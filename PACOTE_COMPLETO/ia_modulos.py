@@ -1392,8 +1392,22 @@ class PipelinePerceptivo:
         # deixaria o modelo ligado ~83% do tempo mesmo perdendo -- consertar a
         # valvula nao pode desligar a protecao junto. Com 12, ele ganha um teste
         # real de 12 janelas e passa a maior parte do tempo fora quando perde.
+        # A carência precisa de par: sem QUARENTENA, o desligado voltava rápido
+        # demais. Medido: com carência 12 e reativação a cada 30 janelas, o
+        # modelo ficava fora em só 13% dos ciclos, ou seja publicava 87% do
+        # tempo perdendo para o baseline. O desligamento pegava num ciclo
+        # isolado e a próxima reativação vinha logo em seguida.
+        #
+        # Com o par, o ciclo fica honesto: fora por QUARENTENA, dentro por
+        # CARENCIA para provar, e então julgado de novo. Perdendo, passa a
+        # maior parte do tempo fora; melhorando, o teste vem de qualquer jeito.
         CARENCIA_CICLOS = 12
+        QUARENTENA_CICLOS = 30
         _carencia = int(getattr(self, "_carencia_modelo", 0) or 0)
+        _quarentena = int(getattr(self, "_quarentena_modelo", 0) or 0)
+        if _quarentena > 0:
+            self._quarentena_modelo = _quarentena - 1
+            cmd["reativar_modelo"] = False      # ainda cumprindo pena
         if cmd.get("reativar_modelo"):
             self.mem.set_modelo_ativo(True)
             self._carencia_modelo = CARENCIA_CICLOS
@@ -1406,7 +1420,9 @@ class PipelinePerceptivo:
                             f"({_carencia} ciclos restantes) — segue ativo")
             else:
                 self.mem.set_modelo_ativo(False)
-                msgs.append("[Meta] MODELO DESATIVADO (só este protocolo) — ganho negativo n>=20")
+                self._quarentena_modelo = QUARENTENA_CICLOS
+                msgs.append(f"[Meta] MODELO DESATIVADO — ganho negativo n>=20, "
+                            f"quarentena de {QUARENTENA_CICLOS} ciclos")
         elif _carencia > 0:
             self._carencia_modelo = _carencia - 1
         msgs.append(f"[Meta] {msg_m} limiar={self.lstm.limiar:.3f}")
