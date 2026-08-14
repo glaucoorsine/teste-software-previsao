@@ -498,6 +498,78 @@ for nome in ("Fontes", "Progresso"):
     checa(botao_visivel(aba), f"aba {nome}: botão antes da caixa que expande",
           [(type(w).__name__, w.empacotado) for w in aba.filhos])
 
+
+
+print("\n[19] eco de janela já fechada não vira aposta nova")
+# aponta a mesa para o arquivo de teste: sem isso ela carrega o estado REAL
+# do immersive, que pode ter janela aberta, e o teste mede outra coisa
+CENTRAL.ESTADO["immersive"] = "teste_central_state.json"
+alvo.unlink(missing_ok=True)
+me = MesaFalsa("immersive")
+me._aplicar({"pad5": ["29", "24"], "modo": "OPERAR", "janela": 3},
+            [{"n": 7, "settled": "e0"}])
+checa(me.escolhas == ["29", "24"], "a decisão real abre a janela", me.escolhas)
+for i, n in enumerate((36, 21, 30)):
+    me.validar({"n": n, "settled": f"e{i+1}"})
+checa(me.escolhas == [] and me.err == 1, "janela fecha como erro",
+      f"{me.escolhas} err={me.err}")
+
+# é isto que acontecia no log dele: o cérebro devolve a mesma aposta
+# como JANELA_ATIVA logo depois de fechar
+me._aplicar({"pad5": ["29", "24"], "modo": "JANELA_ATIVA", "janela": 3},
+            [{"n": 7, "settled": "e4"}])
+checa(me.escolhas == [], "o eco não reabre a aposta velha", me.escolhas)
+checa(me.err == 1, "e não gera janela nova para errar de novo", me.err)
+
+# mas o eco de uma janela que AINDA está aberta não pode apagá-la
+me._aplicar({"pad5": ["1", "2"], "modo": "OPERAR", "janela": 3},
+            [{"n": 7, "settled": "e5"}])
+me.validar({"n": 33, "settled": "e6"})
+antes = (list(me.escolhas), me.restantes)
+me._aplicar({"pad5": ["1", "2"], "modo": "JANELA_ATIVA", "janela": 3},
+            [{"n": 7, "settled": "e7"}])
+checa((list(me.escolhas), me.restantes) == antes,
+      "janela em andamento continua intacta", (me.escolhas, me.restantes))
+
+# uma decisão de verdade depois do eco continua entrando
+me.escolhas, me.restantes = [], 0
+me._aplicar({"pad5": ["7", "8"], "modo": "OPERAR", "janela": 3},
+            [{"n": 7, "settled": "e8"}])
+checa(me.escolhas == ["7", "8"], "OPERAR novo entra normalmente", me.escolhas)
+
+
+
+print("\n[20] o acerto é reconhecido mesmo com tipos diferentes")
+checa(CENTRAL.esta_na_aposta(29, ["29", "24"]),
+      "roleta manda int, aposta vem em texto — ERA AQUI O DEFEITO")
+checa(CENTRAL.esta_na_aposta("29", [29, 24]), "e o contrário também")
+checa(CENTRAL.esta_na_aposta(29, [29, 24]), "int com int")
+checa(CENTRAL.esta_na_aposta("1", ["1", "2"]), "texto com texto")
+checa(CENTRAL.esta_na_aposta("Pachinko", ["10", "Pachinko"]),
+      "símbolo do Crazy Time, que não vira número")
+checa(CENTRAL.esta_na_aposta(0, ["0"]), "o zero, que é fácil de perder")
+checa(not CENTRAL.esta_na_aposta(30, ["29", "24"]), "erro continua erro")
+checa(not CENTRAL.esta_na_aposta(2, ["29", "24"]),
+      "2 não casa com 29 — nada de comparar por pedaço")
+checa(not CENTRAL.esta_na_aposta(7, []), "sem aposta, não há acerto")
+checa(not CENTRAL.esta_na_aposta(7, None), "aposta nula não quebra")
+
+print("\n[20b] a janela da roleta agora fecha como acerto")
+CENTRAL.ESTADO["immersive"] = "teste_central_state.json"
+alvo.unlink(missing_ok=True)
+mt = MesaFalsa("immersive")
+# exatamente o caso do log: aposta em texto, giro em inteiro
+mt._aplicar({"pad5": ["29", "24"], "modo": "OPERAR", "janela": 3},
+            [{"n": 7, "settled": "t0"}])
+mt.validar({"n": 36, "settled": "t1"})
+mt.validar({"n": 29, "settled": "t2"})       # este é acerto
+checa(mt.janela_hit, "o 29 foi reconhecido como acerto")
+checa(mt.ok_num == 1, "e contou no placar de números", mt.ok_num)
+mt.validar({"n": 30, "settled": "t3"})
+checa(mt.ok == 1 and mt.err == 0, "a janela fechou como ACERTO",
+      f"ok={mt.ok} err={mt.err}")
+checa("t2" in mt.acertos_keys, "e o giro leva ✓ no histórico")
+
 alvo.unlink(missing_ok=True)
 print()
 if falhas:

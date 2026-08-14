@@ -209,7 +209,12 @@ class App(ctk.CTk):
         self._ui_validacao = None
         if not self.escolhas: return True
         self.restantes -= 1
-        hit = n in self.escolhas
+        # A roleta entrega o giro como INTEIRO e o cerebro devolve a aposta
+        # como TEXTO: `29 in ['29','24']` da falso, e todo acerto virava
+        # erro. Medido no log dele: 0 acertos em 69 giros no immersive,
+        # quando 5 eram acertos de verdade. Texto dos dois lados -- nao
+        # inteiro, porque o Crazy Time aposta em 'Pachinko'.
+        hit = any(str(n).strip() == str(x).strip() for x in (self.escolhas or []))
         if hit:
             self._acertos_keys.add(key)
             self.ok_num += 1     # contador POR NUMERO

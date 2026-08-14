@@ -153,6 +153,26 @@ def linhas_das_teorias(jogo: str, quantas: int = 22) -> list:
     return L
 
 
+def esta_na_aposta(n, escolhas) -> bool:
+    """O número que saiu estava entre os apostados?
+
+    Parece uma linha boba e era o defeito mais caro do software. As roletas
+    entregam o giro como INTEIRO (14) e o cérebro devolve a aposta como TEXTO
+    ('29'), então `29 in ['29','24']` dava falso e TODO acerto de roleta era
+    contado como erro. Só o Crazy Time acertava, porque lá os dois lados são
+    texto.
+
+    Medido no log dele: immersive 0 acertos em 69 giros, quando o acaso daria
+    uns 6 — probabilidade de 0,13% de acontecer por azar. Não era falta de
+    vantagem, era esta comparação.
+
+    A conversão é para texto dos dois lados, e não para inteiro, porque o
+    Crazy Time aposta em 'Pachinko' e 'CoinFlip', que não viram número.
+    """
+    alvo = str(n).strip()
+    return any(alvo == str(x).strip() for x in (escolhas or []))
+
+
 def texto_multiplicador(r) -> str:
     """O multiplicador daquele giro, se veio um.
 
@@ -689,7 +709,7 @@ class PainelMesa(ctk.CTkFrame):
             return
 
         self.restantes -= 1
-        hit = n in self.escolhas
+        hit = esta_na_aposta(n, self.escolhas)
         # Guarda a chave para o histórico poder marcar ✓ ou ✗ neste giro.
         # Só entram giros conferidos contra uma janela aberta.
         if hit:
@@ -843,6 +863,18 @@ class PainelMesa(ctk.CTkFrame):
     def _aplicar(self, sug, rows):
         modo = sug.get("modo") or ""
         pad = sug.get("pad5") or []
+        # JANELA_ATIVA é o cérebro devolvendo a janela que JÁ estava aberta —
+        # é eco, não decisão nova. Se a janela fechou nesta mesma volta, o eco
+        # chegava com a aposta velha e eu reabria a mesma coisa.
+        #
+        # Medido no log dele: das 23 janelas do Immersive, 17 eram repetição.
+        # ['29','24'] abriu uma vez como OPERAR e voltou 10 vezes como eco;
+        # ['0','20','22','30','15'], mais 5. Ele apostou a vida toda nos
+        # mesmos dois números e fechou 0 de 23, quando o acaso daria 6.
+        if modo == "JANELA_ATIVA" and not (self.escolhas and self.restantes > 0):
+            pad = []
+            registrar(f"{self.jogo} ECO_IGNORADO {sug.get('pad5')} "
+                      f"(janela já fechada — não é decisão nova)")
         if pad and not (self.escolhas and self.restantes > 0):
             self.escolhas = list(pad)[:7]
             self.restantes = int(sug.get("janela") or 3)
