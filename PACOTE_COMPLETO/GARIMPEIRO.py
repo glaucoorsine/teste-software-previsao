@@ -122,6 +122,17 @@ PECAS: Dict[str, Callable[[List[int]], Dict[int, float]]] = {
 }
 
 
+def _p_binom(h: int, n: int, p: float) -> float:
+    """Chance de o acaso entregar h ou mais acertos em n tentativas."""
+    import math
+    if n <= 0 or p <= 0 or p >= 1:
+        return 1.0
+    return sum(math.exp(math.lgamma(n + 1) - math.lgamma(k + 1)
+                        - math.lgamma(n - k + 1)
+                        + k * math.log(p) + (n - k) * math.log(1 - p))
+               for k in range(min(h, n), n + 1))
+
+
 def _normaliza(d: Dict[int, float]) -> Dict[int, float]:
     if not d:
         return {}
@@ -247,13 +258,26 @@ def main() -> int:
           f"{campeao['c_taxa']:.1%}  contra {r['acaso']:.1%} de acaso  "
           f"= {campeao['c_razao']:.2f}x   <- o número que vale")
     print()
+    # O CORTE TEM QUE DEPENDER DO TAMANHO DA CONFERÊNCIA.
+    #
+    # A primeira versão usava razão >= 1,15x, um número redondo escolhido a
+    # olho. Com ~180 ativações e acaso de 18,9%, o desvio da razão é 0,154 —
+    # ou seja, 1,15x fica a UM desvio do acaso. Medido em ruído puro: 3 de 10
+    # mundos passavam desse corte. Uma peneira que chama ruído de ouro em 30%
+    # das vezes não serve para nada.
+    #
+    # Agora o corte é um p-valor sobre a própria conferência, que se ajusta ao
+    # tamanho: com poucas ativações exige razão alta, com muitas aceita menos.
     if campeao["c_n"] < 40:
         print(f"   AVISO: só {campeao['c_n']} ativações na conferência — "
               f"ainda não decide nada.")
-    elif campeao["c_razao"] >= 1.15:
-        print(f"   Segurou fora do garimpo. Vale pré-declarar e cobrar ao vivo.")
     else:
-        print(f"   Não segurou fora do garimpo — o brilho era da peneira.")
+        p = _p_binom(campeao["c_hits"], campeao["c_n"], r["acaso"])
+        print(f"   p da conferência: {p:.4f}")
+        if p <= 0.05:
+            print(f"   Segurou fora do garimpo. Vale pré-declarar e cobrar ao vivo.")
+        else:
+            print(f"   Não segurou fora do garimpo — o brilho era da peneira.")
     print()
     print(f"   (as outras linhas da tabela são contexto. Escolher a melhor")
     print(f"    conferência entre elas seria peneirar de novo no lacrado:")
