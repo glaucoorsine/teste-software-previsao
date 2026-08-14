@@ -1,0 +1,23 @@
+{
+  "descricao": "Bases de estudo com resultados REAIS de capturas do usuário. Não usar sintéticos para validar padrões de perda.",
+  "arquivos": [
+    "mega_fire_print_ultimos_1.json",
+    "mega_fire_print_ultimos_2.json",
+    "mega_fire_print_ultimos_3.json",
+    "mega_fire_bonus_41_em_500.json",
+    "lightning_print_ultimas500_a.json",
+    "lightning_print_ultimas500_b.json",
+    "immersive_print_ultimas500.json"
+  ],
+  "fontes_web_adicionais": [
+    "https://www.tracksino.com/crazytime",
+    "https://www.tracksino.com/lightning-roulette",
+    "https://www.casinotrackpot.com/ph/crazy-time/",
+    "https://www.casinotrackpot.com/ph/lightning-roulette/",
+    "https://www.casinotrackpot.com/ph/immersive-roulette-live/",
+    "https://gamblingcounting.com/crazy-time",
+    "https://gamblingcounting.com/lightning-roulette",
+    "https://gamblingcounting.com/immersive-roulette",
+    "https://gamblingcounting.com/roulette"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "weights_path": "/home/workdir/artifacts/v55build/PACOTE_COMPLETO/lstm_crazy_time.pt",
+  "jogo": "crazy_time",
+  "version": "2026.08.10-v21-sombra",
+  "limiar": 0.12,
+  "temperature": 1.25,
+  "device": "cpu"
+}

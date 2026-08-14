@@ -1,0 +1,26 @@
+{
+  "agente_id": "R11",
+  "dataset_id": "lightning",
+  "ciclos": 1,
+  "notas": [
+    {
+      "em": "2026-08-13T23:22:18",
+      "txt": "residual"
+    }
+  ],
+  "stats": {
+    "hipoteses_total": 1,
+    "rejeicoes": 0,
+    "validadas": 0,
+    "falsos_positivos_sombra": 0,
+    "diversidade_expr": 1
+  },
+  "regioes_exploradas": [
+    "resíduo em entropia=2.25 → 33"
+  ],
+  "ultimas_rejeicoes": [],
+  "exprs_unicas": [
+    "{'op': 'in_set', 'set': ['33']}"
+  ],
+  "atualizado_em": "2026-08-13T23:22:18"
+}

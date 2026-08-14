@@ -1,0 +1,2108 @@
+# -*- coding: utf-8 -*-
+"""
+Pipeline com protocolo de avaliação rigoroso:
+- baseline com o MESMO k de saídas
+- split cronológico + walk-forward
+- decision_id antes do resultado; janela = 1 decisão
+- Brier, log-loss, calibração, cobertura, ganho vs baseline + IC
+- teste negativo (shuffle)
+- SEM EVIDÊNCIA por confiança calibrada
+- modelos/memórias por jogo
+- versionamento
+- percepção como features auditáveis (não voto cego)
+- interrompe modelo se não supera baseline
+"""
+from __future__ import annotations
+import os, time, json, math, copy, uuid, hashlib
+import numpy as np
+from collections import Counter, defaultdict
+from datetime import datetime
+from pathlib import Path
+
+try:
+    from pathlib import Path as _Paa
+    import sys as _sys_aa
+    _root_aa = _Paa(__file__).resolve().parent
+    if str(_root_aa) not in _sys_aa.path:
+        _sys_aa.path.insert(0, str(_root_aa))
+    from academia_autonoma import ciclo as ciclo_academia_autonoma
+except Exception as _e_aa:
+    ciclo_academia_autonoma = None
+
+try:
+    from descoberta_agentes import ciclo_descoberta, candidatos_da_biblioteca, listar_agentes
+except Exception as _imp_desc:
+    ciclo_descoberta = None
+    candidatos_da_biblioteca = None
+    listar_agentes = None
+    print("[ia_modulos] descoberta_agentes indisponível:", _imp_desc)
+try:
+    from fabricante_teorias import fabricar_para
+except Exception:
+    fabricar_para = None
+
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import DataLoader, TensorDataset
+    HAS_TORCH = True
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+except ImportError:
+    HAS_TORCH = False
+    DEVICE = "cpu"
+
+ROOT = Path(__file__).resolve().parent
+# Laboratório de percepção externo (features auditáveis)
+try:
+    import percepcao_lab as PLAB
+    HAS_PLAB = True
+except Exception:
+    PLAB = None
+    HAS_PLAB = False
+try:
+    import estudo_lab as ESTUDO
+    HAS_ESTUDO = True
+except Exception:
+    ESTUDO = None
+    HAS_ESTUDO = False
+try:
+    import academia_agentes as ACADEMIA
+    HAS_ACADEMIA = True
+except Exception:
+    ACADEMIA = None
+    HAS_ACADEMIA = False
+ORDENS_PATH = ROOT / "ordens_ia.json"
+PIPELINE_VERSION = "2026.08.10-v21-sombra"
+EVAL_PROTOCOL = "eval-2026.08.10-v1"  # estável entre patches
+FEATURE_VERSION = "fv4-lab"
+
+WHEEL = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26]
+VOISINS = {22,18,29,7,28,12,35,3,26,0,32,15,19,4,21,2,25}
+TIERS = {27,13,36,11,30,8,23,10,5,24,16,33}
+ORPHELINS = {1,20,14,31,9,17,34,6}
+CT_SETORES = ["1","2","5","10","CoinFlip","CashHunt","Pachinko","CrazyBonus"]
+CT_CICLO = {"1":2.6,"2":4.2,"5":7.7,"10":13.5,"CoinFlip":13.5,"CashHunt":27,"Pachinko":27,"CrazyBonus":54}
+MAP_CT_TO_IDX = {s:i for i,s in enumerate(CT_SETORES)}
+MAP_IDX_TO_CT = {i:s for i,s in enumerate(CT_SETORES)}
+
+def neigh(n, d=2):
+    if n not in WHEEL: return []
+    i = WHEEL.index(n)
+    out=[]
+    for k in range(1,d+1):
+        out += [WHEEL[(i-k)%37], WHEEL[(i+k)%37]]
+    return out
+
+def setor_do(n):
+    if n in VOISINS: return "VOISINS"
+    if n in TIERS: return "TIERS"
+    if n in ORPHELINS: return "ORPHELINS"
+    return "OUTRO"
+
+def cronologico(seq):
+    return list(reversed(list(seq)))
+
+def wilson_ci(successes, n, z=1.96):
+    if n <= 0: return (0.0, 0.0)
+    p = successes / n
+    den = 1 + z*z/n
+    centre = p + z*z/(2*n)
+    margin = z * math.sqrt(p*(1-p)/n + z*z/(4*n*n))
+    return (max(0.0, (centre-margin)/den), min(1.0, (centre+margin)/den))
+
+# ---------- ORDENS ----------
+def ler_ordens(jogo: str) -> dict:
+    base = {"janela": None, "peso_isol": None, "peso_motor": None, "boost_anti": None,
+            "prioritizar_atraso": None, "reduzir_12": None, "motivo": None, "_pendente": False}
+    if not ORDENS_PATH.is_file():
+        return base
+    try:
+        data = json.loads(ORDENS_PATH.read_text(encoding="utf-8"))
+        g = data.get("global") or {}
+        j = data.get(jogo) or {}
+        merged = {**g, **j}
+        pub, apl = merged.get("publicada_em"), merged.get("aplicada_em")
+        pendente = bool(pub) and (not apl or str(pub) > str(apl))
+        if not pendente:
+            return {
+                "janela": merged.get("janela"),
+                "peso_isol": merged.get("peso_isol"),
+                "peso_motor": None,
+                "boost_anti": merged.get("boost_anti"),
+                "prioritizar_atraso": merged.get("prioritizar_atraso"),
+                "reduzir_12": merged.get("reduzir_12"),
+                "motivo": merged.get("motivo"),
+                "_pendente": False, "_ja_aplicada": True,
+            }
+        out = {**base, "_pendente": True}
+        for k in ("janela","peso_isol","peso_motor","boost_anti","prioritizar_atraso","reduzir_12","motivo"):
+            if merged.get(k) is not None:
+                out[k] = merged.get(k)
+        return out
+    except Exception as e:
+        return {**base, "motivo": f"erro leitura ordens: {e}"}
+
+def marcar_ordem_aplicada(jogo: str) -> bool:
+    """Delega ao ia_chat_llm (lock + RMW atômico). Não grava ordens_ia.json diretamente."""
+    try:
+        from ia_chat_llm import marcar_ordem_aplicada as _marcar
+        return bool(_marcar(jogo))
+    except Exception:
+        return False
+
+# ---------- QUALIDADE ----------
+class QualidadeDados:
+    def validar(self, nums, settled_list=None, is_ct=False):
+        report = {"n": len(nums or []), "duplicados": 0, "invalidos": 0,
+                  "ordem_ok": True, "ordem_corrigida": False, "ausentes_flag": False, "interrompeu": False}
+        clean, clean_set = [], []
+        seen = set(); prev_ts = None; inversions = 0
+        for i, n in enumerate(nums or []):
+            if is_ct:
+                if n not in CT_SETORES:
+                    report["invalidos"] += 1; continue
+            else:
+                if not isinstance(n, int) or not (0 <= n <= 36):
+                    report["invalidos"] += 1; continue
+            st = None
+            if settled_list and i < len(settled_list):
+                st = settled_list[i]
+                if st and st in seen:
+                    report["duplicados"] += 1; continue
+                if st:
+                    seen.add(st)
+                    if prev_ts is not None and st > prev_ts:
+                        inversions += 1
+                    prev_ts = st
+            clean.append(n); clean_set.append(st)
+        if inversions > max(2, len(clean)//10):
+            report["ordem_ok"] = False
+            pairs = [(clean[i], clean_set[i]) for i in range(len(clean))]
+            if any(p[1] for p in pairs):
+                pairs.sort(key=lambda x: x[1] or "", reverse=True)
+                clean = [p[0] for p in pairs]; clean_set = [p[1] for p in pairs]
+                report["ordem_corrigida"] = True
+            elif inversions > len(clean)//5:
+                report["interrompeu"] = True
+        if len(clean) < (8 if is_ct else 10):
+            report["ausentes_flag"] = True
+        return clean, clean_set, report
+
+# ---------- CONTEXTO / PERCEPÇÃO (features auditáveis) ----------
+class Contexto:
+    def fatias(self, seq):
+        return {"curta": seq[:10], "media": seq[:30], "longa": seq[:80]}
+    def mudanca_regime(self, seq):
+        if len(seq) < 25: return False, 1.0, "poucos dados"
+        c1, c2 = Counter(seq[:12]), Counter(seq[12:36])
+        t1 = set(k for k,_ in c1.most_common(6))
+        t2 = set(k for k,_ in c2.most_common(6))
+        ov = len(t1 & t2) / max(len(t1 | t2), 1)
+        return ov < 0.34, ov, f"overlap={ov:.2f}"
+
+class Percepcao:
+    """Produtor de características auditáveis — não é voto final."""
+    def roleta(self, nums, mults=None):
+        fr = Counter(nums[:40])
+        atr = {n: next((i for i,x in enumerate(nums) if x==n), len(nums)) for n in range(37)}
+        finais = Counter([n%10 for n in nums[:30]])
+        setores = Counter([setor_do(n) for n in nums[:30]])
+        last = nums[0] if nums else None
+        media = max(len(nums[:40])/37.0, 0.01)
+        anom = [n for n,c in fr.items() if (c-media)/math.sqrt(media) >= 2.0]
+        mult_hits = Counter()
+        if mults:
+            for m in mults[:40]:
+                if isinstance(m, dict) and m.get("n") is not None:
+                    mult_hits[int(m["n"])] += float(m.get("x") or 1)
+        features = {
+            "freq": dict(fr), "atrasos": atr,
+            "finais_top": [e for e,_ in finais.most_common(3)],
+            "setor_quente": setores.most_common(1)[0][0] if setores else None,
+            "setores": dict(setores),
+            "vizinhos": neigh(last, 2) if isinstance(last, int) else [],
+            "ultimo": last, "anomalias": anom, "mult_hits": dict(mult_hits),
+            "feature_version": FEATURE_VERSION,
+        }
+        return features
+
+    def ct(self, secs):
+        last = {s: len(secs) for s in CT_SETORES}
+        for s in CT_SETORES:
+            for i,x in enumerate(secs):
+                if x==s: last[s]=i; break
+        fr = Counter(secs[:35])
+        gaps = {s: last[s]/max(CT_CICLO.get(s,8),1) for s in CT_SETORES}
+        return {"last": last, "freq": dict(fr), "gaps_ratio": gaps, "feature_version": FEATURE_VERSION}
+
+class ModeloEstatistico:
+    def rank_roleta(self, feats, prior_atraso=False, w_isol=1.0):
+        sc = defaultdict(float)
+        for n,c in Counter(feats.get("freq") or {}).most_common(15):
+            sc[n] += c * 0.5
+        atr_w = 0.12 if prior_atraso else 0.08
+        for n,a in (feats.get("atrasos") or {}).items():
+            sc[n] += min(a, 40) * atr_w * max(1.0, w_isol)
+        for n,x in (feats.get("mult_hits") or {}).items():
+            sc[n] += min(x, 50) * 0.05
+        ranked = sorted(sc, key=lambda n: -sc[n])
+        total = sum(sc.values()) or 1
+        conf = (sc[ranked[0]]/total) if ranked else 0
+        return ranked[:10], sc, conf
+
+    def rank_ct(self, feats, prior_atraso=False, w_isol=1.0):
+        sc = defaultdict(float)
+        gap_w = 2.4 if prior_atraso else 2.0
+        for s,g in (feats.get("gaps_ratio") or {}).items():
+            sc[s] += g * gap_w * max(1.0, w_isol)
+        for s,c in (feats.get("freq") or {}).items():
+            sc[s] += c * 0.3
+        ranked = sorted(sc, key=lambda s: -sc[s])
+        total = sum(sc.values()) or 1
+        conf = (sc[ranked[0]]/total) if ranked else 0
+        return ranked, sc, conf
+
+class ModeloAnomalia:
+    def rank_roleta(self, feats, boost=False):
+        a = list(feats.get("anomalias") or [])[:8]
+        conf = min(1.0, len(a)/5.0) * (1.2 if boost else 1.0)
+        return a, min(1.0, conf)
+    def rank_ct(self, feats, boost=False):
+        a = [s for s,g in (feats.get("gaps_ratio") or {}).items() if g>=2.5][:5]
+        conf = min(1.0, len(a)/3.0) * (1.2 if boost else 1.0)
+        return a, min(1.0, conf)
+
+class ModeloSetor:
+    def rank_roleta(self, feats):
+        sq = feats.get("setor_quente")
+        pool = list(VOISINS) if sq=="VOISINS" else list(TIERS) if sq=="TIERS" else list(ORPHELINS) if sq=="ORPHELINS" else []
+        fr = Counter(feats.get("freq") or {})
+        pool = sorted(pool, key=lambda n: -fr.get(n,0))
+        viz = feats.get("vizinhos") or []
+        out = list(dict.fromkeys(pool[:8]+viz))[:10]
+        return out, sq, 0.7 if pool else 0.2
+    def rank_ct(self, feats):
+        gr = feats.get("gaps_ratio") or {}
+        bonus = sorted(["CoinFlip","CashHunt","Pachinko","CrazyBonus"], key=lambda s: -gr.get(s,0))
+        return bonus, "BONUS_GROUP", 0.6
+
+class BaselineFrequencia:
+    """Baseline simples: top-k por frequência no passado — mesmo k do modelo."""
+    def prever(self, hist_recente_primeiro, k, is_ct=False):
+        c = Counter(hist_recente_primeiro[:40])
+        return [x for x,_ in c.most_common(k)]
+
+class GeradorHipoteses:
+    def roleta(self, feats, ranks):
+        hips=[]
+        est,_,_ = ranks["estat"]
+        hips.append({"nome":"ESTAT","nums":est,"peso":1.3})
+        anom,_ = ranks["anom"]
+        if anom: hips.append({"nome":"ANOMALIA","nums":anom,"peso":1.5})
+        setor_nums, sq, _ = ranks["setor"]
+        if setor_nums: hips.append({"nome":"SETOR","nums":setor_nums,"peso":2.0})
+        ends = feats.get("finais_top") or []
+        fnums = [n for e in ends for n in range(e,37,10)]
+        if fnums: hips.append({"nome":"FINAIS","nums":fnums[:10],"peso":1.4})
+        return hips
+    def ct(self, feats, ranks):
+        hips=[]
+        est,_,_ = ranks["estat"]
+        hips.append({"nome":"GAP_CICLO","nums":est[:5],"peso":2.2})
+        anom,_ = ranks["anom"]
+        if anom: hips.append({"nome":"ANOMALIA","nums":anom,"peso":1.8})
+        setor_nums,_,_ = ranks["setor"]
+        if setor_nums: hips.append({"nome":"SETOR","nums":setor_nums,"peso":1.6})
+        fr = Counter(feats.get("freq") or {})
+        if fr.get("1",0)+fr.get("2",0)>=12:
+            bonus=[s for s in ("CashHunt","Pachinko","CrazyBonus","10","5") if (feats.get("gaps_ratio") or {}).get(s,0)>=0.7]
+            hips.append({"nome":"ANTI_12","nums":bonus or ["5","10","CashHunt"],"peso":2.5})
+        return hips
+
+class Critico:
+    # quantas TEORIAS distintas precisam concordar para um número entrar sozinho
+    # (sem apoio de padrão/LSTM). É a "maioria" da votação entre teorias.
+    MIN_VOTOS_TEORIA = 3
+
+    @staticmethod
+    def _familia(nome: str) -> str:
+        """
+        Agrupa fontes CORRELACIONADAS para não inflarem o placar entre si
+        (LAB_*/ESTAT/ANOMALIA vêm da mesma percepção, então contam como uma).
+
+        Teorias da academia são a exceção: cada uma é uma familiaridade
+        independente, descoberta e validada por conta própria, então cada uma
+        vota como fonte distinta. Antes todas viravam a família "ACADEMIA", e
+        como consenso() exige 2 famílias, 18 teorias concordando no mesmo
+        número contavam como 1 voto e o número nunca era aprovado.
+        """
+        n = nome or "?"
+        if n.startswith("LAB_") or n.startswith("ESTUDO_") or n in ("ESTAT", "ANOMALIA", "FINAIS", "ATRASO", "HEURISTICA"):
+            return "PERCEPCAO"
+        if n in ("SETOR", "GAP_CICLO", "ANTI_12"):
+            return "ESTRUTURA"
+        if n == "LSTM":
+            return "LSTM"
+        if n.startswith("ACADEMIA_"):
+            return "TEORIA:" + n[len("ACADEMIA_"):]
+        return n
+
+    @staticmethod
+    def _eh_teoria(fam: str) -> bool:
+        return str(fam or "").startswith("TEORIA:")
+
+    def consenso(self, hips, n_classes, k_alvos, minimo=2):
+        """
+        Votação: cada hipótese vota nos seus números, com peso próprio e
+        decaimento por posição (1º número da lista vale mais que o 5º).
+
+        Um número entra na sugestão por QUALQUER um dos dois caminhos:
+          a) >= MIN_VOTOS_TEORIA teorias distintas concordando  (maioria entre teorias)
+          b) >= `minimo` famílias distintas                     (teoria + padrão + LSTM)
+        Os mais votados ficam no topo — a ordem é por peso total acumulado.
+        """
+        score=defaultdict(float); fontes=defaultdict(set); fontes_raw=defaultdict(set)
+        for h in hips:
+            w=float(h.get("peso",1))
+            fam = self._familia(h.get("nome","?"))
+            for i,n in enumerate(h.get("nums") or []):
+                score[n]+=w/(1+i*0.15)
+                fontes[n].add(fam)
+                fontes_raw[n].add(h.get("nome","?"))
+        total=sum(score.values()) or 1.0
+        probs={k:v/total for k,v in score.items()}
+        votos_teoria={n:sum(1 for f in fs if self._eh_teoria(f)) for n,fs in fontes.items()}
+        aprovados=[
+            n for n,_ in sorted(score.items(), key=lambda x: -x[1])
+            if len(fontes[n])>=minimo or votos_teoria.get(n,0)>=self.MIN_VOTOS_TEORIA
+        ]
+        p0 = k_alvos / max(n_classes,1)
+        sig={}
+        for n in aprovados[:k_alvos]:
+            nf=len(fontes[n]); p=1.0
+            for _ in range(nf):
+                p *= min(1.0, k_alvos/max(n_classes,1))
+            sig[n]={
+                "fontes":nf,"familias":list(fontes[n]),"raw":list(fontes_raw[n]),
+                "p_approx":round(p,5),"significativo":p<0.15,
+                "votos_teoria":votos_teoria.get(n,0),
+                "votos_outros":nf-votos_teoria.get(n,0),
+                "peso_total":round(score[n],3),
+            }
+        return aprovados, probs, {k:list(v) for k,v in fontes_raw.items()}, score, sig, p0
+
+# ---------- MÉTRICAS ----------
+class Metricas:
+    @staticmethod
+    def brier_janela(calib):
+        """Brier no horizonte da JANELA: p = P(hit na janela), y = hit na janela."""
+        rows=[c for c in calib if c.get("tipo")=="janela"]
+        if len(rows)<3: return None
+        return sum((float(c["p"])-float(c["y"]))**2 for c in rows)/len(rows)
+
+    @staticmethod
+    def logloss_janela(calib):
+        rows=[c for c in calib if c.get("tipo")=="janela"]
+        if len(rows)<3: return None
+        s=0.0
+        for c in rows:
+            p=min(max(float(c["p"]),1e-6),1-1e-6)
+            y=float(c["y"])
+            s += -(y*math.log(p)+(1-y)*math.log(1-p))
+        return s/len(rows)
+
+    @staticmethod
+    def cobertura(n_emitidas, n_total_ciclos):
+        """Cobertura = decisões emitidas / (emitidas + AGUARDANDO)."""
+        if not n_total_ciclos: return None
+        return n_emitidas / n_total_ciclos
+
+    @staticmethod
+    def taxa_e_ic(avaliadas):
+        if not avaliadas: return None, (0,0), 0
+        hits = sum(1 for a in avaliadas if (a.get("resultado") or {}).get("acertou"))
+        n=len(avaliadas)
+        return hits/n, wilson_ci(hits, n), n
+
+    @staticmethod
+    def ganho_baseline_janela(avaliadas):
+        """Acerto do modelo vs baseline NA JANELA. Backfill baseline_acertou se registro antigo."""
+        rows=[]
+        for a in avaliadas:
+            if a.get("baseline_alvos") is None or not a.get("resultado"):
+                continue
+            res = a["resultado"]
+            if "baseline_acertou" not in res:
+                # legado: reconstrói a partir dos spins ou do saiu final
+                base = set(a.get("baseline_alvos") or [])
+                spins = a.get("spins") or []
+                if spins:
+                    res["baseline_acertou"] = any(s.get("saiu") in base for s in spins)
+                else:
+                    res["baseline_acertou"] = res.get("saiu") in base
+            rows.append(a)
+        if len(rows)<3: return None, None, None
+        m = sum(1 for a in rows if a["resultado"].get("acertou"))
+        b = sum(1 for a in rows if a["resultado"].get("baseline_acertou"))
+        n=len(rows)
+        return m/n, b/n, (m/n - b/n)
+
+# ---------- MEMÓRIA ----------
+
+def _ts_key(v):
+    """Chave temporal comparável (UTC). Evita comparar ISO como texto."""
+    try:
+        from time_utils import sort_key_ts
+        return sort_key_ts(v)
+    except Exception:
+        return str(v) if v is not None else None
+
+def _ts_le(a, b):
+    """True se a <= b em tempo real."""
+    if a is None or b is None:
+        return False
+    try:
+        return _ts_key(a) <= _ts_key(b)
+    except Exception:
+        return str(a) <= str(b)
+
+class Memoria:
+    def __init__(self, jogo: str):
+        self.jogo = jogo
+        self.path = str(ROOT / f"memoria_{jogo}.json")
+        self.d = {
+            "decisoes_pendentes": [], "avaliadas": [], "novidades": [], "modulos": [], "calib": [],
+            "versoes": [], "negativo": {}, "modelo_ativo": True, "modelo_ativo_v": {}, "n_aguardando_total": 0, "ultimo_aguardando_settled": None,
+        }
+        if os.path.isfile(self.path):
+            try: self.d.update(json.loads(open(self.path, encoding="utf-8").read()))
+            except Exception: pass
+        for k in ("modulos","decisoes_pendentes","avaliadas","calib","versoes"):
+            if not isinstance(self.d.get(k), list):
+                self.d[k]=[]
+
+    def save(self):
+        """Lock + reload + merge + escrita atômica (não sobrescreve estado paralelo)."""
+        import os, time
+        path = self.path
+        lock = path + ".lock"
+        tmp = path + ".tmp"
+        got = False
+        for _ in range(40):
+            try:
+                fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.close(fd)
+                got = True
+                break
+            except FileExistsError:
+                try:
+                    if time.time() - os.path.getmtime(lock) > 20:
+                        os.unlink(lock)
+                        continue
+                except OSError:
+                    pass
+                time.sleep(0.05)
+            except OSError:
+                time.sleep(0.05)
+        if not got:
+            return
+        try:
+            disk = {}
+            if os.path.isfile(path):
+                try:
+                    disk = json.loads(open(path, encoding="utf-8").read())
+                except Exception:
+                    disk = {}
+            merged = self._merge_mem_state(disk, self.d)
+            self.d = merged
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(merged, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, path)
+        except Exception:
+            try:
+                if os.path.isfile(tmp):
+                    os.unlink(tmp)
+            except OSError:
+                pass
+        finally:
+            try:
+                os.unlink(lock)
+            except OSError:
+                pass
+
+    def _merge_mem_state(self, disk: dict, local: dict) -> dict:
+        """Combina listas por id — não descarta o que só existe no disco ou no local."""
+        out = dict(disk or {})
+        for k, v in (local or {}).items():
+            if k not in ("decisoes_pendentes", "avaliadas", "calib", "versoes", "modulos"):
+                # escalares: preferir local se definido
+                if v is not None:
+                    out[k] = v
+        def by_id(items):
+            d = {}
+            for it in items or []:
+                if not isinstance(it, dict):
+                    continue
+                iid = it.get("id") or id(it)
+                d[iid] = it
+            return d
+        for key in ("decisoes_pendentes", "avaliadas"):
+            a = by_id(out.get(key))
+            b = by_id(local.get(key))
+            for iid, it in b.items():
+                if iid not in a:
+                    a[iid] = it
+                else:
+                    old, new = a[iid], it
+                    if old.get("resultado") and not new.get("resultado"):
+                        continue
+                    if new.get("resultado") and not old.get("resultado"):
+                        a[iid] = new
+                        continue
+                    if len(new.get("spins") or []) >= len(old.get("spins") or []):
+                        a[iid] = new
+            items = list(a.values())
+            if key == "decisoes_pendentes":
+                # fechados não ficam pendentes; também dedupe semântico
+                abertos = []
+                seen_sem = set()
+                for it in items:
+                    if it.get("resultado") is not None:
+                        continue
+                    try:
+                        from time_utils import canonical_ts as _cts
+                        ref = _cts(it.get("settled_ref")) or str(it.get("settled_ref"))
+                    except Exception:
+                        ref = str(it.get("settled_ref"))
+                    sem = (ref, tuple(sorted(str(x) for x in (it.get("alvos") or []))))
+                    if sem in seen_sem:
+                        continue
+                    seen_sem.add(sem)
+                    abertos.append(it)
+                out[key] = abertos[-50:]
+            else:
+                out[key] = items[-150:]
+        # contadores: max para não perder incremento paralelo
+        for ck in ("n_aguardando_total",):
+            out[ck] = max(int((disk or {}).get(ck) or 0), int((local or {}).get(ck) or 0))
+        # cobertura_acc: soma componentes
+        def _acc(d):
+            c = (d or {}).get("cobertura_acc") or {}
+            return float(c.get("soma_y") or 0), float(c.get("soma_p") or 0), int(c.get("n") or 0)
+        y1,p1,n1 = _acc(disk); y2,p2,n2 = _acc(local)
+        # se um contém o outro (n maior e soma >=), pegar o maior n
+        if n2 >= n1 and y2 >= y1 - 1e-9:
+            out["cobertura_acc"] = {"soma_y": y2, "soma_p": p2, "n": n2}
+        elif n1 >= n2 and y1 >= y2 - 1e-9:
+            out["cobertura_acc"] = {"soma_y": y1, "soma_p": p1, "n": n1}
+        else:
+            # paralelo verdadeiro: soma (pode inflar levemente se overlap — preferível a perder)
+            out["cobertura_acc"] = {"soma_y": y1 + y2, "soma_p": p1 + p2, "n": n1 + n2}
+        # calib/versoes/modulos: concat + trim
+        for key in ("calib", "versoes", "modulos"):
+            seq = list(out.get(key) or []) + list(local.get(key) or [])
+            out[key] = seq[-200:]
+        return out
+
+    def registrar_decisao(self, alvos, modo, probs, hips_nomes, conf, dist_sel,
+                          baseline_alvos=None, features_hash=None, settled_ref=None, janela=None):
+        # SOMBRA com alvos registra pendente; AGUARDANDO/vazio não
+        if modo == "AGUARDANDO" or (not alvos):
+            self.d["n_aguardando_total"] = int(self.d.get("n_aguardando_total") or 0) + 1
+            nv = self.d.setdefault("n_aguardando_total_v", {})
+            if not isinstance(nv, dict):
+                nv = {}; self.d["n_aguardando_total_v"] = nv
+            nv[PIPELINE_VERSION] = int(nv.get(PIPELINE_VERSION) or 0) + 1
+            self.d.setdefault("aguardando_log", []).append({
+                "em": datetime.now().isoformat(timespec="seconds"), "modo": modo,
+                "pipeline_version": PIPELINE_VERSION,
+            })
+            self.d["aguardando_log"] = self.d.get("aguardando_log", [])[-30:]
+            self.save()
+            return None
+        # Idempotência: mesmo settled_ref + mesmos alvos + ainda aberto → não duplica
+        alvos_key = tuple(sorted(str(a) for a in (alvos or [])))
+        for pend in self.d.get("decisoes_pendentes") or []:
+            if pend.get("resultado") is not None:
+                continue
+            try:
+                from time_utils import canonical_ts as _cts
+                same_ref = (_cts(pend.get("settled_ref")) or str(pend.get("settled_ref"))) == (_cts(settled_ref) or str(settled_ref))
+            except Exception:
+                same_ref = str(pend.get("settled_ref")) == str(settled_ref)
+            if same_ref and tuple(sorted(str(a) for a in (pend.get("alvos") or []))) == alvos_key:
+                return pend
+        item = {
+            "id": str(uuid.uuid4())[:8],
+            "em": datetime.now().isoformat(timespec="seconds"),
+            "pipeline_version": PIPELINE_VERSION,
+            "eval_protocol": EVAL_PROTOCOL,
+            "feature_version": FEATURE_VERSION,
+            "features_hash": features_hash,
+            "alvos": alvos, "baseline_alvos": baseline_alvos,
+            "modo": modo, "conf": conf, "dist_sel": dist_sel,
+            "top_probs": dict(list(sorted((probs or {}).items(), key=lambda x: -x[1]))[:8]),
+            "hips": hips_nomes, "resultado": None,
+            "settled_ref": settled_ref, "hits": 0, "misses": 0, "janela": janela, "spins": [],
+        }
+        self.d["decisoes_pendentes"].append(item)
+        self.d["decisoes_pendentes"] = self.d["decisoes_pendentes"][-50:]
+        self.d.setdefault("versoes", []).append({
+            "id": item["id"], "pipeline": PIPELINE_VERSION, "features": FEATURE_VERSION, "em": item["em"]
+        })
+        self.d["versoes"] = self.d["versoes"][-100:]
+        self.save()
+        return item
+
+    def registrar_spin(self, saiu, acertou, settled_result=None, window_done=False):
+        for ult in reversed(self.d.get("decisoes_pendentes") or []):
+            if ult.get("resultado") is not None or not ult.get("alvos"):
+                continue
+            sref = ult.get("settled_ref")
+            if sref and settled_result and _ts_le(settled_result, sref):
+                return {"ignored": True, "reason": "resultado_nao_posterior"}
+            if acertou:
+                ult["hits"] = int(ult.get("hits") or 0) + 1
+            else:
+                ult["misses"] = int(ult.get("misses") or 0) + 1
+            # baseline: acerto se saiu em baseline_alvos em QUALQUER spin da janela
+            if saiu in (ult.get("baseline_alvos") or []):
+                ult["baseline_hits"] = int(ult.get("baseline_hits") or 0) + 1
+            ult.setdefault("spins", []).append({"saiu": saiu, "acertou": bool(acertou), "settled": settled_result})
+            ult["spins"] = ult["spins"][-20:]
+            # Horizonte fixo: NÃO fecha no primeiro acerto — só com window_done
+            if not window_done:
+                self.save()
+                return {"open": True, "id": ult.get("id"), "hits": ult.get("hits"), "misses": ult.get("misses")}
+            # UMA avaliação por janela (modelo e baseline)
+            acertou_janela = bool(ult.get("hits", 0) > 0 or acertou)
+            baseline_acertou = bool(ult.get("baseline_hits", 0) > 0)
+            ult["resultado"] = {
+                "saiu": saiu, "acertou": acertou_janela, "baseline_acertou": baseline_acertou,
+                "settled": settled_result, "hits": ult.get("hits"), "misses": ult.get("misses"),
+                "baseline_hits": ult.get("baseline_hits", 0),
+                "spins_n": len(ult.get("spins") or []),
+            }
+            # p_janela: approx 1-(1-p_sel)^J se J conhecido, senão usa massa calibrada
+            dist = ult.get("dist_sel") or {}
+            p_sel = sum(float(v) for v in dist.values()) if dist else float(ult.get("conf") or 0)
+            p_sel = min(max(p_sel, 1e-6), 1-1e-6)
+            J = max(1, int(ult.get("janela") or len(ult.get("spins") or []) or 1))
+            p_janela = 1.0 - (1.0 - p_sel)**J
+            p_janela = min(max(p_janela, 1e-6), 1-1e-6)
+            self.d.setdefault("calib", []).append({
+                "p": p_janela, "y": 1.0 if acertou_janela else 0.0,
+                "tipo": "janela", "id": ult.get("id"), "J": J, "p_sel": p_sel,
+                "pipeline_version": PIPELINE_VERSION,
+                "eval_protocol": EVAL_PROTOCOL,
+                "p_nota": "approx_indep",
+            })
+            self.d["calib"] = self.d["calib"][-200:]
+            self.d.setdefault("avaliadas", []).append(copy.deepcopy(ult))
+            self.d["avaliadas"] = self.d["avaliadas"][-100:]
+            # acumula p_esperado da JANELA que fechou (mesma escala de y)
+            try:
+                from metricas_honestas import p_esperado_para
+                is_ct = self.jogo == "crazy_time"
+                pe = p_esperado_para(ult.get("alvos") or [], int(ult.get("janela") or 3), is_ct=is_ct)
+                y = 1.0 if acertou_janela else 0.0
+                acc = self.d.setdefault("cobertura_acc", {"soma_y": 0.0, "soma_p": 0.0, "n": 0})
+                acc["soma_y"] = float(acc.get("soma_y") or 0.0) + y
+                acc["soma_p"] = float(acc.get("soma_p") or 0.0) + float(pe)
+                acc["n"] = int(acc.get("n") or 0) + 1
+                ult["p_esperado_janela"] = pe
+            except Exception:
+                pass
+            self.save()
+            return ult
+        return None
+
+    def avaliar_ultima(self, saiu, acertou, settled_result=None, window_done=False):
+        return self.registrar_spin(saiu, acertou, settled_result, window_done=window_done)
+
+    def avancar_pendentes_stream(self, hist, settled):
+        """Fecha janelas SOMBRA/OPERAR só com o stream (sem depender da UI/pad5).
+        hist/settled: mais recente primeiro. Eventos com settled > settled_ref são posteriores.
+        """
+        if not hist:
+            return []
+        settled = list(settled or [None] * len(hist))
+        if len(settled) < len(hist):
+            settled = list(settled) + [None] * (len(hist) - len(settled))
+        fechadas = []
+        # trabalha sobre cópia da lista de pendentes
+        for ult in list(self.d.get("decisoes_pendentes") or []):
+            if ult.get("resultado") is not None or not ult.get("alvos"):
+                continue
+            sref = ult.get("settled_ref")
+            janela = max(1, int(ult.get("janela") or 3))
+            alvos = set(str(a) for a in (ult.get("alvos") or []))
+            base_alvos = set(str(a) for a in (ult.get("baseline_alvos") or []))
+            spins = list(ult.get("spins") or [])
+            known = set()
+            for s in spins:
+                if not isinstance(s, dict) or s.get("settled") is None:
+                    continue
+                known.add(str(s.get("settled")))
+                try:
+                    from time_utils import canonical_ts as _cts
+                    c = _cts(s.get("settled"))
+                    if c:
+                        known.add(c)
+                except Exception:
+                    pass
+            # pares posteriores em ordem cronológica (antigo → novo)
+            posteriores = []
+            for n, s in zip(hist, settled):
+                if s is None:
+                    continue
+                if sref is not None:
+                    try:
+                        if _ts_key(s) <= _ts_key(sref):
+                            continue
+                    except Exception:
+                        if str(s) <= str(sref):
+                            continue
+                posteriores.append((n, s))
+            posteriores.sort(key=lambda x: _ts_key(x[1]) if x[1] is not None else x[1])
+            mudou = False
+            for n, s in posteriores:
+                try:
+                    from time_utils import canonical_ts as _cts
+                    sk = _cts(s) or str(s)
+                except Exception:
+                    sk = str(s)
+                if sk in known or str(s) in known:
+                    continue
+                acertou = str(n) in alvos
+                if acertou:
+                    ult["hits"] = int(ult.get("hits") or 0) + 1
+                else:
+                    ult["misses"] = int(ult.get("misses") or 0) + 1
+                if str(n) in base_alvos:
+                    ult["baseline_hits"] = int(ult.get("baseline_hits") or 0) + 1
+                spins.append({"saiu": n, "acertou": acertou, "settled": s})
+                known.add(str(s))
+                mudou = True
+                # janela FIXA de J spins (sem early-stop) — baseline e modelo no mesmo horizonte
+                if len(spins) >= janela:
+                    break
+            if not mudou:
+                continue
+            ult["spins"] = spins[-20:]
+            if len(spins) < janela:
+                self.save()
+                continue
+            # fechar janela
+            acertou_janela = int(ult.get("hits") or 0) > 0
+            baseline_acertou = int(ult.get("baseline_hits") or 0) > 0
+            last_spin = spins[-1] if spins else {}
+            ult["resultado"] = {
+                "saiu": last_spin.get("saiu"), "acertou": acertou_janela,
+                "baseline_acertou": baseline_acertou,
+                "settled": last_spin.get("settled"),
+                "hits": ult.get("hits"), "misses": ult.get("misses"),
+                "baseline_hits": ult.get("baseline_hits", 0),
+                "spins_n": len(spins),
+            }
+            dist = ult.get("dist_sel") or {}
+            p_sel = sum(float(v) for v in dist.values()) if dist else float(ult.get("conf") or 0)
+            p_sel = min(max(p_sel, 1e-6), 1 - 1e-6)
+            J = max(1, int(ult.get("janela") or len(spins) or 1))
+            p_janela = min(max(1.0 - (1.0 - p_sel) ** J, 1e-6), 1 - 1e-6)
+            self.d.setdefault("calib", []).append({
+                "p": p_janela, "y": 1.0 if acertou_janela else 0.0,
+                "tipo": "janela", "id": ult.get("id"), "J": J, "p_sel": p_sel,
+                "pipeline_version": PIPELINE_VERSION,
+                "eval_protocol": EVAL_PROTOCOL,
+                "p_nota": "approx_indep",
+            })
+            self.d["calib"] = self.d["calib"][-200:]
+            self.d.setdefault("avaliadas", []).append(copy.deepcopy(ult))
+            self.d["avaliadas"] = self.d["avaliadas"][-100:]
+            # remove dos pendentes
+            self.d["decisoes_pendentes"] = [
+                d for d in (self.d.get("decisoes_pendentes") or []) if d.get("id") != ult.get("id")
+            ]
+            fechadas.append(ult)
+        if fechadas:
+            self.save()
+        return fechadas
+
+
+    def novidade(self, hist):
+        seq = [str(x) for x in hist[:12]]
+        cnt = Counter(seq)
+        prev = self.d.get("novidades") or []
+        best = 0.0
+        for p in prev[-25:]:
+            old_seq = p.get("seq") or []
+            match = sum(1 for i in range(min(len(seq), len(old_seq))) if seq[i]==old_seq[i])
+            pos_sim = match / max(len(seq), 1)
+            old_c = Counter(old_seq)
+            multi_sim = sum((cnt & old_c).values()) / max(sum((cnt | old_c).values()), 1)
+            best = max(best, 0.6*pos_sim + 0.4*multi_sim)
+        is_new = best < 0.5
+        self.d.setdefault("novidades", []).append({"seq": seq, "em": datetime.now().isoformat(timespec="seconds"), "sim_max": best})
+        self.d["novidades"] = self.d["novidades"][-40:]
+        self.save()
+        return is_new, best
+
+    def log_modulo(self, nome, conf, dt_ms, extra=""):
+        self.d.setdefault("modulos", []).append({
+            "nome": nome, "conf": float(conf), "dt_ms": round(float(dt_ms),2),
+            "extra": str(extra)[:120], "em": datetime.now().isoformat(timespec="seconds"),
+        })
+        self.d["modulos"] = self.d["modulos"][-80:]
+        self.save()
+
+    def _so_versao_atual(self, rows):
+        """Só registros desta PIPELINE_VERSION."""
+        return [r for r in (rows or []) if r.get("eval_protocol") == EVAL_PROTOCOL]
+
+    def modelo_ativo_atual(self):
+        mv = self.d.get("modelo_ativo_v")
+        if isinstance(mv, dict) and PIPELINE_VERSION in mv:
+            return bool(mv[PIPELINE_VERSION])
+        # 3 — se legado desativou, NÃO herda: v12 começa ativo
+        return True
+
+    def set_modelo_ativo(self, ativo: bool):
+        mv = self.d.setdefault("modelo_ativo_v", {})
+        if not isinstance(mv, dict):
+            mv = {}; self.d["modelo_ativo_v"] = mv
+        mv[PIPELINE_VERSION] = bool(ativo)
+        self.d["modelo_ativo"] = bool(ativo)  # espelho
+        self.save()
+
+    def relatorio_metricas(self):
+        av = self._so_versao_atual(self.d.get("avaliadas") or [])
+        cal = [c for c in (self.d.get("calib") or []) if c.get("pipeline_version") == PIPELINE_VERSION]
+        taxa, ic, n = Metricas.taxa_e_ic(av)
+        brier = Metricas.brier_janela(cal)
+        ll = Metricas.logloss_janela(cal)
+        nv = self.d.get("n_aguardando_total_v")
+        if isinstance(nv, dict):
+            n_ag = int(nv.get(PIPELINE_VERSION) or 0)
+        else:
+            n_ag = int(self.d.get("n_aguardando_total") or 0)
+        cob = Metricas.cobertura(n, n + n_ag)
+        tm, tb, ganho = Metricas.ganho_baseline_janela(av)
+        return {
+            "n": n, "taxa": taxa, "ic95": ic, "brier": brier, "logloss": ll,
+            "cobertura": cob, "taxa_modelo": tm, "taxa_baseline": tb, "ganho": ganho,
+            "modelo_ativo": self.modelo_ativo_atual(),
+            "n_aguardando": n_ag,
+            "protocolo": PIPELINE_VERSION,
+            "n_legado_ignorado": len(self.d.get("avaliadas") or []) - n,
+        }
+
+    def teste_negativo(self, k=5):
+        """Embaralha spins de cada janela — somente protocolo atual."""
+        av = copy.deepcopy([a for a in (self.d.get("avaliadas") or []) if a.get("eval_protocol") == EVAL_PROTOCOL])
+        if len(av) < 8:
+            return {"ok": False, "motivo": "poucas avaliadas"}
+        hits_real = sum(1 for a in av if (a.get("resultado") or {}).get("acertou"))
+        # pool de todos os saídos observados nas janelas
+        pool = []
+        for a in av:
+            spins = a.get("spins") or []
+            if spins:
+                pool.extend([s.get("saiu") for s in spins])
+            else:
+                pool.append((a.get("resultado") or {}).get("saiu"))
+        rng = np.random.default_rng(42)
+        hits_shuf = 0
+        for a in av:
+            spins = a.get("spins") or []
+            J = max(1, len(spins) or int(a.get("janela") or 1))
+            # amostra J resultados aleatórios do pool
+            if len(pool) >= J:
+                fake = list(rng.choice(pool, size=J, replace=False))
+            else:
+                fake = list(rng.choice(pool, size=J, replace=True)) if pool else []
+            if any(s in (a.get("alvos") or []) for s in fake):
+                hits_shuf += 1
+        n = len(av)
+        self.d["negativo"] = {
+            "taxa_real": hits_real/n, "taxa_shuffle": hits_shuf/n,
+            "n": n, "em": datetime.now().isoformat(timespec="seconds"),
+        }
+        self.save()
+        suspeito = (hits_shuf/n) >= (hits_real/n) - 0.02 and (hits_real/n) > 0.35
+        return {"ok": True, "taxa_real": hits_real/n, "taxa_shuffle": hits_shuf/n, "suspeito_leak": suspeito}
+
+# ---------- LSTM ----------
+if HAS_TORCH:
+    class RedeSeq(nn.Module):
+        def __init__(self, n):
+            super().__init__()
+            self.lstm = nn.LSTM(n, 64, 2, batch_first=True, dropout=0.2)
+            self.fc = nn.Linear(64, n)
+        def forward(self, x):
+            o,_ = self.lstm(x)
+            return self.fc(o[:,-1,:])
+
+class MotorLSTM:
+    def __init__(self, jogo: str, is_ct=False):
+        self.jogo = jogo
+        self.is_ct = is_ct
+        self.n = 8 if is_ct else 37
+        self.k_alvos = 3 if is_ct else 7
+        self.device = DEVICE
+        self.has = HAS_TORCH
+        self.limiar = 0.08 if not is_ct else 0.12
+        self.treinado = False
+        self.weights_path = str(ROOT / f"lstm_{jogo}.pt")
+        self.temperature = 1.0
+        self.load_error = None
+        self.last_holdout = {}
+        if self.has:
+            self.m = RedeSeq(self.n).to(self.device)
+            self.opt = optim.Adam(self.m.parameters(), lr=0.005)
+            self.loss = nn.CrossEntropyLoss()
+            self._load()
+
+    def _load(self):
+        self.load_error = None
+        if self.has and os.path.isfile(self.weights_path):
+            try:
+                import json as _json
+                man_path = self.weights_path + ".manifest.json"
+                if not os.path.isfile(man_path):
+                    self.load_error = "manifesto ausente — pesos ignorados (salve de novo para criar)"
+                    self.treinado = False
+                    return
+                try:
+                    man = _json.loads(open(man_path, encoding="utf-8").read())
+                except Exception as e:
+                    self.load_error = f"manifesto inválido: {e}"
+                    self.treinado = False
+                    return
+                if man.get("version") and man.get("version") != PIPELINE_VERSION:
+                    self.load_error = f"manifesto legado version={man.get('version')} — ignorado"
+                    self.treinado = False
+                    return
+                st = torch.load(self.weights_path, map_location=self.device)
+                ver = st.get("version")
+                if ver != PIPELINE_VERSION:
+                    self.load_error = f"pesos legado version={ver} (atual={PIPELINE_VERSION}) — ignorados"
+                    self.treinado = False
+                    return
+                self.m.load_state_dict(st["model"])
+                self.limiar = st.get("limiar", self.limiar)
+                self.temperature = float(st.get("temperature", 1.0))
+                self.treinado = True
+                self._clamp_limiar()
+            except Exception as e:
+                self.load_error = str(e)
+                self.treinado = False
+
+    def _save(self):
+        if not self.has: return
+        try:
+            torch.save({
+                "model": self.m.state_dict(), "limiar": self.limiar,
+                "temperature": self.temperature, "version": PIPELINE_VERSION,
+            }, self.weights_path)
+            # manifesto exigido para carga seguinte
+            import json as _json
+            from pathlib import Path as _P
+            man = {
+                "weights_path": self.weights_path,
+                "jogo": getattr(self, "jogo", None),
+                "version": PIPELINE_VERSION,
+                "limiar": float(self.limiar),
+                "temperature": float(getattr(self, "temperature", 1.0) or 1.0),
+                "device": str(DEVICE) if "DEVICE" in dir() else "cpu",
+            }
+            _P(self.weights_path + ".manifest.json").write_text(
+                _json.dumps(man, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        except Exception as e:
+            # não esconder a causa
+            try:
+                msgs_attr = getattr(self, "_last_save_err", None)
+                self._last_save_err = f"{type(e).__name__}: {e}"
+            except Exception:
+                pass
+
+    def _clamp_limiar(self):
+        self.limiar = float(min(0.16, max(0.04, float(self.limiar or 0.08))))
+
+    def ajustar(self, d):
+        self.limiar = max(0.04, min(0.16, self.limiar+d))
+
+
+    def _enc(self, h):
+        if self.is_ct: return [MAP_CT_TO_IDX[x] for x in h if x in MAP_CT_TO_IDX]
+        return [x for x in h if isinstance(x,int) and 0<=x<=36]
+
+    def _xy(self, seq, w=10):
+        X,Y=[],[]
+        for i in range(len(seq)-w):
+            t=np.zeros((w,self.n),np.float32)
+            for j,v in enumerate(seq[i:i+w]): t[j,v]=1
+            X.append(t); Y.append(seq[i+w])
+        if not X: return None,None
+        return torch.tensor(np.array(X)).to(self.device), torch.tensor(Y,dtype=torch.long).to(self.device)
+
+    def _otimizar_temperatura(self, logits_val, y_val):
+        if logits_val is None or len(y_val)==0: return
+        best_t, best_nll = 1.0, 1e9
+        for t in [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5]:
+            p = torch.softmax(logits_val/t, dim=1)
+            nll = 0.0
+            for i,yi in enumerate(y_val.tolist()):
+                nll += -math.log(float(p[i, yi].clamp(min=1e-8)))
+            nll /= len(y_val)
+            if nll < best_nll:
+                best_nll, best_t = nll, t
+        self.temperature = best_t
+
+    def _reiniciar_rede(self):
+        """Reinicia pesos para avaliação independente (sem herdar .pt com futuro)."""
+        self.m = RedeSeq(self.n).to(self.device)
+        self.opt = optim.Adam(self.m.parameters(), lr=0.005)
+        self.temperature = 1.0
+
+    def walk_forward(self, hist_recente_primeiro):
+        """
+        Walk-forward sem sobreposição de testes:
+        blocos [train|val|test] contíguos e test de um corte não reaparece no próximo.
+        Val mínima exigida; T do modelo salvo calibrada em holdout puro (últimos 10%).
+        """
+        if not self.has: return "sem torch", 0.0, 0.0
+        d = self._enc(cronologico(hist_recente_primeiro))
+        if len(d) < 50: return "dados<50", 0.0, 0.0
+        w = 10
+        # blocos NÃO sobrepostos: avança ponteiro
+        hits_ia, hits_b, total = 0, 0, 0
+        cursor = max(int(len(d)*0.35), w+15)
+        fold = 0
+        while cursor < int(len(d)*0.92):
+            # train: tudo antes de cursor-val_size
+            val_size = max(8, int((cursor) * 0.15))
+            train_end = cursor - val_size
+            if train_end < w+8:
+                cursor += max(8, int(len(d)*0.08))
+                continue
+            train = d[:train_end]
+            val = d[train_end:cursor]
+            test_len = max(6, int(len(d)*0.08))
+            test_seg = d[cursor:cursor+test_len]
+            if len(test_seg) < 3:
+                break
+            if len(val) < w+2:
+                # 2 — val pequena demais: pula calibração T fina, usa T=1.0
+                temp_ok = False
+            else:
+                temp_ok = True
+            self._reiniciar_rede()
+            Xt,Yt = self._xy(train, w=w)
+            if Xt is None or len(Xt)<5:
+                cursor += test_len
+                continue
+            loader = DataLoader(TensorDataset(Xt,Yt), batch_size=16, shuffle=True)
+            self.m.train()
+            for _ in range(6):
+                for bx,by in loader:
+                    self.opt.zero_grad(); self.loss(self.m(bx),by).backward(); self.opt.step()
+            self.m.eval()
+            with torch.no_grad():
+                if temp_ok:
+                    Xv,Yv = self._xy(val, w=w)
+                    if Xv is not None and len(Yv)>=3:
+                        self._otimizar_temperatura(self.m(Xv), Yv)
+                    else:
+                        self.temperature = 1.0
+                else:
+                    self.temperature = 1.0
+            base = [k for k,_ in Counter(train).most_common(self.k_alvos)]
+            for i in range(len(test_seg)):
+                past = d[:cursor] + test_seg[:i]
+                if len(past) < w: continue
+                seq = past[-w:]
+                tarr = np.zeros((1,w,self.n), np.float32)
+                for j,v in enumerate(seq): tarr[0,j,v]=1
+                X = torch.tensor(tarr).to(self.device)
+                with torch.no_grad():
+                    pr = torch.softmax(self.m(X)[0]/max(self.temperature,1e-3), dim=0)
+                    _, idx = torch.topk(pr, self.k_alvos)
+                    pred = [int(x) for x in idx.tolist()]
+                y = test_seg[i]
+                total += 1
+                if y in pred: hits_ia += 1
+                if y in base: hits_b += 1
+            fold += 1
+            cursor += test_len  # 5 — avança sem reutilizar test
+        if total == 0:
+            return "WF sem pontos", 0.0, 0.0
+        taxa_ia = hits_ia/total
+        taxa_b = hits_b/total
+        # 3/5 — holdout puro para T; se série curta, aumenta fração (até 25%) para ter >= w+3
+        self._reiniciar_rede()
+        hold_frac = 0.10
+        if len(d) < 100:
+            # garante holdout mínimo ~ w+3 pontos
+            need = w + 5
+            hold_frac = min(0.25, max(0.10, need / max(len(d), 1)))
+        hold = int(len(d) * (1.0 - hold_frac))
+        hold = min(hold, len(d) - (w + 3)) if len(d) > w + 5 else int(len(d)*0.85)
+        hold = max(hold, w + 8)
+        train_op = d[:hold]
+        holdout = d[hold:]
+        Xt,Yt = self._xy(train_op, w=w)
+        if Xt is not None and len(Xt)>=5:
+            loader = DataLoader(TensorDataset(Xt,Yt), batch_size=16, shuffle=True)
+            self.m.train()
+            for _ in range(8):
+                for bx,by in loader:
+                    self.opt.zero_grad(); self.loss(self.m(bx),by).backward(); self.opt.step()
+            self.m.eval()
+            with torch.no_grad():
+                if len(holdout) > w+2:
+                    Xh,Yh = self._xy(holdout, w=w)
+                    if Xh is not None and len(Yh)>=2:
+                        self._otimizar_temperatura(self.m(Xh), Yh)
+                    else:
+                        self.temperature = 1.0
+                else:
+                    self.temperature = 1.0
+        self.treinado = True
+        self._save()
+        self.last_holdout = {"ia": taxa_ia, "baseline": taxa_b, "k": self.k_alvos, "T": self.temperature, "pontos": total, "folds": fold}
+        return f"WF({total}pts,{fold}folds,reinit,no-overlap) IA {taxa_ia*100:.1f}% vs base {taxa_b*100:.1f}% T={self.temperature:.2f}", taxa_ia, taxa_b
+
+
+    def prever_dist(self, hist_recente_primeiro):
+        if not self.has or not self.treinado:
+            c=Counter(hist_recente_primeiro[:30])
+            tops=[k for k,_ in c.most_common(self.k_alvos)]
+            return tops, 0.05, {t:0.05 for t in tops}, "FALLBACK_NAO_LSTM", {"is_lstm": False}
+        d=self._enc(cronologico(hist_recente_primeiro))
+        if len(d)<10: return [], 0.0, {}, "curto", {"is_lstm": False}
+        seq=d[-10:]
+        t=np.zeros((1,10,self.n),np.float32)
+        for j,v in enumerate(seq): t[0,j,v]=1
+        X=torch.tensor(t).to(self.device)
+        self.m.eval()
+        with torch.no_grad():
+            logits = self.m(X)[0]
+            probs = torch.softmax(logits/max(self.temperature,1e-3), dim=0)
+            pmax=float(torch.max(probs))
+            influ_steps=[]
+            base_top=pmax
+            for step in range(10):
+                t2=t.copy(); t2[0,step,:]=0
+                pr2=torch.softmax(self.m(torch.tensor(t2).to(self.device))[0]/max(self.temperature,1e-3), dim=0)
+                influ_steps.append(round(base_top-float(torch.max(pr2)),4))
+            if pmax < self.limiar:
+                dist={(MAP_IDX_TO_CT[i] if self.is_ct else i): float(probs[i]) for i in range(self.n)}
+                return [], pmax, dist, f"SEM EVIDÊNCIA ({pmax*100:.1f}%<{self.limiar*100:.1f}%)", {"steps":influ_steps,"is_lstm":True}
+            pv, idx = torch.topk(probs, self.k_alvos)
+            alvos=[]; dist={}
+            for i in range(self.k_alvos):
+                ix=idx[i].item()
+                a = MAP_IDX_TO_CT[ix] if self.is_ct else ix
+                alvos.append(a); dist[a]=float(pv[i])
+            return alvos, pmax, dist, f"LSTM OK {pmax*100:.1f}% T={self.temperature:.2f}", {"steps":influ_steps,"top":dist,"is_lstm":True}
+
+class MetaSupervisora:
+    def __init__(self):
+        self._last_total = -1
+    def educar(self, ok, err, brier=None, limiar_atual=0.08, ganho=None, n_avaliadas=0, modelo_ativo=True, taxa_janela=None):
+        # unidade principal = JANELA (taxa_janela / n_avaliadas); ok/err só auxiliar
+        cmd={"limiar_delta":0.0,"janela_mod":0,"desativar_modelo":False,"reativar_modelo":False}
+        if taxa_janela is not None and n_avaliadas > 0:
+            taxa = taxa_janela * 100
+            msg = f"Taxa janela {taxa:.1f}% (n={n_avaliadas})."
+            ref_n = n_avaliadas
+        else:
+            total = ok + err
+            taxa = (ok/total*100) if total else 100.0
+            msg = f"Taxa evento {taxa:.1f}% ({ok}/{total}) [provisório]."
+            ref_n = total
+        novos = ref_n > self._last_total
+        if not novos:
+            msg += " sem novas janelas — estável."
+            return cmd, msg
+        self._last_total = ref_n
+        if ref_n>=5 and taxa<30:
+            msg+=" CRÍTICO <30%."
+            if limiar_atual < 0.15: cmd["limiar_delta"]=0.01
+            cmd["janela_mod"]=-1
+        elif ref_n>=5 and taxa>=45:
+            msg+=" Acima da meta."; cmd["limiar_delta"]=-0.01; cmd["janela_mod"]=1
+        if brier is not None and brier>0.25 and limiar_atual < 0.15:
+            cmd["limiar_delta"]+=0.01; msg+=f" Brier~janela {brier:.2f} (approx)."
+        if ganho is not None and ganho < -0.03 and n_avaliadas >= 20 and modelo_ativo:
+            msg += f" ganho {ganho:.3f} n={n_avaliadas} — desativar."
+            cmd["desativar_modelo"] = True
+        if ganho is not None and ganho > 0.0 and n_avaliadas >= 20 and not modelo_ativo:
+            msg += f" ganho {ganho:.3f} — reativar."
+            cmd["reativar_modelo"] = True
+        # reativação exploratória a cada 30 janelas mesmo com ganho levemente negativo
+        if not modelo_ativo and n_avaliadas >= 30 and n_avaliadas % 30 == 0:
+            msg += " reativação exploratória periódica."
+            cmd["reativar_modelo"] = True
+        return cmd, msg
+
+class PipelinePerceptivo:
+    # Quantas teorias validadas DISTINTAS precisam concordar para o consenso
+    # abrir gatilho sem o LSTM. Ver o "Caminho 2" em processar().
+    # Cada teoria aqui já passou pela sombra prospectiva ao vivo e pelo FDR —
+    # duas concordando são dois testes independentes que sobreviveram, não dois
+    # palpites. Uma sozinha continua não abrindo gatilho.
+    MIN_TEORIAS_SOZINHO = 2
+
+    def __init__(self, jogo: str = "mega_fire"):
+        self.jogo = jogo
+        self.is_ct = (jogo == "crazy_time")
+        self.qual = QualidadeDados()
+        self.ctx = Contexto()
+        self.perc = Percepcao()
+        self.m_est = ModeloEstatistico()
+        self.m_anom = ModeloAnomalia()
+        self.m_setor = ModeloSetor()
+        self.baseline = BaselineFrequencia()
+        self.ger = GeradorHipoteses()
+        self.crit = Critico()
+        self.mem = Memoria(jogo)
+        self.lstm = MotorLSTM(jogo, is_ct=self.is_ct)
+        self.meta = MetaSupervisora()
+        self.ciclos = 0
+        self.n_classes = 8 if self.is_ct else 37
+        self.k_alvos = 3 if self.is_ct else 7
+        self.prefs = {"peso_isol":1.0,"boost_anti":False,"prioritizar_atraso":False,"reduzir_12":False,"janela":None}
+
+    def processar(self, historico, ok, err, settled=None, mults=None, last_result=None, active_selection=None):
+        t0=time.time(); msgs=[]
+        # limiar nunca permanece inflado de sessões antigas
+        try:
+            self.lstm.limiar = float(min(0.16, max(0.04, float(self.lstm.limiar or 0.08))))
+        except Exception:
+            self.lstm.limiar = 0.08
+        msgs.append(f"[Versão] pipeline={PIPELINE_VERSION} features={FEATURE_VERSION} jogo={self.jogo}")
+
+        
+        # --- 12 agentes de descoberta → Crítico → META → Biblioteca ---
+        fab_res = {"candidatos": [], "msgs": [], "n_propostas": 0}
+        self._fab_cands = []
+        try:
+            if ciclo_academia_autonoma is not None:
+                _hist_fab = historico if historico is not None else []
+                _ar = ciclo_academia_autonoma(self.jogo, _hist_fab, settled=settled, mults=mults)
+                for _m in _ar.get("msgs") or []:
+                    msgs.append(_m)
+                self._fab_cands = list(_ar.get("candidatos") or [])
+            elif False and ciclo_descoberta is not None:
+                # legado desativado (stub); autoridade = academia_autonoma
+                pass
+            elif fabricar_para is not None:
+                _hist_fab = historico if historico is not None else []
+                _maxk = 7 if self.jogo != "crazy_time" else 3
+                fr = fabricar_para(self.jogo, _hist_fab, mults=mults, max_k=_maxk)
+                for _m in fr.get("msgs") or []:
+                    msgs.append(_m)
+                self._fab_cands = list(fr.get("candidatos") or [])
+        except Exception as _e:
+            msgs.append(f"[Descoberta] erro: {_e}")
+            self._fab_cands = []
+        except Exception as _e:
+            msgs.append(f"[Fabricante] erro: {_e}")
+            self._fab_cands = []
+
+
+        ordens = ler_ordens(self.jogo)
+        if ordens.get("_pendente"):
+            msgs.append(f"[Ordens] NOVA={ {k:ordens[k] for k in ('janela','peso_isol','peso_motor','boost_anti','prioritizar_atraso','reduzir_12','motivo') if ordens.get(k) is not None} }")
+            if not marcar_ordem_aplicada(self.jogo):
+                msgs.append("[Ordens] aviso: não foi possível marcar aplicada (lock/disco)")
+            if ordens.get("peso_motor") is not None:
+                try: self.lstm.limiar = max(0.04, min(0.16, self.lstm.limiar - 0.01*float(ordens["peso_motor"])/3))
+                except Exception: pass
+        elif ordens.get("_ja_aplicada"):
+            msgs.append(f"[Ordens] estáveis motivo={ordens.get('motivo')}")
+
+        for key in ("peso_isol","boost_anti","prioritizar_atraso","reduzir_12","janela"):
+            if ordens.get(key) is not None:
+                self.prefs[key] = ordens[key]
+        w_isol = float(self.prefs.get("peso_isol") or 1.0)
+        boost_anti = bool(self.prefs.get("boost_anti"))
+        prior_atraso = bool(self.prefs.get("prioritizar_atraso"))
+
+        if last_result is not None:
+            window_done = bool(last_result.get("window_done"))  # NÃO usar acertou — horizonte fixo
+            aval = self.mem.avaliar_ultima(
+                last_result.get("saiu"), last_result.get("acertou"),
+                settled_result=last_result.get("settled"), window_done=window_done,
+            )
+            if isinstance(aval, dict) and aval.get("ignored"):
+                msgs.append(f"[Memória] anti-leak: {aval.get('reason')}")
+            elif isinstance(aval, dict) and aval.get("open"):
+                msgs.append(f"[Memória] janela aberta id={aval.get('id')} h={aval.get('hits')} m={aval.get('misses')}")
+            elif aval:
+                msgs.append(f"[Memória] FECHOU id={aval.get('id')} acertou={(aval.get('resultado') or {}).get('acertou')}")
+
+        hist, hist_set, rep = self.qual.validar(historico, settled, is_ct=self.is_ct)
+        msgs.append(f"[Qualidade] n={rep['n']} dup={rep['duplicados']} inv={rep['invalidos']} ordem_ok={rep['ordem_ok']} corr={rep['ordem_corrigida']}")
+        if rep.get("interrompeu"):
+            return self._aguardar(msgs, "ordem temporal inválida", settled=settled, n_hist=len(historico or []))
+        # Sombra/OPERAR: encerra janelas no motor (não depende de pad5/UI)
+        try:
+            fechadas = self.mem.avancar_pendentes_stream(hist, hist_set or settled)
+            for u in fechadas:
+                r = u.get("resultado") or {}
+                msgs.append(
+                    f"[Memória/stream] FECHOU id={u.get('id')} modo={u.get('modo')} "
+                    f"acertou={r.get('acertou')} spins={r.get('spins_n')}"
+                )
+        except Exception as e:
+            msgs.append(f"[Memória/stream] erro: {e}")
+        if len(hist) < (8 if self.is_ct else 10):
+            return self._aguardar(msgs, "dados insuficientes", settled=settled, n_hist=len(hist) if hist is not None else len(historico or []))
+
+        rel = self.mem.relatorio_metricas()
+        ganho = rel.get("ganho")
+        cmd, msg_m = self.meta.educar(
+            ok, err, rel.get("brier"), self.lstm.limiar, ganho,
+            n_avaliadas=int(rel.get("n") or 0),
+            modelo_ativo=bool(self.mem.modelo_ativo_atual()),
+            taxa_janela=rel.get("taxa"),
+        )
+        self.lstm.ajustar(cmd["limiar_delta"])
+        if cmd.get("desativar_modelo"):
+            self.mem.set_modelo_ativo(False)
+            msgs.append("[Meta] MODELO DESATIVADO (só este protocolo) — ganho negativo n>=20")
+        if cmd.get("reativar_modelo"):
+            self.mem.set_modelo_ativo(True)
+            msgs.append("[Meta] MODELO REATIVADO (este protocolo)")
+        msgs.append(f"[Meta] {msg_m} limiar={self.lstm.limiar:.3f}")
+
+        # métricas no feed
+        if rel.get("n"):
+            ic = rel.get("ic95") or (0,0)
+            msgs.append(
+                f"[Métricas] n={rel['n']} taxa={None if rel['taxa'] is None else round(rel['taxa']*100,1)}% "
+                f"IC95=[{ic[0]*100:.1f}%,{ic[1]*100:.1f}%] "
+                f"Brier={rel.get('brier')} logloss={rel.get('logloss')} "
+                f"cob={None if rel.get('cobertura') is None else round(rel['cobertura']*100,1)}% "
+                f"base={rel.get('taxa_baseline')} ganho={rel.get('ganho')} ag={rel.get('n_aguardando')}"
+            )
+
+        fat=self.ctx.fatias(hist)
+        mudou, ov, info = self.ctx.mudanca_regime(hist)
+        msgs.append(f"[Contexto] c={len(fat['curta'])} m={len(fat['media'])} l={len(fat['longa'])} regime={mudou} ({info})")
+        is_new, sim = self.mem.novidade(hist)
+        msgs.append(f"[Novidade] nova={is_new} sim={sim:.2f}")
+
+        self.ciclos += 1
+        lstm_vs_base=None
+        precisa = self.lstm.has and ((not self.lstm.treinado) or (self.ciclos % 5 == 0))
+        if precisa:
+            t1=time.time()
+            msg_tr,tia,tb = self.lstm.walk_forward(hist)
+            lstm_vs_base = tia-tb
+            self.mem.log_modulo("LSTM_WF", tia, (time.time()-t1)*1000, msg_tr)
+            msgs.append(f"[WalkForward] {msg_tr}")
+            if self.ciclos % 15 == 0:
+                neg = self.mem.teste_negativo(self.k_alvos)
+                msgs.append(f"[TesteNegativo] {neg}")
+
+        t1=time.time()
+        if self.is_ct:
+            feats=self.perc.ct(hist)
+            t_e=time.time(); est=self.m_est.rank_ct(feats, prior_atraso, w_isol); self.mem.log_modulo("ESTAT", est[2], (time.time()-t_e)*1000)
+            t_a=time.time(); anom=self.m_anom.rank_ct(feats, boost_anti); self.mem.log_modulo("ANOMALIA", anom[1], (time.time()-t_a)*1000)
+            t_s=time.time(); setor=self.m_setor.rank_ct(feats); self.mem.log_modulo("SETOR", setor[2], (time.time()-t_s)*1000)
+            ranks={"estat":est,"anom":anom,"setor":setor}
+            hips=self.ger.ct(feats, ranks)
+        else:
+            feats=self.perc.roleta(hist, mults=mults)
+            t_e=time.time(); est=self.m_est.rank_roleta(feats, prior_atraso, w_isol); self.mem.log_modulo("ESTAT", est[2], (time.time()-t_e)*1000)
+            t_a=time.time(); anom=self.m_anom.rank_roleta(feats, boost_anti); self.mem.log_modulo("ANOMALIA", anom[1], (time.time()-t_a)*1000)
+            t_s=time.time(); setor=self.m_setor.rank_roleta(feats); self.mem.log_modulo("SETOR", setor[2], (time.time()-t_s)*1000)
+            ranks={"estat":est,"anom":anom,"setor":setor}
+            hips=self.ger.roleta(feats, ranks)
+            if mudou:
+                for h in hips:
+                    if h["nome"]=="ESTAT": h["peso"]*=0.7
+        self.mem.log_modulo("Percepcao", 1.0, (time.time()-t1)*1000, feats.get("feature_version"))
+        msgs.append(f"[Features] version={feats.get('feature_version')} keys={list(feats.keys())[:8]}")
+
+        # 6 — percepcao_lab como produtor de features/hipóteses AUDITÁVEIS (peso moderado)
+        lab_items = []
+        if HAS_PLAB:
+            try:
+                if self.is_ct:
+                    for fn in (getattr(PLAB, "ag_ct_atraso", None), getattr(PLAB, "ag_ct_quente", None)):
+                        if callable(fn):
+                            lab_items.extend(PLAB.normaliza(fn(hist)))
+                else:
+                    for fn_name in ("ag_final_dominante", "ag_atrasados", "ag_ausentes", "ag_setor_roda", "ag_vizinhos_ultimo", "ag_markov"):
+                        fn = getattr(PLAB, fn_name, None)
+                        if callable(fn):
+                            lab_items.extend(PLAB.normaliza(fn(hist)))
+                pad, hip, anti = PLAB.classificar(lab_items)
+                lab_items = (pad + hip + anti)[:12]
+                msgs.append(f"[LabExterno] itens={len(lab_items)} nomes={[it.get('nome') for it in lab_items[:6]]}")
+            except Exception as e:
+                msgs.append(f"[LabExterno] erro: {e}")
+                lab_items = []
+        else:
+            msgs.append("[LabExterno] percepcao_lab indisponível")
+
+        # ESTUDO INDEPENDENTE (12 agentes) → biblioteca → hipóteses de entrada
+        estudo_items = []
+        if HAS_ESTUDO:
+            try:
+                ESTUDO.estudar(self.jogo, hist, mults=mults if not self.is_ct else None)
+                estudo_items = ESTUDO.ler_estudos(self.jogo)
+                msgs.append(
+                    f"[EstudoIndep] publicados={len(estudo_items)} "
+                    f"ids={[it.get('id') for it in estudo_items[:6]]}"
+                )
+            except Exception as e:
+                msgs.append(f"[EstudoIndep] erro: {e}")
+                estudo_items = []
+        else:
+            msgs.append("[EstudoIndep] estudo_lab indisponível")
+
+        # Academia: pesquisadores → crítico → META → biblioteca validada → motor
+        validado = []
+        if HAS_ACADEMIA:
+            try:
+                # Pipeline NÃO executa ciclo — somente consulta (serviço acadêmico é a autoridade)
+                # reaproveita CT_SETORES (já definido no topo do arquivo) em vez de
+                # redigitar a lista — evitava o typo "CrazyTime" (nome errado; o
+                # setor bônus real se chama "CrazyBonus", igual a schema_eventos.CT_DOMAIN)
+                dominio_ac = (
+                    list(CT_SETORES) if self.is_ct else [str(i) for i in range(37)]
+                )
+                hist_ac = [str(x) for x in (hist or [])]
+                validado = ACADEMIA.conhecimento_validado_para_motor(
+                    self.jogo, hist=hist_ac, dominio=dominio_ac
+                )
+                import academia_db as _ADB
+                n_teste = len(_ADB.list_hipoteses(self.jogo, "em_teste"))
+                n_rej = len(_ADB.list_hipoteses(self.jogo, "rejeitada"))
+                mon = _ADB.get_monitor(self.jogo) or {}
+                meta = _ADB.get_meta(self.jogo) or {}
+                msgs.append(
+                    f"[Academia/consulta] validados={len(validado)} em_teste={n_teste} "
+                    f"rejeitadas={n_rej} meta={meta.get('ultima') or meta.get('estado')} "
+                    f"monitor_ms={mon.get('ultimo_ms')}"
+                )
+                if validado:
+                    msgs.append(f"[Academia] top validado={[v.get('hipotese') for v in validado[-3:]]}")
+                else:
+                    msgs.append("[Academia] sem conhecimento validado — motor sem tip acadêmico")
+            except Exception as e:
+                msgs.append(f"[Academia] erro consulta: {e}")
+        else:
+            msgs.append("[Academia] academia_agentes indisponível")
+
+
+        # lab/estudo NÃO entram no motor — só Academia validada
+        if lab_items:
+            msgs.append(f"[LabExterno] {len(lab_items)} percepções (auditoria; fora do motor)")
+        if estudo_items:
+            msgs.append(f"[EstudoIndep] {len(estudo_items)} estudos (auditoria; fora do motor)")
+
+        # Somente conhecimento VALIDADO pela META entra no motor.
+        # TODAS votam (antes só as 5 últimas, `validado[-5:]`, o que jogava fora
+        # a maioria dos votos quando havia muitas teorias ativas).
+        # Peso = quanto a teoria JÁ PROVOU ao vivo: margem do IC90 inferior da
+        # sombra sobre o baseline daquela teoria (evidencia_sombra vem da META).
+        # Teoria que só empata com o acaso vota fraco; com margem sólida, forte.
+        # "nums" só vem preenchido quando eval_cond(expr, hist) é verdadeiro,
+        # ou seja: só vota a teoria CABÍVEL para a situação ao vivo deste giro.
+        # As demais continuam validadas, apenas dormentes agora.
+        _n_teorias_votando = 0
+        for v in validado:
+            nums = v.get("nums") or []
+            if not nums:
+                continue
+            ev = v.get("evidencia_sombra") or {}
+            try:
+                margem = float(ev.get("ic90_low") or 0.0) - float(ev.get("baseline") or 0.0)
+            except (TypeError, ValueError):
+                margem = 0.0
+            # Peso do voto. A margem pelo ic90 é a medida dura e continua
+            # valendo para quem já validou. Mas ela é ZERO para toda teoria
+            # ainda acumulando — e como só validadas votavam, o consenso ficava
+            # sempre com zero teorias. Agora quem ainda acumula entra com o
+            # peso contínuo da evidência (academia_agentes._peso_evidencia),
+            # que é pequeno de propósito: uma teoria de 1,3x com 30 ativações
+            # vota com 0,16, contra 1,0 de uma percepção comum. Ela não manda
+            # sozinha em nada — ela só deixa de ser silenciada.
+            peso_ev = 0.0
+            try:
+                peso_ev = float(v.get("peso_evidencia") or 0.0)
+            except (TypeError, ValueError):
+                peso_ev = 0.0
+            if v.get("validada"):
+                peso = 1.0 + 4.0 * max(0.0, margem)  # 1.0 sem margem … ~2.2 com +30pp
+            else:
+                peso = max(0.15, peso_ev)            # acumulando: voz pequena, mas voz
+            nome_ag = str(v.get("agente") or "?")
+            uid = str(v.get("id") or nome_ag)[:8]
+            hips.append({
+                "nome": f"ACADEMIA_{nome_ag}:{uid}",   # identidade própria = voto próprio
+                "nums": list(nums)[:8],
+                "peso": round(peso, 3),
+                "desc": v.get("hipotese"),
+            })
+            _n_teorias_votando += 1
+        _n_padroes = sum(1 for h in hips if not str(h.get("nome","")).startswith("ACADEMIA_"))
+        msgs.append(
+            f"[Consenso] cabíveis agora: {_n_teorias_votando} teorias "
+            f"({sum(1 for _v in validado if _v.get('validada'))} validadas, "
+            f"{sum(1 for _v in validado if not _v.get('validada'))} acumulando) "
+            f"+ {_n_padroes} padrões"
+        )
+
+        for h in hips:
+            if prior_atraso and h.get("nome") in ("ESTAT","GAP_CICLO"):
+                h["peso"]=float(h.get("peso",1))*max(1.0,w_isol)
+            if boost_anti and h.get("nome") in ("ANOMALIA","ANTI_12","FINAIS"):
+                h["peso"]=float(h.get("peso",1))*1.35
+
+        # baseline mesmo k
+        base_alvos = self.baseline.prever(hist, self.k_alvos, self.is_ct)
+
+        t1=time.time()
+        alvos_l, conf, dist_l, msg_l, influ = self.lstm.prever_dist(hist)
+        self.mem.log_modulo("LSTM", conf, (time.time()-t1)*1000, msg_l)
+        msgs.append(f"[LSTM] {msg_l}")
+        if getattr(self.lstm, "load_error", None):
+            msgs.append(f"[LSTM] ERRO pesos: {self.lstm.load_error}")
+        if influ.get("steps"):
+            ranked_steps = sorted(enumerate(influ["steps"]), key=lambda x: -x[1])[:3]
+            msgs.append("[Explicabilidade] oclusão " + ", ".join(f"t-{10-i}:{d}" for i,d in ranked_steps))
+
+        is_real_lstm = bool((influ or {}).get("is_lstm")) and "FALLBACK" not in msg_l and "curto" not in msg_l
+        modelo_ativo = self.mem.modelo_ativo_atual()
+        if alvos_l and is_real_lstm and modelo_ativo:
+            hips.append({"nome":"LSTM","nums":alvos_l,"peso":2.6})
+        elif alvos_l and not is_real_lstm:
+            hips.append({"nome":"HEURISTICA","nums":alvos_l,"peso":1.0})
+            msgs.append("[LSTM] fallback — não conta como LSTM")
+        elif not modelo_ativo:
+            msgs.append("[LSTM] modelo desativado (não supera baseline) — só hipóteses clássicas")
+
+        # hipóteses do fabricante (teorias criadas do histórico)
+        fab_c = list(getattr(self, "_fab_cands", None) or [])
+        if fab_c:
+            hips.append({"nome": "DESCOBERTA", "nums": fab_c[: self.k_alvos], "peso": 2.4})
+            msgs.append(f"[Descoberta→consenso] {fab_c[:self.k_alvos]}")
+
+        # MESA DOS APLICADORES — as 6 lentes sobre o momento atual entram no
+        # consenso como mais uma fonte. Sem isto elas ficavam no pacote sem
+        # nunca serem chamadas (a auditoria de integração pegou isso).
+        try:
+            from academia_autonoma.aplicadores import mesa as _mesa
+            _cab = [x for x in (validado or []) if x.get("nums")]
+            if _cab:
+                _rm = _mesa(self.jogo, [str(h) for h in hist],
+                            [str(i) for i in range(self.n_classes)], _cab)
+                if _rm.get("numeros"):
+                    hips.append({"nome": "APLICADORES", "nums": _rm["numeros"], "peso": 2.2})
+                    msgs.append(f"[Aplicadores] {_rm['motivo'][:110]}")
+        except Exception as _e:
+            msgs.append(f"[Aplicadores] erro: {type(_e).__name__}: {_e}")
+
+        # A REGRA DO OPERADOR ENTRA NA VOTAÇÃO.
+        # Ela vinha sendo medida por fora, como se fosse auditoria. Mas a tese
+        # dele é que o CRUZAMENTO decide — e um conhecimento que não vota não
+        # cruza com nada. Aqui ela vira mais uma voz, com peso 2.0: acima da
+        # estatística crua (1.3) e abaixo do LSTM (2.6), porque tem evidência
+        # medida mas ainda não fechada.
+        #
+        # Medida na declaração (14/08/2026), 7 números contra 18,9%:
+        #     lightning 36/144 = 25,0%  1,32x  p=0,043
+        #     immersive 30/137 = 21,9%  1,16x
+        #     mega_fire 17/92  = 18,5%  0,98x
+        # Não está confirmada. Entra como voz, não como veredito — se estiver
+        # errada, as outras fontes a superam na votação, que é o ponto de ter
+        # votação em vez de uma regra mandando sozinha.
+        if not self.is_ct:
+            try:
+                from academia_autonoma.hipoteses_predeclaradas import (
+                    H4_familia_na_faixa_quente as _h4)
+                _cron = []
+                for _x in reversed(hist):
+                    try:
+                        _cron.append(int(_x))
+                    except (TypeError, ValueError):
+                        pass
+                _nums_op = _h4(_cron)
+                if _nums_op:
+                    hips.append({"nome": "REGRA_OPERADOR",
+                                 "nums": [str(x) for x in _nums_op],
+                                 "peso": 2.0})
+                    msgs.append(f"[Regra do operador] família de {_cron[-1]} "
+                                f"na faixa quente → {_nums_op}")
+            except Exception as _e:
+                msgs.append(f"[Regra do operador] erro: {type(_e).__name__}: {_e}")
+
+        aprovados, probs, fontes, score, sig, p0 = self.crit.consenso(hips, self.n_classes, self.k_alvos, minimo=2)
+        msgs.append(f"[Hipóteses] {[h['nome'] for h in hips]}")
+        msgs.append(f"[Crítico] multi-fonte={aprovados[:8]} p0={p0:.3f}")
+        # placar da votação: por que cada número entrou
+        if sig:
+            _linhas = []
+            for _n in aprovados[:self.k_alvos]:
+                _s = sig.get(_n) or {}
+                _linhas.append(
+                    f"{_n} ← {_s.get('votos_teoria',0)} teorias"
+                    + (f" + {_s.get('votos_outros',0)} padrões" if _s.get('votos_outros') else "")
+                    + f" (peso {_s.get('peso_total',0)})"
+                )
+            msgs.append("[Consenso/votos] " + " | ".join(_linhas))
+        top_p = sorted(probs.items(), key=lambda x: -x[1])[:8]
+        msgs.append("[Probs] " + ", ".join(f"{k}:{v:.3f}" for k,v in top_p))
+        msgs.append(f"[Baseline] top{self.k_alvos}={base_alvos}")
+
+        # De onde veio o gatilho. Os bloqueios que existem por causa do LSTM
+        # (abaixo) não podem derrubar uma sugestão que não usou o LSTM.
+        via_consenso = False
+        # Caminho 1 (mais forte): LSTM treinado concordando com outra fonte.
+        inter=[]
+        if is_real_lstm and modelo_ativo:
+            for a in (alvos_l or []):
+                fs = fontes.get(a, [])
+                if any(f not in ("LSTM","HEURISTICA") for f in fs):
+                    inter.append(a)
+        if inter:
+            alvos=list(dict.fromkeys(inter))[:self.k_alvos]
+            for a in aprovados:
+                if is_real_lstm and a in (alvos_l or []) and a not in alvos:
+                    alvos.append(a)
+                if len(alvos)>=self.k_alvos: break
+            modo="GATILHO_OK"
+        else:
+            # Caminho 2: o CONSENSO DISPARA SOZINHO.
+            #
+            # Antes, interseção vazia zerava tudo — o LSTM era porteiro, não
+            # votante. Com isso, máquina sem torch (ou com <50 eventos, ou com
+            # o modelo em fallback) nunca mostrava previsão nenhuma, e a tela
+            # não dizia o motivo. Não era rigor: era travamento por um
+            # componente ausente. Quem protege a qualidade aqui é a sombra
+            # prospectiva ao vivo mais o portão do FDR, e esses continuam
+            # inteiros — só entram números que JÁ passaram por eles.
+            #
+            # A exigência que substitui o LSTM é acordo entre teorias
+            # INDEPENDENTES: pelo menos MIN_TEORIAS_SOZINHO teorias validadas
+            # distintas apontando o mesmo número. Uma teoria sozinha não abre
+            # gatilho.
+            so_teorias = [
+                a for a in aprovados
+                if int((sig.get(a) or {}).get("votos_teoria", 0)) >= self.MIN_TEORIAS_SOZINHO
+            ]
+            if so_teorias:
+                alvos = list(dict.fromkeys(so_teorias))[:self.k_alvos]
+                modo = "GATILHO_OK"
+                via_consenso = True
+                _det = ", ".join(
+                    f"{a}({int((sig.get(a) or {}).get('votos_teoria', 0))})" for a in alvos
+                )
+                msgs.append(
+                    f"[Gatilho] consenso sozinho — {len(alvos)} número(s) com "
+                    f"≥{self.MIN_TEORIAS_SOZINHO} teorias validadas concordando: {_det}"
+                )
+                if not is_real_lstm:
+                    msgs.append(
+                        "[LSTM] sem modelo treinado — a votação das teorias decidiu sozinha"
+                    )
+            else:
+                alvos=[]; modo="AGUARDANDO"
+                if not is_real_lstm:
+                    msgs.append(
+                        "[LSTM] SEM MODELO TREINADO — instale as dependências "
+                        "(0_INSTALAR_DEPENDENCIAS.bat) e junte ≥50 eventos. "
+                        "Enquanto isso, só sai previsão se "
+                        f"≥{self.MIN_TEORIAS_SOZINHO} teorias validadas concordarem."
+                    )
+
+        if self.is_ct and alvos:
+            fr=Counter(hist[:25])
+            forcar = bool(self.prefs.get("reduzir_12")) or (fr.get("1",0)+fr.get("2",0)>=14)
+            if forcar:
+                filtrados=[a for a in alvos if a not in ("1","2")]
+                if not filtrados:
+                    filtrados=[a for a in aprovados if a not in ("1","2")][:self.k_alvos]
+                    msgs.append("[CT] anti-1/2 recuperação")
+                else:
+                    msgs.append("[CT] anti-fixação 1/2")
+                alvos=list(dict.fromkeys(filtrados))[:self.k_alvos]
+
+        if not alvos:
+            modo="AGUARDANDO"
+
+        # confiança calibrada insuficiente → SEM EVIDÊNCIA operacional
+        sombra_alvos = list(alvos) if alvos else []
+        if modo=="GATILHO_OK" and conf < self.lstm.limiar:
+            # guarda candidatos experimentais antes de limpar orientação pública
+            sombra_alvos = list(alvos) if alvos else list(base_alvos or [])[:self.k_alvos]
+            alvos=[]; modo="AGUARDANDO"
+            msgs.append("[Gatilho] SEM EVIDÊNCIA calibrada — conf < limiar")
+
+        # ========== POLÍTICA CONSERVADORA ==========
+        # rel_n = janelas de DECISÃO já avaliadas (métrica científica)
+        # n_hist = giros disponíveis no histórico (amostra operacional)
+        rel_n = int(rel.get("n") or 0)
+        n_hist = len(hist)
+        ganho = rel.get("ganho")
+        taxa_m = rel.get("taxa")
+        taxa_b = rel.get("taxa_baseline")
+        brier = rel.get("brier")
+        operavel = True
+        motivo_bloq = []
+        modelo_ativo = bool(self.mem.modelo_ativo_atual())
+
+        # Amostra operacional: precisa de giros no histórico, NÃO de janelas avaliadas.
+        # Exigir 20 janelas avaliadas antes da 1ª previsão criava deadlock (nunca previa → nunca avaliava).
+        MIN_HIST = 12 if self.is_ct else 15
+        if n_hist < MIN_HIST:
+            operavel = False
+            motivo_bloq.append(f"histórico insuficiente ({n_hist}<{MIN_HIST})")
+
+        # Métricas científicas só bloqueiam DEPOIS de ter amostra de avaliação
+        MIN_JANELAS_METRICAS = 20
+
+        # 2/3 — ganho ≤ 0 vs baseline (só após MIN_JANELAS_METRICAS)
+        if ganho is not None and ganho < -0.02 and rel_n >= MIN_JANELAS_METRICAS:
+            operavel = False
+            motivo_bloq.append(f"ganho<0 vs baseline ({ganho:.3f}) n_aval={rel_n}")
+        elif ganho is not None and abs(ganho) <= 0.02 and rel_n >= MIN_JANELAS_METRICAS:
+            msgs.append(f"[Métricas] ganho≈0 vs baseline ({ganho:.3f}) — empate, não bloqueia por ganho")
+
+        # 2 — modelo desativado
+        #
+        # `modelo_ativo` rastreia se o LSTM vem batendo a baseline; ele é
+        # desligado quando não bate. Isso é motivo legítimo para não confiar
+        # numa sugestão DO LSTM — mas não diz nada sobre teorias validadas na
+        # sombra ao vivo, que não passam por ele. Sem esta ressalva, uma
+        # instalação cujo LSTM foi desligado ficava muda para sempre, mesmo com
+        # teorias provadas concordando.
+        if not modelo_ativo and not via_consenso:
+            operavel = False
+            motivo_bloq.append("modelo_desativado")
+        elif not modelo_ativo and via_consenso:
+            msgs.append("[Métricas] LSTM desativado, mas a sugestão veio das teorias — não bloqueia")
+
+        # 1 — taxa ~ acaso POR JANELA (não por giro)
+        try:
+            from metricas_honestas import p_alvos_ct, p_alvos_roleta, p_hit_janela
+            _al_ref = list(alvos or sombra_alvos or [])
+            _p1 = p_alvos_ct(_al_ref) if self.is_ct else p_alvos_roleta(_al_ref)
+            # janela_base ainda não definida aqui — usar 3 conservador alinhado ao default abaixo
+            _j_ref = 3
+            p_acaso_janela = p_hit_janela(_p1, _j_ref) if _al_ref else (self.k_alvos / max(self.n_classes, 1))
+        except Exception:
+            p_acaso_janela = self.k_alvos / max(self.n_classes, 1)
+        if taxa_m is not None and rel_n >= MIN_JANELAS_METRICAS and taxa_m <= p_acaso_janela * 1.05:
+            operavel = False
+            motivo_bloq.append(f"taxa~acaso_janela ({taxa_m:.3f}≤{p_acaso_janela*1.05:.3f}) n_aval={rel_n}")
+
+        # 7 — Brier ruim → sobe limiar e bloqueia
+        if brier is not None and brier > 0.28:
+            self.lstm.limiar = min(0.16, self.lstm.limiar + 0.01)
+            operavel = False
+            motivo_bloq.append(f"Brier alto {brier:.3f}")
+
+        # 7 — teste negativo suspeito
+        neg = self.mem.d.get("negativo") or {}
+        if neg.get("suspeito_leak") and neg.get("n", 0) >= 8:
+            operavel = False
+            motivo_bloq.append("teste_negativo suspeito")
+
+        # 5 — janela menor e menos alvos
+        janela_base = 3  # default conservador 2–3
+        if conf < 0.15:
+            k_use = max(2, self.k_alvos - 2) if not self.is_ct else 2
+        elif conf < 0.25:
+            k_use = max(2, self.k_alvos - 1) if not self.is_ct else 2
+        else:
+            k_use = self.k_alvos if not self.is_ct else min(3, self.k_alvos)
+        if alvos:
+            alvos = list(alvos)[:k_use]
+
+        # 6 — lab nunca abre gatilho sozinho (já famílias).
+        #
+        # Antes, isto era "sem LSTM real não opera", ponto — e ficava DEPOIS do
+        # portão, anulando o caminho do consenso sozinho. Medido: o gatilho
+        # abria 280 vezes e nenhuma previsão chegava à tela.
+        #
+        # Um bloqueio por causa do LSTM só faz sentido sobre uma sugestão que
+        # USA o LSTM. Quando quem decidiu foram teorias validadas na sombra ao
+        # vivo, a ausência do modelo não diz nada sobre a qualidade delas.
+        # Os freios que medem DESEMPENHO REAL (taxa~acaso, Brier, ganho vs
+        # baseline abaixo) continuam valendo para os dois caminhos.
+        if modo == "GATILHO_OK" and not is_real_lstm and not via_consenso:
+            operavel = False
+            motivo_bloq.append("sem LSTM real")
+
+        
+        # Honestidade: cobertura alta de acaso bloqueia, salvo ganho vs acaso SIGNIFICATIVO (IC95)
+        try:
+            from metricas_honestas import p_alvos_ct, p_alvos_roleta, p_hit_janela, ganho_significativo
+            _al = list(alvos or sombra_alvos or [])
+            _p1 = p_alvos_ct(_al) if self.is_ct else p_alvos_roleta(_al)
+            _pe = p_hit_janela(_p1, janela_base)
+            msgs.append(f"[Honestidade] P(hit|acaso)≈{_pe:.1%} k={len(_al)} J={janela_base}")
+            # acumulado na memória
+            cov = self.mem.d.get("cobertura_acc") or {}
+            n_acc = int(cov.get("n") or 0)
+            y_acc = float(cov.get("soma_y") or 0.0)
+            p_acc = float(cov.get("soma_p") or 0.0)
+            p_med = (p_acc / n_acc) if n_acc > 0 else _pe
+            sig = ganho_significativo(int(y_acc), n_acc, p_med) if n_acc >= 20 else {"ok": False, "motivo": "n<20"}
+            msgs.append(f"[Honestidade] ganho_sig={sig.get('ok')} ({sig.get('motivo')}) n={n_acc}")
+            if _pe >= 0.85 and not sig.get("ok"):
+                operavel = False
+                motivo_bloq.append(f"cobertura_acaso_alta({_pe:.1%}) sem ganho significativo")
+        except Exception as e:
+            msgs.append(f"[Honestidade] indisponível: {e}")
+
+# SOMBRA no aquecimento: registra experimental SEM orientação pública
+        # Usa alvos do gatilho OU candidatos guardados (sombra_alvos/baseline)
+        # candidatos experimentais: alvos atuais → sombra_alvos → baseline → critic multi-fonte
+        cand_sombra = list(alvos) if alvos else []
+        # O CONSENSO VEM ANTES DO BASELINE.
+        #
+        # Aqui estava o defeito mais caro do software. Com o gatilho em
+        # AGUARDANDO — que é o estado normal enquanto não há teoria validada —
+        # `alvos` fica vazio, e a cascata caía direto em `sombra_alvos`, que a
+        # linha ~1749 já havia preenchido com `base_alvos`. Resultado medido
+        # nos 205 giros reais de Lightning do operador: em 128 de 144 ciclos
+        # (88,9%) a sombra avaliava o BASELINE DE FREQUÊNCIA, não o consenso.
+        #
+        # As consequências eram todas na mesma direção:
+        #   - o consenso era calculado, aparecia no log e era descartado;
+        #   - a evidência que se acumulava nas teorias vinha de janelas do
+        #     baseline, e depois era comparada contra o próprio baseline;
+        #   - qualquer melhoria no cruzamento (regra do operador votando,
+        #     teorias acumulando votando) não mexia um dígito no resultado,
+        #     porque não chegava ao que estava sendo medido.
+        #
+        # O baseline continua na fila — mas como último recurso, que é o papel
+        # dele. O que a sombra tem que provar é o consenso.
+        if not cand_sombra:
+            cand_sombra = [a for a in (aprovados or [])][:self.k_alvos]
+        if not cand_sombra:
+            cand_sombra = list(sombra_alvos or [])
+        if not cand_sombra:
+            cand_sombra = list(base_alvos or [])[:self.k_alvos]
+        if not cand_sombra and getattr(self, "_fab_cands", None):
+            cand_sombra = list(self._fab_cands)[:self.k_alvos]
+        if not cand_sombra:
+            # crítico / hips
+            try:
+                pool = []
+                for h in (hips or []):
+                    for n in (h.get("nums") or h.get("numeros") or []):
+                        if n not in pool:
+                            pool.append(n)
+                cand_sombra = pool[:self.k_alvos]
+            except Exception:
+                cand_sombra = []
+        cand_sombra = list(dict.fromkeys(str(x) if self.is_ct else x for x in cand_sombra))[:self.k_alvos]
+        # SOMBRA continua DEPOIS de 20 avaliadas se não houver OPERAR público
+        pode_sombra = bool(cand_sombra) and n_hist >= MIN_HIST
+        status_op = "OPERAR" if (operavel and modo == "GATILHO_OK" and alvos and rel_n >= MIN_JANELAS_METRICAS and modelo_ativo) else "NAO_OPERAR"
+        if status_op == "OPERAR":
+            modo_out = "OPERAR"
+            msgs.append(f"[Conservador] OPERAR k={len(alvos)} janela≤{janela_base} conf={conf:.3f}")
+        elif pode_sombra:
+            alvos = list(cand_sombra)[:self.k_alvos]
+            modo_out = "SOMBRA"
+            status_op = "SOMBRA"
+            fase = "aquecimento" if rel_n < MIN_JANELAS_METRICAS else "monitor"
+            msgs.append(
+                f"[Sombra/{fase}] k={len(alvos)} hist={n_hist} avaliadas={rel_n} (mín. {MIN_JANELAS_METRICAS}) "
+                f"modelo_ativo={modelo_ativo} — sem orientação pública"
+            )
+        elif modo == "AGUARDANDO":
+            modo_out = "AGUARDANDO"
+            msgs.append("[Conservador] NAO_OPERAR — AGUARDANDO/SEM EVIDÊNCIA")
+        else:
+            modo_out = "NAO_OPERAR"
+            msgs.append(f"[Conservador] NAO_OPERAR — {'; '.join(motivo_bloq) or modo}")
+
+        msgs.append(f"[Gatilho] {modo}" + (f" → {alvos}" if alvos else " — LSTM real ∩ outra fonte"))
+        msgs.append(f"[Baseline] top{self.k_alvos}={base_alvos} | ganho={ganho} taxa_m={taxa_m} taxa_b={taxa_b}")
+
+
+        janela=max(2, min(3, janela_base + cmd["janela_mod"]))  # 5 — teto 3
+        if self.prefs.get("janela") is not None:
+            try: janela = max(2, min(3, int(self.prefs["janela"])))
+            except Exception: pass
+
+        dist_sel = {str(a): float(dist_l.get(a, probs.get(a, 0))) for a in alvos}
+        sel_ui = list(active_selection or [])
+        if sel_ui:
+            msgs.append(f"[Memória] janela UI ativa {sel_ui} — sem nova decisão")
+            alvos = list(sel_ui)
+            modo = "JANELA_ATIVA"
+            modo_out = "JANELA_ATIVA"
+            status_op = "OPERAR"
+        elif alvos and locals().get("modo_out") in ("OPERAR", "SOMBRA"):
+            fh = hashlib.md5(json.dumps(feats, sort_keys=True, default=str).encode()).hexdigest()[:10]
+            modo_reg = "OPERAR" if locals().get("modo_out") == "OPERAR" else "SOMBRA"
+            item = self.mem.registrar_decisao(
+                alvos, modo_reg, probs, [h["nome"] for h in hips], conf, dist_sel,
+                baseline_alvos=base_alvos, features_hash=fh,
+                settled_ref=(settled[0] if settled else None), janela=janela,
+            )
+            if item:
+                msgs.append(f"[Memória] decisão {modo_reg} id={item['id']} baseline={base_alvos}")
+        elif alvos and modo == "GATILHO_OK":
+            msgs.append("[Memória] gatilho sem OPERAR/SOMBRA — abstenção")
+        elif modo == "AGUARDANDO":
+            settled0 = settled[0] if settled else None
+            if settled0 and settled0 == self.mem.d.get("ultimo_aguardando_settled"):
+                msgs.append("[Memória] AGUARDANDO duplicado (mesmo settled) — não conta de novo")
+            else:
+                self.mem.d["ultimo_aguardando_settled"] = settled0
+                self.mem.registrar_decisao([], modo, {}, [], 0.0, {})
+
+        sols=[]
+        _st = locals().get("status_op") or "NAO_OPERAR"
+        _rn = int(rel.get("n") or 0)
+        if modo == "AGUARDANDO" or _st == "NAO_OPERAR":
+            sols.append("NÃO APOSTAR — aguardar OPERAR")
+        if rel.get("ganho") is not None and rel["ganho"] <= 0:
+            sols.append("Ganho≤0 vs baseline — não usar modelo")
+        if rel.get("brier") and rel["brier"] > 0.25:
+            sols.append("Calibração fraca — mais SEM EVIDÊNCIA")
+        if _rn < 20:
+            sols.append(f"Amostra {_rn}/20 — só observar")
+        if not sols:
+            sols.append("Operar só com OPERAR + ganho>0 + amostra≥20")
+        msgs.append("[Soluções práticas] " + " | ".join(sols))
+        msgs.append(f"[Metacognição] conf={conf:.3f} limiar={self.lstm.limiar:.3f} T={self.lstm.temperature:.2f} ativo={self.mem.modelo_ativo_atual()} | p_janela=1-(1-p_sel)^J (approx, assume indep.)")
+        msgs.append(f"[Monitor] {(time.time()-t0)*1000:.0f}ms device={self.lstm.device}")
+
+        av_v = self.mem._so_versao_atual(self.mem.d.get("avaliadas") or [])
+        cal_v = [c for c in (self.mem.d.get("calib") or []) if c.get("pipeline_version") == PIPELINE_VERSION]
+        pend_v = [d for d in (self.mem.d.get("decisoes_pendentes") or [])
+                  if d.get("resultado") is None and d.get("alvos") and (
+                      d.get("eval_protocol") == EVAL_PROTOCOL
+                      or d.get("pipeline_version") == PIPELINE_VERSION)]
+        acertos_aval = sum(1 for a in av_v if (a.get("resultado") or {}).get("acertou"))
+        erros_aval = max(0, len(av_v) - acertos_aval)
+        cov = self.mem.d.get("cobertura_acc") or {}
+        mem_stats = {
+            "avaliadas": len(av_v),
+            "pendentes": len(pend_v),
+            "calib": len(cal_v),
+            "treinado": bool(self.lstm.treinado),
+            "metricas": rel,
+            "protocolo": PIPELINE_VERSION,
+            "eval_protocol": EVAL_PROTOCOL,
+            "legado_avaliadas": len(self.mem.d.get("avaliadas") or []) - len(av_v),
+            "acertos_aval": acertos_aval,
+            "erros_aval": erros_aval,
+            "soma_p_esperado": float(cov.get("soma_p") or 0.0),
+            "soma_y_cobertura": float(cov.get("soma_y") or 0.0),
+            "n_cobertura": int(cov.get("n") or 0),
+        }
+        msgs.append(
+            f"[Aprendizado] protocolo={PIPELINE_VERSION} avaliadas={mem_stats['avaliadas']} "
+            f"pend={mem_stats['pendentes']} calib={mem_stats['calib']} legado_ign={mem_stats['legado_avaliadas']}"
+        )
+
+        try:
+            _modo_final = modo_out
+        except NameError:
+            _modo_final = modo
+        try:
+            _status = status_op
+        except NameError:
+            _status = "NAO_OPERAR"
+        try:
+            _motivos = list(motivo_bloq)
+        except NameError:
+            _motivos = []
+        # UI pública só com OPERAR / janela ativa; SOMBRA registra mas não orienta
+        if _modo_final == "JANELA_ATIVA":
+            pad_ui = list(alvos)
+        elif _modo_final == "OPERAR" and _status == "OPERAR":
+            pad_ui = list(alvos)
+        else:
+            pad_ui = []
+        return {
+            "pad5": pad_ui, "anti5": [], "janela": janela, "msgs": msgs,
+            "device": str(self.lstm.device), "modo": _modo_final, "conf": conf,
+            "probs": {str(k): round(float(v),4) for k,v in top_p},
+            "solucoes": sols, "mem_stats": mem_stats, "baseline": base_alvos,
+            "version": PIPELINE_VERSION, "eval_protocol": EVAL_PROTOCOL,
+            "operavel": _modo_final == "OPERAR" and _status == "OPERAR",
+            "alvos_auditoria": list(alvos) if alvos else [], "motivo_bloq": _motivos,
+            "sombra": _modo_final == "SOMBRA",
+            "contadores": {
+                "historico_bruto": n_hist if 'n_hist' in dir() else len(hist),
+                "janelas_avaliadas": rel_n if 'rel_n' in dir() else 0,
+                "janelas_pendentes": mem_stats.get("pendentes", 0),
+                "min_avaliadas": 20,
+                "legado_ignorado": mem_stats.get("legado_avaliadas", 0),
+            },
+        }
+
+    def _aguardar(self, msgs, motivo, settled=None, n_hist=0):
+        msgs.append(f"[Gatilho] AGUARDANDO — {motivo}")
+        msgs.append("[Soluções práticas] Aguardar dados/condição mínima")
+        settled0 = settled[0] if settled else None
+        key = f"{motivo}|{settled0}"
+        if key == self.mem.d.get("ultimo_aguardar_key"):
+            msgs.append("[Memória] _aguardar duplicado (mesmo motivo+settled) — não conta")
+        else:
+            self.mem.d["ultimo_aguardar_key"] = key
+            self.mem.registrar_decisao([], "AGUARDANDO", {}, [], 0.0, {})
+        try:
+            rel = self.mem.relatorio_metricas()
+            av_v = self.mem._so_versao_atual(self.mem.d.get("avaliadas") or [])
+            # mesma regra do caminho normal: abertas, com alvos, protocolo atual
+            pend_v = [
+                d for d in (self.mem.d.get("decisoes_pendentes") or [])
+                if d.get("resultado") is None
+                and d.get("alvos")
+                and (
+                    d.get("eval_protocol") == EVAL_PROTOCOL
+                    or d.get("pipeline_version") == PIPELINE_VERSION
+                )
+            ]
+            acertos_aval = sum(1 for a in av_v if (a.get("resultado") or {}).get("acertou"))
+            erros_aval = max(0, len(av_v) - acertos_aval)
+            contadores = {
+                "historico_bruto": int(n_hist or 0),
+                "janelas_avaliadas": len(av_v),
+                "janelas_pendentes": len(pend_v),
+                "min_avaliadas": 20,
+                "legado_ignorado": max(0, len(self.mem.d.get("avaliadas") or []) - len(av_v)),
+            }
+            mem_stats = {
+                "avaliadas": len(av_v), "pendentes": len(pend_v),
+                "acertos_aval": acertos_aval, "erros_aval": erros_aval,
+                "protocolo": PIPELINE_VERSION, "eval_protocol": EVAL_PROTOCOL,
+                "metricas": rel,
+            }
+        except Exception:
+            contadores = {
+                "historico_bruto": int(n_hist or 0),
+                "janelas_avaliadas": 0, "janelas_pendentes": 0,
+                "min_avaliadas": 20, "legado_ignorado": 0,
+            }
+            mem_stats = {"avaliadas": 0, "pendentes": 0, "acertos_aval": 0, "erros_aval": 0}
+        return {
+            "pad5": [], "anti5": [], "janela": 3, "msgs": msgs,
+            "device": str(DEVICE), "modo": "AGUARDANDO", "conf": 0.0, "probs": {},
+            "solucoes": ["Aguardar"], "version": PIPELINE_VERSION,
+            "eval_protocol": EVAL_PROTOCOL, "operavel": False, "sombra": False,
+            "alvos_auditoria": [], "motivo_bloq": [motivo],
+            "contadores": contadores, "mem_stats": mem_stats, "baseline": [],
+        }

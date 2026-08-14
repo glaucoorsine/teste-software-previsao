@@ -1,0 +1,81 @@
+{
+  "decisoes_pendentes": [
+    {
+      "id": "a514e203",
+      "em": "2026-08-14T12:16:34",
+      "pipeline_version": "2026.08.10-v21-sombra",
+      "eval_protocol": "eval-2026.08.10-v1",
+      "feature_version": "fv4-lab",
+      "features_hash": null,
+      "alvos": [
+        3,
+        4
+      ],
+      "baseline_alvos": null,
+      "modo": "SOMBRA",
+      "conf": 0.4,
+      "dist_sel": {},
+      "top_probs": {},
+      "hips": [],
+      "resultado": null,
+      "settled_ref": "ref-2",
+      "hits": 0,
+      "misses": 0,
+      "janela": 2,
+      "spins": []
+    },
+    {
+      "id": "778f9143",
+      "em": "2026-08-14T12:16:34",
+      "pipeline_version": "2026.08.10-v21-sombra",
+      "eval_protocol": "eval-2026.08.10-v1",
+      "feature_version": "fv4-lab",
+      "features_hash": null,
+      "alvos": [
+        1,
+        2
+      ],
+      "baseline_alvos": null,
+      "modo": "SOMBRA",
+      "conf": 0.4,
+      "dist_sel": {},
+      "top_probs": {},
+      "hips": [],
+      "resultado": null,
+      "settled_ref": "ref-1",
+      "hits": 0,
+      "misses": 0,
+      "janela": 2,
+      "spins": []
+    }
+  ],
+  "avaliadas": [],
+  "calib": [],
+  "versoes": [
+    {
+      "id": "a514e203",
+      "pipeline": "2026.08.10-v21-sombra",
+      "features": "fv4-lab",
+      "em": "2026-08-14T12:16:34"
+    },
+    {
+      "id": "a514e203",
+      "pipeline": "2026.08.10-v21-sombra",
+      "features": "fv4-lab",
+      "em": "2026-08-14T12:16:34"
+    },
+    {
+      "id": "778f9143",
+      "pipeline": "2026.08.10-v21-sombra",
+      "features": "fv4-lab",
+      "em": "2026-08-14T12:16:34"
+    }
+  ],
+  "modulos": [],
+  "n_aguardando_total": 0,
+  "cobertura_acc": {
+    "soma_y": 0.0,
+    "soma_p": 0.0,
+    "n": 0
+  }
+}

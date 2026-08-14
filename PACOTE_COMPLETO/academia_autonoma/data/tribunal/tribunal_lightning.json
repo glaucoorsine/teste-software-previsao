@@ -1,0 +1,1772 @@
+[
+  {
+    "teoria_id": "339d75de423ef3aeff946fdb",
+    "descricao": "gap 4 med=26",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 1/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 1,
+      "taxa": 0.1,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=1/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.1 baseline=0.225",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=1/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "acertos_unicos=1 total_hits=1",
+        "peso": 0.9
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=1",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=1/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "0be85575394863913e64800f",
+    "descricao": "eco potencial 4",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "a6cf32554a0bb8b0bc1250c7",
+    "descricao": "gap 18 med=12",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.225",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "b53fbf95e7624d22ae6c68f5",
+    "descricao": "eco potencial 18",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 1/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 1,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/1 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 1/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 1 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=1",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "46980fb39a07587856368b3e",
+    "descricao": "gap 0 med=21",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.225",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "ae789215d48e7983781e37e1",
+    "descricao": "eco potencial 0",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "49d8430e32173143eeed17a0",
+    "descricao": "contagem(13)≥2 em w=5 E em {13,3,0}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 2/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 2,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/2 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 2/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 2 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=2",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "228fdfcba43211ddfd0a6363",
+    "descricao": "contagem(13)≥2 em w=8 E em {13,3,0}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 2/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 2,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/2 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 2/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 2 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=2",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "a2fdd2f54d9649444c9004c4",
+    "descricao": "contagem(13)≥2 em w=12 E em {13,6,3}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 5/10; votos A=0 R=1 Abs=6",
+    "janela": {
+      "n": 5,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/5 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 5/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=5",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "aed88de7b5124398ef975592",
+    "descricao": "motivo2 ('5', '9') n=2",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 1/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 1,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/1 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 1/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 1 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=1",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "935252e16bf2f6eff67752cf",
+    "descricao": "gap 1 med=20",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.2",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "bee2643e18f42fdd687f7bb5",
+    "descricao": "eco potencial 1",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "339d75de423ef3aeff946fdb",
+    "descricao": "gap 4 med=26",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 1/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 1,
+      "taxa": 0.1,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=1/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.1 baseline=0.2",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=1/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "acertos_unicos=1 total_hits=1",
+        "peso": 0.9
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=1",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=1/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "0be85575394863913e64800f",
+    "descricao": "eco potencial 4",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "a6cf32554a0bb8b0bc1250c7",
+    "descricao": "gap 18 med=12",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.2",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "b53fbf95e7624d22ae6c68f5",
+    "descricao": "eco potencial 18",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 1/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 1,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/1 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 1/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 1 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=1",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "46980fb39a07587856368b3e",
+    "descricao": "gap 0 med=21",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.2",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "ae789215d48e7983781e37e1",
+    "descricao": "eco potencial 0",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "49d8430e32173143eeed17a0",
+    "descricao": "contagem(13)≥2 em w=5 E em {13,3,0}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 2/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 2,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/2 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 2/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 2 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=2",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "228fdfcba43211ddfd0a6363",
+    "descricao": "contagem(13)≥2 em w=8 E em {13,3,0}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 2/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 2,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/2 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 2/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 2 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=2",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "a2fdd2f54d9649444c9004c4",
+    "descricao": "contagem(13)≥2 em w=12 E em {13,6,3}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 5/10; votos A=0 R=1 Abs=6",
+    "janela": {
+      "n": 5,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/5 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 5/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=5",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "aed88de7b5124398ef975592",
+    "descricao": "motivo2 ('5', '9') n=2",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 1/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 1,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/1 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 1/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 1 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=1",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "935252e16bf2f6eff67752cf",
+    "descricao": "gap 1 med=20",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.2",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "bee2643e18f42fdd687f7bb5",
+    "descricao": "eco potencial 1",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "339d75de423ef3aeff946fdb",
+    "descricao": "gap 4 med=26",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 1/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 1,
+      "taxa": 0.1,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=1/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.1 baseline=0.2",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=1/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "acertos_unicos=1 total_hits=1",
+        "peso": 0.9
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=1",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=1/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "0be85575394863913e64800f",
+    "descricao": "eco potencial 4",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "a6cf32554a0bb8b0bc1250c7",
+    "descricao": "gap 18 med=12",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.2",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "b53fbf95e7624d22ae6c68f5",
+    "descricao": "eco potencial 18",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 1/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 1,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/1 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 1/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 1 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=1",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "46980fb39a07587856368b3e",
+    "descricao": "gap 0 med=21",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.2",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  },
+  {
+    "teoria_id": "ae789215d48e7983781e37e1",
+    "descricao": "eco potencial 0",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "lightning",
+    "ts": "13:29:06"
+  }
+]

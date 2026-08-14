@@ -1,0 +1,11 @@
+# Essenciais — o software funciona com estes:
+customtkinter
+requests
+numpy
+psutil
+Pillow
+
+# OPCIONAL — só a rede neural usa. Pode não existir para Python muito novo
+# (o PyTorch publica com atraso). Sem ele a previsão sai pelo consenso das
+# teorias validadas. Instale à parte:  pip install torch
+# torch

@@ -1,0 +1,11 @@
+{
+  "provider": "xai",
+  "api_key": "",
+  "model": "grok-2-latest",
+  "base_url": "https://api.x.ai/v1",
+  "openai_base_url": "https://api.openai.com/v1",
+  "ollama_url": "http://127.0.0.1:11434",
+  "ollama_model": "llama3.2",
+  "max_log_lines": 80,
+  "temperature": 0.4
+}

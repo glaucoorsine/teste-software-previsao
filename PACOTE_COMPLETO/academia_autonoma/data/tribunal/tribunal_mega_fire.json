@@ -1,0 +1,1772 @@
+[
+  {
+    "teoria_id": "7148274b685e22dfa3c89c20",
+    "descricao": "gap 22 med=23",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.1",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:01"
+  },
+  {
+    "teoria_id": "c040bb6461a0b2d58b8ac0f9",
+    "descricao": "eco potencial 22",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:01"
+  },
+  {
+    "teoria_id": "f16992a57629d8fb691ec1d4",
+    "descricao": "eco potencial 13",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:01"
+  },
+  {
+    "teoria_id": "543fc5cbd60a78d7076c2d25",
+    "descricao": "gap 31 med=14",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.1",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:01"
+  },
+  {
+    "teoria_id": "871e8e9df9dc7b27eebb8844",
+    "descricao": "eco potencial 31",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:01"
+  },
+  {
+    "teoria_id": "8bc6a4fb97fc37a3dd7bade3",
+    "descricao": "regime 27 vs 34 w12/20",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 5/10; votos A=0 R=1 Abs=6",
+    "janela": {
+      "n": 5,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/5 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 5/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=5",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:01"
+  },
+  {
+    "teoria_id": "6c261b885eb0f3e7d73658e3",
+    "descricao": "contagem(27)≥2 em w=5 E em {27,14,11}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 5/10; votos A=0 R=1 Abs=6",
+    "janela": {
+      "n": 5,
+      "hits": 1,
+      "taxa": 0.2,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=1/5 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 5/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=1/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=5",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:51"
+  },
+  {
+    "teoria_id": "8767a847973af76f409a2acf",
+    "descricao": "contagem(27)≥2 em w=8 E em {27,14,11}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 6/10; votos A=1 R=0 Abs=6",
+    "janela": {
+      "n": 6,
+      "hits": 2,
+      "taxa": 0.3333333333333333,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=2/6 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 6/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "aprova",
+        "motivo": "últimas5 hits=2/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=6",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "4cc95911a282c310799024ae",
+    "descricao": "contagem(27)≥2 em w=12 E em {27,14,11}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 8/10; votos A=0 R=1 Abs=6",
+    "janela": {
+      "n": 8,
+      "hits": 2,
+      "taxa": 0.25,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=2/8 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 8/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=1/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=8",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "e56a3f27fe81e65df2dab27f",
+    "descricao": "contagem(27)≥2 em w=20 E em {27,34,14}",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 2/10 (<30% — precisava 3/10) | votos A=1 R=6 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 2,
+      "taxa": 0.2,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=2/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.2 baseline=0.1",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "aprova",
+        "motivo": "acertos_unicos=2 total_hits=2",
+        "peso": 0.9
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=2 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=2/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=3)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "2d71c0fb62bb9c207176feec",
+    "descricao": "gap 27 med=9",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 2/10 (<30% — precisava 3/10) | votos A=1 R=6 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 2,
+      "taxa": 0.2,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=2/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.2 baseline=0.1",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "aprova",
+        "motivo": "últimas5 hits=2/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "acertos_unicos=1 total_hits=2",
+        "peso": 0.9
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=2",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=2/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "38d7260709390e3a791c4bc7",
+    "descricao": "eco potencial 27",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 1/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 1,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/1 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 1/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 1 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=1",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "7148274b685e22dfa3c89c20",
+    "descricao": "gap 22 med=23",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.1",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "c040bb6461a0b2d58b8ac0f9",
+    "descricao": "eco potencial 22",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "f16992a57629d8fb691ec1d4",
+    "descricao": "eco potencial 13",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "543fc5cbd60a78d7076c2d25",
+    "descricao": "gap 31 med=14",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.1",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "871e8e9df9dc7b27eebb8844",
+    "descricao": "eco potencial 31",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "8bc6a4fb97fc37a3dd7bade3",
+    "descricao": "regime 27 vs 34 w12/20",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 5/10; votos A=0 R=1 Abs=6",
+    "janela": {
+      "n": 5,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/5 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 5/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=5",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "6c261b885eb0f3e7d73658e3",
+    "descricao": "contagem(27)≥2 em w=5 E em {27,14,11}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 5/10; votos A=0 R=1 Abs=6",
+    "janela": {
+      "n": 5,
+      "hits": 1,
+      "taxa": 0.2,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=1/5 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 5/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=1/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=5",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "8767a847973af76f409a2acf",
+    "descricao": "contagem(27)≥2 em w=8 E em {27,14,11}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 6/10; votos A=1 R=0 Abs=6",
+    "janela": {
+      "n": 6,
+      "hits": 2,
+      "taxa": 0.3333333333333333,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=2/6 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 6/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "aprova",
+        "motivo": "últimas5 hits=2/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=6",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "4cc95911a282c310799024ae",
+    "descricao": "contagem(27)≥2 em w=12 E em {27,14,11}",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 8/10; votos A=0 R=1 Abs=6",
+    "janela": {
+      "n": 8,
+      "hits": 2,
+      "taxa": 0.25,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=2/8 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 8/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=1/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=8",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=3",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "e56a3f27fe81e65df2dab27f",
+    "descricao": "contagem(27)≥2 em w=20 E em {27,34,14}",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 2/10 (<30% — precisava 3/10) | votos A=1 R=6 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 2,
+      "taxa": 0.2,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=2/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.2 baseline=0.1",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "aprova",
+        "motivo": "acertos_unicos=2 total_hits=2",
+        "peso": 0.9
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=2 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=2/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=3)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "2d71c0fb62bb9c207176feec",
+    "descricao": "gap 27 med=9",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 2/10 (<30% — precisava 3/10) | votos A=1 R=6 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 2,
+      "taxa": 0.2,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=2/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.2 baseline=0.1",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "aprova",
+        "motivo": "últimas5 hits=2/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "acertos_unicos=1 total_hits=2",
+        "peso": 0.9
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=2",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=2/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "38d7260709390e3a791c4bc7",
+    "descricao": "eco potencial 27",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 1/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 1,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/1 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 1/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 1 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=1",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "7148274b685e22dfa3c89c20",
+    "descricao": "gap 22 med=23",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.1",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "c040bb6461a0b2d58b8ac0f9",
+    "descricao": "eco potencial 22",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "f16992a57629d8fb691ec1d4",
+    "descricao": "eco potencial 13",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "543fc5cbd60a78d7076c2d25",
+    "descricao": "gap 31 med=14",
+    "veredito": "descartada_pelo_tribunal",
+    "motivo": "FALHOU: 0/10 (<30% — precisava 3/10) | votos A=0 R=7 | descartada (reavaliável sob comando)",
+    "janela": {
+      "n": 10,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "reprova",
+        "motivo": "hits=0/10 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "reprova",
+        "motivo": "taxa=0.0 baseline=0.1",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "reprova",
+        "motivo": "zero acertos",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "reprova",
+        "motivo": "bloco1=0 bloco2=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "reprova",
+        "motivo": "métrica insuficiente hits=0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "reprova",
+        "motivo": "métrica falhou ou k=0 (k=1)",
+        "peso": 1.0
+      }
+    ],
+    "estado": "descartada_pelo_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "871e8e9df9dc7b27eebb8844",
+    "descricao": "eco potencial 31",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 0/10; votos A=0 R=0 Abs=7",
+    "janela": {
+      "n": 0,
+      "hits": 0,
+      "taxa": null,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/0 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 0/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "abstencao",
+        "motivo": "só 0 ativações recentes",
+        "peso": 1.0
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=0",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  },
+  {
+    "teoria_id": "8bc6a4fb97fc37a3dd7bade3",
+    "descricao": "regime 27 vs 34 w12/20",
+    "veredito": "em_revisao",
+    "motivo": "aguardando ativações 5/10; votos A=0 R=1 Abs=6",
+    "janela": {
+      "n": 5,
+      "hits": 0,
+      "taxa": 0.0,
+      "regra": ">=3 acertos em 10 ativações"
+    },
+    "votos": [
+      {
+        "id": "T1_puro_vivo",
+        "voto": "abstencao",
+        "motivo": "hits=0/5 (mínimo 3/10)",
+        "peso": 1.2
+      },
+      {
+        "id": "T2_vs_baseline",
+        "voto": "abstencao",
+        "motivo": "amostra 5/10",
+        "peso": 1.0
+      },
+      {
+        "id": "T3_consistencia_recente",
+        "voto": "reprova",
+        "motivo": "últimas5 hits=0/5",
+        "peso": 1.1
+      },
+      {
+        "id": "T4_diversidade_alvos",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta",
+        "peso": 0.8
+      },
+      {
+        "id": "T5_estabilidade_bloco",
+        "voto": "abstencao",
+        "motivo": "n=5",
+        "peso": 1.0
+      },
+      {
+        "id": "T6_contexto_ativo_agora",
+        "voto": "abstencao",
+        "motivo": "aguardando mais ativações",
+        "peso": 1.0
+      },
+      {
+        "id": "T7_cap_5_7_e_utilidade",
+        "voto": "abstencao",
+        "motivo": "amostra incompleta; k=1",
+        "peso": 1.0
+      }
+    ],
+    "estado": "em_revisao_tribunal",
+    "jogo": "mega_fire",
+    "ts": "12:54:52"
+  }
+]

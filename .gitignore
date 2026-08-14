@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+PACOTE_COMPLETO/memoria_*.json
+PACOTE_COMPLETO/notificacoes.json

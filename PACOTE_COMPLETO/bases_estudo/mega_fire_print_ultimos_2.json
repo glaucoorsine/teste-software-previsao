@@ -1,0 +1,1231 @@
+{
+  "jogo": "mega_fire",
+  "origem": "print_usuario_2026-08-11",
+  "capturado_em": "2026-08-11T14:31:05.913125+00:00",
+  "n_eventos": 130,
+  "nota": "Números reais extraídos de capturas de tela do usuário (não sintéticos).",
+  "events": [
+    {
+      "n": 9,
+      "valor": "9",
+      "settled": "2026-08-11T12:00:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 35,
+      "valor": "35",
+      "settled": "2026-08-11T11:59:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 11,
+      "valor": "11",
+      "settled": "2026-08-11T11:59:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 3,
+      "valor": "3",
+      "settled": "2026-08-11T11:58:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 16,
+      "valor": "16",
+      "settled": "2026-08-11T11:58:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 54
+        }
+      ],
+      "mult": 54,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 5,
+      "valor": "5",
+      "settled": "2026-08-11T11:57:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 19,
+      "valor": "19",
+      "settled": "2026-08-11T11:57:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 19,
+      "valor": "19",
+      "settled": "2026-08-11T11:56:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 19,
+      "valor": "19",
+      "settled": "2026-08-11T11:56:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 20,
+      "valor": "20",
+      "settled": "2026-08-11T11:55:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 18,
+      "valor": "18",
+      "settled": "2026-08-11T11:55:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 21,
+      "valor": "21",
+      "settled": "2026-08-11T11:54:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 69
+        }
+      ],
+      "mult": 69,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 15,
+      "valor": "15",
+      "settled": "2026-08-11T11:54:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 10,
+      "valor": "10",
+      "settled": "2026-08-11T11:53:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 31,
+      "valor": "31",
+      "settled": "2026-08-11T11:53:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 26,
+      "valor": "26",
+      "settled": "2026-08-11T11:52:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 21,
+      "valor": "21",
+      "settled": "2026-08-11T11:52:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 69
+        }
+      ],
+      "mult": 69,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 0,
+      "valor": "0",
+      "settled": "2026-08-11T11:51:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 16,
+      "valor": "16",
+      "settled": "2026-08-11T11:51:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 54
+        }
+      ],
+      "mult": 54,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 13,
+      "valor": "13",
+      "settled": "2026-08-11T11:50:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 29,
+      "valor": "29",
+      "settled": "2026-08-11T11:50:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 125
+        }
+      ],
+      "mult": 125,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 15,
+      "valor": "15",
+      "settled": "2026-08-11T11:49:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 0,
+      "valor": "0",
+      "settled": "2026-08-11T11:49:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 31,
+      "valor": "31",
+      "settled": "2026-08-11T11:48:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 14,
+      "valor": "14",
+      "settled": "2026-08-11T11:48:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 34,
+      "valor": "34",
+      "settled": "2026-08-11T11:47:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 191
+        }
+      ],
+      "mult": 191,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 4,
+      "valor": "4",
+      "settled": "2026-08-11T11:47:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 114
+        }
+      ],
+      "mult": 114,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 25,
+      "valor": "25",
+      "settled": "2026-08-11T11:46:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 8,
+      "valor": "8",
+      "settled": "2026-08-11T11:46:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 4,
+      "valor": "4",
+      "settled": "2026-08-11T11:45:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 114
+        }
+      ],
+      "mult": 114,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 6,
+      "valor": "6",
+      "settled": "2026-08-11T11:45:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 34,
+      "valor": "34",
+      "settled": "2026-08-11T11:44:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 191
+        }
+      ],
+      "mult": 191,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 25,
+      "valor": "25",
+      "settled": "2026-08-11T11:44:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 22,
+      "valor": "22",
+      "settled": "2026-08-11T11:43:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 8,
+      "valor": "8",
+      "settled": "2026-08-11T11:43:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 3,
+      "valor": "3",
+      "settled": "2026-08-11T11:42:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 18,
+      "valor": "18",
+      "settled": "2026-08-11T11:42:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 7,
+      "valor": "7",
+      "settled": "2026-08-11T11:41:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 23,
+      "valor": "23",
+      "settled": "2026-08-11T11:41:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 26,
+      "valor": "26",
+      "settled": "2026-08-11T11:40:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 12,
+      "valor": "12",
+      "settled": "2026-08-11T11:40:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 20,
+      "valor": "20",
+      "settled": "2026-08-11T11:39:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 4,
+      "valor": "4",
+      "settled": "2026-08-11T11:39:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 114
+        }
+      ],
+      "mult": 114,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 25,
+      "valor": "25",
+      "settled": "2026-08-11T11:38:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 20,
+      "valor": "20",
+      "settled": "2026-08-11T11:38:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 1,
+      "valor": "1",
+      "settled": "2026-08-11T11:37:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 168
+        }
+      ],
+      "mult": 168,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 15,
+      "valor": "15",
+      "settled": "2026-08-11T11:37:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 9,
+      "valor": "9",
+      "settled": "2026-08-11T11:36:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 36,
+      "valor": "36",
+      "settled": "2026-08-11T11:36:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 10,
+      "valor": "10",
+      "settled": "2026-08-11T11:35:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 21,
+      "valor": "21",
+      "settled": "2026-08-11T11:35:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 69
+        }
+      ],
+      "mult": 69,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 28,
+      "valor": "28",
+      "settled": "2026-08-11T11:34:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 15,
+      "valor": "15",
+      "settled": "2026-08-11T11:34:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 9,
+      "valor": "9",
+      "settled": "2026-08-11T11:33:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 0,
+      "valor": "0",
+      "settled": "2026-08-11T11:33:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 29,
+      "valor": "29",
+      "settled": "2026-08-11T11:32:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 125
+        }
+      ],
+      "mult": 125,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 23,
+      "valor": "23",
+      "settled": "2026-08-11T11:32:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 1,
+      "valor": "1",
+      "settled": "2026-08-11T11:31:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 168
+        }
+      ],
+      "mult": 168,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 33,
+      "valor": "33",
+      "settled": "2026-08-11T11:31:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 238
+        }
+      ],
+      "mult": 238,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 13,
+      "valor": "13",
+      "settled": "2026-08-11T11:30:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 14,
+      "valor": "14",
+      "settled": "2026-08-11T11:30:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 15,
+      "valor": "15",
+      "settled": "2026-08-11T11:29:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 17,
+      "valor": "17",
+      "settled": "2026-08-11T11:29:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 4,
+      "valor": "4",
+      "settled": "2026-08-11T11:28:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 114
+        }
+      ],
+      "mult": 114,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 10,
+      "valor": "10",
+      "settled": "2026-08-11T11:28:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 2,
+      "valor": "2",
+      "settled": "2026-08-11T11:27:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 48
+        }
+      ],
+      "mult": 48,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 19,
+      "valor": "19",
+      "settled": "2026-08-11T11:27:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 22,
+      "valor": "22",
+      "settled": "2026-08-11T11:26:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 18,
+      "valor": "18",
+      "settled": "2026-08-11T11:26:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 31,
+      "valor": "31",
+      "settled": "2026-08-11T11:25:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 23,
+      "valor": "23",
+      "settled": "2026-08-11T11:25:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 1,
+      "valor": "1",
+      "settled": "2026-08-11T11:24:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 168
+        }
+      ],
+      "mult": 168,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 31,
+      "valor": "31",
+      "settled": "2026-08-11T11:24:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 5,
+      "valor": "5",
+      "settled": "2026-08-11T11:23:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 36,
+      "valor": "36",
+      "settled": "2026-08-11T11:23:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 9,
+      "valor": "9",
+      "settled": "2026-08-11T11:22:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 27,
+      "valor": "27",
+      "settled": "2026-08-11T11:22:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 5,
+      "valor": "5",
+      "settled": "2026-08-11T11:21:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 10,
+      "valor": "10",
+      "settled": "2026-08-11T11:21:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 20,
+      "valor": "20",
+      "settled": "2026-08-11T11:20:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 33,
+      "valor": "33",
+      "settled": "2026-08-11T11:20:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 238
+        }
+      ],
+      "mult": 238,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 19,
+      "valor": "19",
+      "settled": "2026-08-11T11:19:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 16,
+      "valor": "16",
+      "settled": "2026-08-11T11:19:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 54
+        }
+      ],
+      "mult": 54,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 24,
+      "valor": "24",
+      "settled": "2026-08-11T11:18:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 8,
+      "valor": "8",
+      "settled": "2026-08-11T11:18:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 4,
+      "valor": "4",
+      "settled": "2026-08-11T11:17:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 114
+        }
+      ],
+      "mult": 114,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 6,
+      "valor": "6",
+      "settled": "2026-08-11T11:17:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 32,
+      "valor": "32",
+      "settled": "2026-08-11T11:16:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 34,
+      "valor": "34",
+      "settled": "2026-08-11T11:16:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 191
+        }
+      ],
+      "mult": 191,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 33,
+      "valor": "33",
+      "settled": "2026-08-11T11:15:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 238
+        }
+      ],
+      "mult": 238,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 31,
+      "valor": "31",
+      "settled": "2026-08-11T11:15:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 23,
+      "valor": "23",
+      "settled": "2026-08-11T11:14:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 32,
+      "valor": "32",
+      "settled": "2026-08-11T11:14:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 32,
+      "valor": "32",
+      "settled": "2026-08-11T11:13:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 21,
+      "valor": "21",
+      "settled": "2026-08-11T11:13:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 69
+        }
+      ],
+      "mult": 69,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 5,
+      "valor": "5",
+      "settled": "2026-08-11T11:12:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 30,
+      "valor": "30",
+      "settled": "2026-08-11T11:12:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 4,
+      "valor": "4",
+      "settled": "2026-08-11T11:11:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 114
+        }
+      ],
+      "mult": 114,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 30,
+      "valor": "30",
+      "settled": "2026-08-11T11:11:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 35,
+      "valor": "35",
+      "settled": "2026-08-11T11:10:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 13,
+      "valor": "13",
+      "settled": "2026-08-11T11:10:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 14,
+      "valor": "14",
+      "settled": "2026-08-11T11:09:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 5,
+      "valor": "5",
+      "settled": "2026-08-11T11:09:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 6,
+      "valor": "6",
+      "settled": "2026-08-11T11:08:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 22,
+      "valor": "22",
+      "settled": "2026-08-11T11:08:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 4,
+      "valor": "4",
+      "settled": "2026-08-11T11:07:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 114
+        }
+      ],
+      "mult": 114,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 27,
+      "valor": "27",
+      "settled": "2026-08-11T11:07:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 35,
+      "valor": "35",
+      "settled": "2026-08-11T11:06:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 33,
+      "valor": "33",
+      "settled": "2026-08-11T11:06:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 238
+        }
+      ],
+      "mult": 238,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 34,
+      "valor": "34",
+      "settled": "2026-08-11T11:05:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 191
+        }
+      ],
+      "mult": 191,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 19,
+      "valor": "19",
+      "settled": "2026-08-11T11:05:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 18,
+      "valor": "18",
+      "settled": "2026-08-11T11:04:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 9,
+      "valor": "9",
+      "settled": "2026-08-11T11:04:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 24,
+      "valor": "24",
+      "settled": "2026-08-11T11:03:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 17,
+      "valor": "17",
+      "settled": "2026-08-11T11:03:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 31,
+      "valor": "31",
+      "settled": "2026-08-11T11:02:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 30,
+      "valor": "30",
+      "settled": "2026-08-11T11:02:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 4,
+      "valor": "4",
+      "settled": "2026-08-11T11:01:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 114
+        }
+      ],
+      "mult": 114,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 31,
+      "valor": "31",
+      "settled": "2026-08-11T11:01:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 36,
+      "valor": "36",
+      "settled": "2026-08-11T11:00:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 26,
+      "valor": "26",
+      "settled": "2026-08-11T11:00:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 18,
+      "valor": "18",
+      "settled": "2026-08-11T10:59:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 1,
+      "valor": "1",
+      "settled": "2026-08-11T10:59:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "tags": [
+        {
+          "x": 168
+        }
+      ],
+      "mult": 168,
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 9,
+      "valor": "9",
+      "settled": "2026-08-11T10:58:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 30,
+      "valor": "30",
+      "settled": "2026-08-11T10:58:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 12,
+      "valor": "12",
+      "settled": "2026-08-11T10:57:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 9,
+      "valor": "9",
+      "settled": "2026-08-11T10:57:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 32,
+      "valor": "32",
+      "settled": "2026-08-11T10:56:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 9,
+      "valor": "9",
+      "settled": "2026-08-11T10:56:00+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    },
+    {
+      "n": 19,
+      "valor": "19",
+      "settled": "2026-08-11T10:55:30+00:00",
+      "origem": "print_usuario_2026-08-11",
+      "jogo": "mega_fire",
+      "timestamp_sintetico": true
+    }
+  ],
+  "timestamp_sintetico": true,
+  "nota_temporal": "settled é âncora sintética (~35s/passo) para ordenação interna; não representa o instante real da rodada. Componentes que exigem ordem temporal genuína devem respeitar timestamp_sintetico=true."
+}
