@@ -7,3 +7,6 @@ PACOTE_COMPLETO/notificacoes.json
 PACOTE_COMPLETO/Logs/_test_isolado/
 PACOTE_COMPLETO/academia_autonoma/data/
 PACOTE_COMPLETO/biblioteca_estudos_*.json
+
+# zip de entrega — artefato de build, a fonte ja esta versionada
+PACOTE_COMPLETO_*.zip
