@@ -105,6 +105,80 @@ def topico_novo() -> str:
         "".join(secrets.choice(ALFABETO) for _ in range(5)) for _ in range(3))
 
 
+MIN_SOMBRA = 8      # amostra que a academia exige para sequer avaliar
+
+
+def linhas_das_teorias(jogo: str, quantas: int = 22) -> list:
+    """As teorias com mais evidência acumulada, e o quanto falta a cada uma.
+
+    "Nenhuma teoria aprovada" era um fato sem explicação na tela. Aqui dá para
+    ver o motivo: quanta sombra cada uma juntou, com que taxa, e quanto ainda
+    falta para ter amostra suficiente. Uma teoria só é aprovada depois de
+    acertar acima do acaso com amostra que não caiba no azar.
+    """
+    try:
+        import academia_db as DB
+        hs = DB.list_hipoteses(jogo) or []
+    except Exception as e:
+        return [f"não foi possível ler as teorias: {type(e).__name__}: {e}"]
+    if not hs:
+        return ["nenhuma teoria no catálogo ainda"]
+
+    def amostra(h):
+        return int((h.get("prospectivo") or {}).get("n") or 0)
+
+    validadas = [h for h in hs if str(h.get("estado", "")).startswith("validada")]
+    com_dado = [h for h in hs if amostra(h) > 0]
+    prontas = [h for h in hs if amostra(h) >= MIN_SOMBRA]
+
+    L = [f"TEORIAS — {len(hs)} no catálogo · {len(com_dado)} já com sombra · "
+         f"{len(prontas)} com amostra ≥{MIN_SOMBRA} · {len(validadas)} aprovadas"]
+    if not validadas:
+        L.append("nenhuma aprovada ainda: aprovar exige acertar acima do "
+                 "acaso com amostra que não caiba no azar. As de baixo estão "
+                 "juntando essa amostra — e as que já votam no consenso "
+                 "aparecem na aba da mesa.")
+    L.append("")
+    L.append(f"{'amostra':>8}  {'taxa':>6}  {'estado':<22}{'ativação':<20}o que diz")
+    L.append("─" * 118)
+    for h in sorted(hs, key=amostra, reverse=True)[:quantas]:
+        p = h.get("prospectivo") or {}
+        n = amostra(h)
+        taxa = p.get("taxa")
+        L.append(f"{n:>8}  "
+                 f"{(f'{taxa:.0%}' if taxa is not None else '—'):>6}  "
+                 f"{str(h.get('estado') or '')[:21]:<22}"
+                 f"{str(h.get('ativacao') or '')[:19]:<20}"
+                 f"{str(h.get('descricao') or '')[:44]}")
+    return L
+
+
+def texto_multiplicador(r) -> str:
+    """O multiplicador daquele giro, se veio um.
+
+    A captura guarda em `tags`, como {"x": 100} no Lightning ou {"x": 7} no
+    Crazy Time. O maior manda: quando um giro traz mais de um, é o maior que
+    interessa a quem está olhando.
+    """
+    valores = []
+    for t in (r.get("tags") or []):
+        if not isinstance(t, dict):
+            continue
+        x = t.get("x")
+        if x:
+            try:
+                valores.append(int(x))
+            except (TypeError, ValueError):
+                pass
+        for L in (t.get("lucky") or []):
+            if isinstance(L, dict) and L.get("x") and L.get("n") == r.get("n"):
+                try:
+                    valores.append(int(L["x"]))
+                except (TypeError, ValueError):
+                    pass
+    return f"×{max(valores)}" if valores else ""
+
+
 def cor_do_numero(v) -> str:
     try:
         n = int(v)
@@ -417,6 +491,8 @@ class PainelMesa(ctk.CTkFrame):
         self.escolhas: list = []
         self.restantes = 0
         self.vistos: set = set()
+        self.acertos_keys: set = set()
+        self.erros_keys: set = set()
         self.janela_hit = False
         self.ultima_janela = 0
         self.ultimas_escolhas: list = []
@@ -492,17 +568,30 @@ class PainelMesa(ctk.CTkFrame):
                                        text_color=FRACO)
         self.contadores.pack(anchor="w")
 
-        ctk.CTkLabel(esq, text="últimos giros", font=("Arial", 11, "bold"),
+        ctk.CTkLabel(esq, text="últimos giros   ✓ estava na aposta · "
+                                "✗ não estava · ×N multiplicador",
+                     font=("Arial", 11, "bold"),
                      text_color=FRACO).pack(anchor="w", pady=(12, 4))
         self.hist = ctk.CTkFrame(esq, fg_color="transparent")
         self.hist.pack(fill="x")
-        self.hist_caixas = []
+        # Cada giro é uma coluna com três linhas: o multiplicador em cima, o
+        # número no meio, o acerto embaixo. Tudo criado uma vez só — recriar
+        # widgets a cada volta era o que fazia o painel piscar.
+        self.hist_col = []
         for _ in range(16):
-            c = ctk.CTkLabel(self.hist, text="", width=34, height=30,
-                             fg_color="transparent", corner_radius=6,
-                             font=("Arial", 12, "bold"))
-            c.pack(side="left", padx=2)
-            self.hist_caixas.append(c)
+            col = ctk.CTkFrame(self.hist, fg_color="transparent", width=40)
+            col.pack(side="left", padx=2)
+            mult = ctk.CTkLabel(col, text="", width=38, height=14,
+                                font=("Arial", 10, "bold"), text_color=AMARELO)
+            mult.pack()
+            num = ctk.CTkLabel(col, text="", width=38, height=30,
+                               fg_color="transparent", corner_radius=6,
+                               font=("Arial", 12, "bold"))
+            num.pack()
+            marca = ctk.CTkLabel(col, text="", width=38, height=16,
+                                 font=("Arial", 13, "bold"))
+            marca.pack()
+            self.hist_col.append({"mult": mult, "num": num, "marca": marca})
 
         ctk.CTkLabel(esq, text="o que as IAs disseram nesta volta",
                      font=("Arial", 11, "bold"), text_color=FRACO
@@ -529,6 +618,10 @@ class PainelMesa(ctk.CTkFrame):
                 self.ok_num = int(st.get("ok_num") or 0)
                 self.err_num = int(st.get("err_num") or 0)
                 self.vistos = set(st.get("vistos") or [])
+                # Mesmos nomes que o combo daquela mesa já usava: o histórico
+                # de acertos que ele acumulou aparece de volta na tela.
+                self.acertos_keys = set(st.get("acertos_keys") or [])
+                self.erros_keys = set(st.get("erros_keys") or [])
                 self.ultima_janela = int(st.get("last_janela_size") or 0)
                 self.ultimas_escolhas = list(st.get("last_escolhas") or [])
                 self.soma_p = float(st.get("soma_p_esperado") or 0.0)
@@ -556,6 +649,8 @@ class PainelMesa(ctk.CTkFrame):
             dados = {"ok": self.ok, "err": self.err,
                      "ok_num": self.ok_num, "err_num": self.err_num,
                      "vistos": list(self.vistos)[-200:],
+                     "acertos_keys": list(self.acertos_keys)[-200:],
+                     "erros_keys": list(self.erros_keys)[-200:],
                      "escolhas": list(self.escolhas),
                      "restantes": int(self.restantes),
                      "janela_hit": bool(self.janela_hit),
@@ -595,10 +690,14 @@ class PainelMesa(ctk.CTkFrame):
 
         self.restantes -= 1
         hit = n in self.escolhas
+        # Guarda a chave para o histórico poder marcar ✓ ou ✗ neste giro.
+        # Só entram giros conferidos contra uma janela aberta.
         if hit:
             self.ok_num += 1
+            self.acertos_keys.add(chave)
         else:
             self.err_num += 1
+            self.erros_keys.add(chave)
         registrar(f"{self.jogo} {'HIT' if hit else 'MISS'} {n} "
                   f"restam={self.restantes}")
 
@@ -709,19 +808,37 @@ class PainelMesa(ctk.CTkFrame):
         self.after(0, lambda: self.st.configure(text=texto, text_color=cor))
 
     def _desenhar_hist(self, rows):
-        """Reaproveita os rótulos em vez de recriá-los.
+        """Cada giro: o número, se estava na aposta, e o multiplicador.
 
-        Destruir e recriar dezesseis widgets por mesa a cada volta são 64
-        widgets refeitos o tempo todo na thread da interface — é o que fazia o
-        painel de uma mesa sumir e voltar. Agora eles nascem uma vez e só
-        trocam texto e cor.
+        Os widgets são reaproveitados — destruir e recriar dezesseis colunas
+        por mesa a cada volta era o que fazia o painel sumir e voltar.
         """
-        for i, cx in enumerate(self.hist_caixas):
-            if i < len(rows):
-                v = rows[i].get("n")
-                cx.configure(text=str(v), fg_color=cor_do_numero(v))
-            else:
-                cx.configure(text="", fg_color="transparent")
+        for i, col in enumerate(self.hist_col):
+            if i >= len(rows):
+                col["mult"].configure(text="")
+                col["num"].configure(text="", fg_color="transparent")
+                col["marca"].configure(text="")
+                continue
+            r = rows[i]
+            v = r.get("n")
+            col["num"].configure(text=str(v), fg_color=cor_do_numero(v))
+            col["mult"].configure(text=texto_multiplicador(r))
+            marca, cor = self._marca_do_giro(r)
+            col["marca"].configure(text=marca, text_color=cor)
+
+    def _marca_do_giro(self, r):
+        """✓ se o giro caiu na aposta, ✗ se não, nada se não foi conferido.
+
+        Só marca giro que passou por uma janela aberta. Sem isso, todo giro
+        antigo apareceria como erro só por não ter sido escolhido, o que daria
+        um placar visual falso e muito pior do que o real.
+        """
+        chave = str(r.get("settled") or "")
+        if chave and chave in self.acertos_keys:
+            return "✓", VERDE
+        if chave and chave in self.erros_keys:
+            return "✗", VERMELHO
+        return "", FRACO
 
     def _aplicar(self, sug, rows):
         modo = sug.get("modo") or ""
@@ -999,6 +1116,7 @@ class Laboratorio(ctk.CTkFrame):
                              f"{str(a.get('estado'))[:9]:<10}"
                              f"{a.get('amostra', 0):>8}  "
                              f"{str(a.get('ultima_descoberta') or '—')[:48]}")
+                L += ["", ""] + linhas_das_teorias(jogo)
                 trib = snap.get("tribunal")
                 if trib:
                     L += ["", "TRIBUNAL", str(trib)[:900]]

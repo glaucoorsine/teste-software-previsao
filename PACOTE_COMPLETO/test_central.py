@@ -122,7 +122,10 @@ class MesaFalsa(CENTRAL.PainelMesa):
                   "feed", "st", "academia"):
             setattr(self, n, Boneco())
         self.caixas = [Boneco() for _ in range(7)]
-        self.hist_caixas = [Boneco() for _ in range(16)]
+        self.hist_col = [{"mult": Boneco(), "num": Boneco(), "marca": Boneco()}
+                         for _ in range(16)]
+        self.acertos_keys = set()
+        self.erros_keys = set()
         self.lendo_academia = False
         self._carregar()
 
@@ -364,21 +367,72 @@ checa(len([x for x in t2.splitlines() if x.strip()]) == 2,
       "segundos diferentes não são juntados", t2)
 checa("×" not in t2, "e nada de contador onde não houve repetição")
 
-print("\n[16] o histórico reaproveita os rótulos em vez de recriá-los")
+print("\n[16] o histórico mostra número, acerto e multiplicador")
 mh = MesaFalsa("lightning")
-antes_ids = [id(c) for c in mh.hist_caixas]
-mh._desenhar_hist([{"n": n} for n in (7, 0, 32, 5)])
-checa([id(c) for c in mh.hist_caixas] == antes_ids,
+antes_ids = [id(c["num"]) for c in mh.hist_col]
+giros = [{"n": 1, "settled": "a", "tags": [{"x": 100}]},
+         {"n": 0, "settled": "b", "tags": []},
+         {"n": 32, "settled": "c", "tags": [{"x": 50}]},
+         {"n": 5, "settled": "d", "tags": []}]
+mh.acertos_keys = {"a", "c"}
+mh.erros_keys = {"b"}
+mh._desenhar_hist(giros)
+checa([id(c["num"]) for c in mh.hist_col] == antes_ids,
       "os mesmos widgets continuam lá — nada é destruído")
-checa(mh.hist_caixas[0].cfg.get("text") == "7", "primeiro giro desenhado",
-      mh.hist_caixas[0].cfg.get("text"))
-checa(mh.hist_caixas[1].cfg.get("fg_color") == "#16a34a",
-      "o zero fica verde", mh.hist_caixas[1].cfg.get("fg_color"))
-checa(mh.hist_caixas[4].cfg.get("text") == "",
-      "sobra de caixa fica apagada", mh.hist_caixas[4].cfg.get("text"))
-mh._desenhar_hist([{"n": 1}])
-checa(mh.hist_caixas[1].cfg.get("text") == "",
-      "e some ao encurtar o histórico", mh.hist_caixas[1].cfg.get("text"))
+checa(mh.hist_col[0]["num"].cfg.get("text") == "1", "primeiro giro desenhado",
+      mh.hist_col[0]["num"].cfg.get("text"))
+checa(mh.hist_col[1]["num"].cfg.get("fg_color") == "#16a34a",
+      "o zero fica verde", mh.hist_col[1]["num"].cfg.get("fg_color"))
+
+checa(mh.hist_col[0]["mult"].cfg.get("text") == "×100",
+      "multiplicador de 100 aparece", mh.hist_col[0]["mult"].cfg.get("text"))
+checa(mh.hist_col[2]["mult"].cfg.get("text") == "×50",
+      "e o de 50 também", mh.hist_col[2]["mult"].cfg.get("text"))
+checa(mh.hist_col[1]["mult"].cfg.get("text") == "",
+      "giro sem multiplicador fica limpo",
+      mh.hist_col[1]["mult"].cfg.get("text"))
+
+checa(mh.hist_col[0]["marca"].cfg.get("text") == "✓",
+      "giro que caiu na aposta leva ✓", mh.hist_col[0]["marca"].cfg.get("text"))
+checa(mh.hist_col[1]["marca"].cfg.get("text") == "✗",
+      "giro conferido e errado leva ✗", mh.hist_col[1]["marca"].cfg.get("text"))
+checa(mh.hist_col[3]["marca"].cfg.get("text") == "",
+      "giro nunca conferido não leva marca nenhuma — senão o placar visual "
+      "ficaria pior que o real", mh.hist_col[3]["marca"].cfg.get("text"))
+
+mh._desenhar_hist([{"n": 1, "settled": "a"}])
+checa(mh.hist_col[1]["num"].cfg.get("text") == "",
+      "e some ao encurtar o histórico", mh.hist_col[1]["num"].cfg.get("text"))
+checa(mh.hist_col[1]["mult"].cfg.get("text") == "",
+      "o multiplicador some junto")
+
+print("\n[16b] o multiplicador é lido dos dois formatos de captura")
+checa(CENTRAL.texto_multiplicador({"n": 7, "tags": [{"x": 7}]}) == "×7",
+      "formato do Crazy Time")
+checa(CENTRAL.texto_multiplicador(
+    {"n": 13, "tags": [{"lucky": [{"n": 13, "x": 500}]}]}) == "×500",
+    "formato lucky da roleta")
+checa(CENTRAL.texto_multiplicador(
+    {"n": 13, "tags": [{"lucky": [{"n": 20, "x": 500}]}]}) == "",
+    "lucky de OUTRO número não é o multiplicador deste giro")
+checa(CENTRAL.texto_multiplicador({"n": 5, "tags": [{"x": 3}, {"x": 50}]})
+      == "×50", "com mais de um, mostra o maior")
+checa(CENTRAL.texto_multiplicador({"n": 5}) == "", "sem tags, nada")
+checa(CENTRAL.texto_multiplicador({"n": 5, "tags": [{"x": "abc"}]}) == "",
+      "valor estragado não quebra a tela")
+
+print("\n[16c] as marcas sobrevivem a fechar e reabrir")
+alvo.unlink(missing_ok=True)
+ms = MesaFalsa("lightning")
+ms._aplicar({"pad5": [8, 9], "modo": "OPERAR", "janela": 2},
+            [{"n": 7, "settled": "z0"}])
+ms.validar({"n": 8, "settled": "z1"})       # acerto
+ms.validar({"n": 30, "settled": "z2"})      # erro
+checa("z1" in ms.acertos_keys and "z2" in ms.erros_keys,
+      "conferência marcou os dois giros")
+ms2 = MesaFalsa("lightning")
+checa("z1" in ms2.acertos_keys, "o ✓ voltou depois de reabrir")
+checa("z2" in ms2.erros_keys, "o ✗ voltou também")
 
 print("\n[17] leitura da academia não empilha")
 
