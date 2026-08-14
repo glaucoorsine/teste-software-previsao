@@ -319,7 +319,11 @@ class PainelMesa(ctk.CTkFrame):
                 # senão o cérebro perde o retorno daquele giro para sempre.
                 self._estado("cérebro sem resposta", "#eab308")
                 return
-            self.primeira = False
+            if self.primeira:
+                self.primeira = False
+                self._estado("API instável — histórico salvo" if offline
+                             else "operacional",
+                             "#eab308" if offline else "#22c55e")
             self.ultimo_resultado = None
             if cap.get("head_id"):
                 try:
