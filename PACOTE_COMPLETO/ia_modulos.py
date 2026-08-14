@@ -1776,6 +1776,33 @@ class PipelinePerceptivo:
                     hips.append({"nome": "REGRA_OPERADOR_ESTREITA",
                                  "nums": [str(x) for x in _nums_op],
                                  "peso": 1.0})
+
+                # A TABELA DE TRANSIÇÕES QUE ELE DITOU TAMBÉM VOTA.
+                #
+                # Ela existia no pacote e era avaliada pela academia, mas os
+                # candidatos dela passavam pelo mesmo filtro de validação que
+                # engolia todo o resto — nunca chegavam à votação ao vivo. Era
+                # conhecimento dele guardado numa gaveta.
+                #
+                # Medida em 3367 giros somados das três mesas: a tabela inteira
+                # dá no acaso (1,00x no lightning e no immersive, que juntos têm
+                # 2667 ativações). Mas UMA regra se destaca — 29→[30] a 3,52x
+                # com p=0,0020, e decaindo certo conforme a janela cresce
+                # (3,52x / 2,26x / 1,77x), que é o formato de efeito real e não
+                # de ruído. Não sobrevive à correção por 96 testes, então entra
+                # como voz e não como veredito: se estiver errada, as outras
+                # fontes a superam na votação.
+                try:
+                    from academia_autonoma.regras_do_operador import TRANSICOES
+                    _alvo_tr = TRANSICOES.get(_cron[-1]) if _cron else None
+                    if _alvo_tr:
+                        hips.append({"nome": "REGRA_TRANSICAO",
+                                     "nums": [str(x) for x in _alvo_tr],
+                                     "peso": 1.6})
+                        msgs.append(f"[Transição ditada] {_cron[-1]} → "
+                                    f"{_alvo_tr}")
+                except Exception as _e:
+                    msgs.append(f"[Transição ditada] erro: {type(_e).__name__}")
             except Exception as _e:
                 msgs.append(f"[Regra do operador] erro: {type(_e).__name__}: {_e}")
 
