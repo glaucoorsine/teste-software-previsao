@@ -227,15 +227,37 @@ def main() -> int:
         print(f" {nomes:<44} {m['taxa']:>6.1%} {m['razao']:>5.2f}x "
               f"{m['c_taxa']:>7.1%} {m['c_razao']:>5.2f}x")
     print()
-    melhor_conf = max(r["melhores"], key=lambda d: d["c_razao"])
-    print(f" MELHOR NA CONFERÊNCIA (o que vale):")
-    print(f"   {' + '.join(melhor_conf['pecas'])}")
-    print(f"   {melhor_conf['c_hits']}/{melhor_conf['c_n']} = "
-          f"{melhor_conf['c_taxa']:.1%}  contra {r['acaso']:.1%} de acaso  "
-          f"= {melhor_conf['c_razao']:.2f}x")
-    if melhor_conf["c_n"] < 40:
-        print(f"   AVISO: só {melhor_conf['c_n']} ativações na conferência — "
+    # O VENCEDOR É O DO GARIMPO. A CONFERÊNCIA É RELATÓRIO, NÃO SEGUNDA PENEIRA.
+    #
+    # A versão anterior coroava `max(melhores, key=c_razao)` — escolhia o melhor
+    # DA CONFERÊNCIA. Isso escolhe de novo em cima da parte lacrada, o que a
+    # deslacra: com 8 candidatos, o melhor deles bate o acaso por sorte. Medido
+    # em ruído puro, onde não existe ouro nenhum: o primeiro do garimpo dava
+    # 1,27x em média e caía para 0,86x na conferência (a peneira funcionando),
+    # mas um dos seis mundos entregou 1,28x na conferência — e era ruído.
+    #
+    # Então o candidato é escolhido no garimpo, uma vez só, e o número que vale
+    # é o que ele fez na parte que não viu. Os demais ficam na tabela acima
+    # como contexto, não como concorrentes ao título.
+    campeao = r["melhores"][0]
+    print(f" O CANDIDATO (escolhido no garimpo, uma vez só):")
+    print(f"   {' + '.join(campeao['pecas'])}")
+    print(f"   no garimpo:     {campeao['taxa']:.1%}  {campeao['razao']:.2f}x")
+    print(f"   na conferência: {campeao['c_hits']}/{campeao['c_n']} = "
+          f"{campeao['c_taxa']:.1%}  contra {r['acaso']:.1%} de acaso  "
+          f"= {campeao['c_razao']:.2f}x   <- o número que vale")
+    print()
+    if campeao["c_n"] < 40:
+        print(f"   AVISO: só {campeao['c_n']} ativações na conferência — "
               f"ainda não decide nada.")
+    elif campeao["c_razao"] >= 1.15:
+        print(f"   Segurou fora do garimpo. Vale pré-declarar e cobrar ao vivo.")
+    else:
+        print(f"   Não segurou fora do garimpo — o brilho era da peneira.")
+    print()
+    print(f"   (as outras linhas da tabela são contexto. Escolher a melhor")
+    print(f"    conferência entre elas seria peneirar de novo no lacrado:")
+    print(f"    em ruído puro isso entrega 1,28x com a mesma cara de ouro.)")
     print()
     return 0
 
