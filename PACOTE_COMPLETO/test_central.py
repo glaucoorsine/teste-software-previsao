@@ -122,7 +122,8 @@ class MesaFalsa(CENTRAL.PainelMesa):
                   "feed", "st", "academia"):
             setattr(self, n, Boneco())
         self.caixas = [Boneco() for _ in range(7)]
-        self.hist_col = [{"mult": Boneco(), "num": Boneco(), "marca": Boneco()}
+        self.hist_col = [{"topo": Boneco(), "mult": Boneco(),
+                          "num": Boneco(), "marca": Boneco()}
                          for _ in range(16)]
         self.acertos_keys = set()
         self.erros_keys = set()
@@ -569,6 +570,58 @@ mt.validar({"n": 30, "settled": "t3"})
 checa(mt.ok == 1 and mt.err == 0, "a janela fechou como ACERTO",
       f"ok={mt.ok} err={mt.err}")
 checa("t2" in mt.acertos_keys, "e o giro leva ✓ no histórico")
+
+
+
+print("\n[21] Crazy Time: top slot, resultado e multiplicador")
+giro = {"n": "2", "settled": "c1",
+        "tags": [{"top": {"simbolo": "5", "x": 3}}, {"x": 2}]}
+t = CENTRAL.top_slot(giro)
+checa(t["simbolo"] == "5" and t["x"] == 3, "lê o símbolo e o multiplicador do slot", t)
+checa(t["bateu"] is False, "sorteou 5, a roda parou no 2 — não bateu")
+checa(CENTRAL.texto_top_slot(giro) == "5 ×3 miss",
+      "e a linha diz miss", CENTRAL.texto_top_slot(giro))
+# o 3 do top slot NAO e o multiplicador aplicado: no print dele,
+# "5 3X | 2 | 2X" quer dizer slot 5 a 3X, roda no 2, aplicado 2X
+checa(CENTRAL.texto_multiplicador(giro) == "×2",
+      "o multiplicador aplicado é o do giro, não o do slot",
+      CENTRAL.texto_multiplicador(giro))
+
+bateu = {"n": "2", "settled": "c2",
+         "tags": [{"top": {"simbolo": "2", "x": 10}}, {"x": 10}]}
+tb = CENTRAL.top_slot(bateu)
+checa(tb["bateu"] is True, "top slot no 2 e roda no 2 — bateu")
+checa(CENTRAL.texto_top_slot(bateu) == "2 ×10",
+      "quando bate, não escreve miss", CENTRAL.texto_top_slot(bateu))
+
+sem = {"n": "1", "settled": "c3", "tags": [{"x": 1}]}
+checa(CENTRAL.texto_top_slot(sem) == "", "giro sem top slot fica em branco")
+checa(CENTRAL.top_slot({"n": "1"})["simbolo"] is None, "sem tags não quebra")
+
+bonus = {"n": "CashHunt", "settled": "c4",
+         "tags": [{"top": {"simbolo": "CashHunt", "x": 5}}]}
+checa(CENTRAL.top_slot(bonus)["bateu"] is True,
+      "bônus também casa por nome, não só número")
+checa(CENTRAL.texto_top_slot(bonus) == "CashHunt ×5", "e aparece por extenso")
+
+print("\n[21b] o desenho põe cada coisa na sua linha")
+CENTRAL.ESTADO["crazy_time"] = "teste_central_state.json"
+alvo.unlink(missing_ok=True)
+mc = MesaFalsa("crazy_time")
+mc._desenhar_hist([giro, bateu, sem])
+checa(mc.hist_col[0]["topo"].cfg.get("text") == "5 ×3 miss",
+      "primeira coluna: o top slot", mc.hist_col[0]["topo"].cfg.get("text"))
+checa(mc.hist_col[0]["num"].cfg.get("text") == "2",
+      "o resultado real embaixo dele", mc.hist_col[0]["num"].cfg.get("text"))
+checa(mc.hist_col[0]["mult"].cfg.get("text") == "×2",
+      "e o multiplicador aplicado", mc.hist_col[0]["mult"].cfg.get("text"))
+checa(mc.hist_col[1]["topo"].cfg.get("text_color") == "#38bdf8",
+      "top slot que bateu fica aceso",
+      mc.hist_col[1]["topo"].cfg.get("text_color"))
+checa(mc.hist_col[0]["topo"].cfg.get("text_color") == CENTRAL.FRACO,
+      "e o miss fica apagado")
+checa(mc.hist_col[5]["topo"].cfg.get("text") == "",
+      "coluna sobrando fica limpa")
 
 alvo.unlink(missing_ok=True)
 print()

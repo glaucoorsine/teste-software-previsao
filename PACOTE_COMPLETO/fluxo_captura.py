@@ -300,11 +300,31 @@ def parse_items_ct(items: List[dict]) -> List[dict]:
                 continue
             settled = canonical_ts(d.get("settledAt") or d.get("settled") or it.get("settledAt"))
             tags = []
-            # multiplicador do top slot quando disponível
+            # O TOP SLOT é meia informação sem o símbolo.
+            #
+            # Antes só o multiplicador era guardado, e o símbolo sorteado ia
+            # fora. Mas é o cruzamento dos dois que conta a história do giro:
+            # o top slot sorteia um símbolo com um multiplicador, e ele só
+            # paga se a roda parar no MESMO símbolo — senão é "Miss". Sem
+            # guardar o símbolo não dá para mostrar isso nem para estudar
+            # quantas vezes o top slot bate.
             try:
                 if isinstance(out, dict):
                     top = out.get("topSlot") or {}
                     mult = top.get("multiplier") or out.get("maxMultiplier")
+                    simbolo = None
+                    for c in ("sector", "result", "wheelSector", "symbol",
+                              "slotResult", "value"):
+                        v = top.get(c) if isinstance(top, dict) else None
+                        if v:
+                            simbolo = str(v).strip()
+                            break
+                    if simbolo:
+                        low = simbolo.lower().replace("_", " ")
+                        simbolo = aliases.get(
+                            low, aliases.get(low.replace(" ", ""), simbolo))
+                    if mult or simbolo:
+                        tags.append({"top": {"simbolo": simbolo, "x": mult}})
                     if mult:
                         tags.append({"x": mult})
             except Exception:

@@ -1267,12 +1267,32 @@ class MetaSupervisora:
             cmd["reativar_modelo"] = True
         return cmd, msg
 
+# ═══════════════════════════════════════════════════ MODO CONSENSO PURO
+#
+# Decisão do operador, 15/08/2026: a sugestão sai do CRUZAMENTO DAS TEORIAS e
+# de mais nada. As guardas estatísticas que eu tinha posto por cima — ganho
+# contra o baseline, calibração do LSTM, taxa medida contra o acaso — deixam de
+# poder calar o consenso.
+#
+# O que NÃO some, porque não é régua minha e sim o próprio consenso:
+#   - o número precisa de MIN_TEORIAS_CONSENSO teorias distintas concordando
+#   - sem esse acordo, a tela continua dizendo AGUARDANDO
+# Sem isso não existiria consenso, existiria palpite de uma fonte só.
+#
+# O que continua rodando por trás, sem bloquear: a sombra prospectiva, que mede
+# cada teoria ao vivo. Ela deixa de ser porteiro e passa a ser só medida — é o
+# que permite dizer depois quais teorias estão puxando o resultado para cima.
+#
+# PARA VOLTAR ATRÁS: troque para False nesta linha e pronto. Nada foi apagado;
+# as guardas continuam escritas logo abaixo e voltam a valer inteiras. Rode o
+# RESULTADO.bat antes e depois para comparar as duas com o mesmo critério.
+CONSENSO_PURO = True
+
+
 class PipelinePerceptivo:
-    # Quantas teorias validadas DISTINTAS precisam concordar para o consenso
-    # abrir gatilho sem o LSTM. Ver o "Caminho 2" em processar().
-    # Cada teoria aqui já passou pela sombra prospectiva ao vivo e pelo FDR —
-    # duas concordando são dois testes independentes que sobreviveram, não dois
-    # palpites. Uma sozinha continua não abrindo gatilho.
+    # Quantas teorias DISTINTAS precisam concordar para o número entrar.
+    # Duas fontes independentes apontando o mesmo número é o piso do que se
+    # pode chamar de cruzamento; uma sozinha é palpite.
     MIN_TEORIAS_SOZINHO = 2
 
     def __init__(self, jogo: str = "mega_fire"):
@@ -1817,7 +1837,8 @@ class PipelinePerceptivo:
         # números com ≥2 teorias concordando") e morria na linha seguinte, em
         # 160 de 160 voltas. Zero sugestões em todo o histórico.
         sombra_alvos = list(alvos) if alvos else []
-        if modo == "GATILHO_OK" and conf < self.lstm.limiar and not via_consenso:
+        if (modo == "GATILHO_OK" and conf < self.lstm.limiar
+                and not via_consenso and not CONSENSO_PURO):
             # guarda candidatos experimentais antes de limpar orientação pública
             sombra_alvos = list(alvos) if alvos else list(base_alvos or [])[:self.k_alvos]
             alvos=[]; modo="AGUARDANDO"
@@ -2024,7 +2045,16 @@ class PipelinePerceptivo:
         # tirado. A sombra e o portão do FDR continuam valendo; o que muda é de
         # quem se cobra a régua.
         _modelo_ok = modelo_ativo or via_consenso
-        status_op = "OPERAR" if (operavel and modo == "GATILHO_OK" and alvos and rel_n >= MIN_JANELAS_METRICAS and _modelo_ok) else "NAO_OPERAR"
+        if CONSENSO_PURO:
+            # Consenso puro: houve acordo entre teorias, então é entrada. Não
+            # se exige janelas avaliadas, nem modelo ativo, nem ganho contra
+            # baseline. O acordo é o critério.
+            status_op = "OPERAR" if (modo == "GATILHO_OK" and alvos) else "NAO_OPERAR"
+            if status_op == "OPERAR" and motivo_bloq:
+                msgs.append("[Consenso puro] as teorias concordaram — "
+                            "seguindo apesar de: " + "; ".join(motivo_bloq))
+        else:
+            status_op = "OPERAR" if (operavel and modo == "GATILHO_OK" and alvos and rel_n >= MIN_JANELAS_METRICAS and _modelo_ok) else "NAO_OPERAR"
         if status_op == "OPERAR":
             modo_out = "OPERAR"
             msgs.append(f"[Conservador] OPERAR k={len(alvos)} janela≤{janela_base} conf={conf:.3f}")

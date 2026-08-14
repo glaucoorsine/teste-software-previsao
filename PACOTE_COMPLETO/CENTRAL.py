@@ -153,6 +153,38 @@ def linhas_das_teorias(jogo: str, quantas: int = 22) -> list:
     return L
 
 
+def top_slot(r) -> dict:
+    """O que o top slot sorteou neste giro, e se bateu com o resultado.
+
+    O top slot sorteia um símbolo com um multiplicador antes da roda girar, e
+    só paga se a roda parar no MESMO símbolo. Quando não bate é "Miss" — que é
+    a maioria das vezes, e é justamente o que interessa acompanhar: quantas
+    vezes ele acerta, e em qual símbolo.
+    """
+    for t in (r.get("tags") or []):
+        if isinstance(t, dict) and isinstance(t.get("top"), dict):
+            s = t["top"].get("simbolo")
+            x = t["top"].get("x")
+            bateu = bool(s) and str(s).strip() == str(r.get("n")).strip()
+            return {"simbolo": s, "x": x, "bateu": bateu}
+    return {"simbolo": None, "x": None, "bateu": False}
+
+
+def texto_top_slot(r) -> str:
+    """Uma linha curta: `5 ×3` quando bateu, `5 ×3 miss` quando não."""
+    t = top_slot(r)
+    if not t["simbolo"] and not t["x"]:
+        return ""
+    partes = []
+    if t["simbolo"]:
+        partes.append(str(t["simbolo"]))
+    if t["x"]:
+        partes.append(f"×{t['x']}")
+    if t["simbolo"] and not t["bateu"]:
+        partes.append("miss")
+    return " ".join(partes)
+
+
 def esta_na_aposta(n, escolhas) -> bool:
     """O número que saiu estava entre os apostados?
 
@@ -597,21 +629,31 @@ class PainelMesa(ctk.CTkFrame):
         # Cada giro é uma coluna com três linhas: o multiplicador em cima, o
         # número no meio, o acerto embaixo. Tudo criado uma vez só — recriar
         # widgets a cada volta era o que fazia o painel piscar.
+        # No Crazy Time cada giro tem três coisas, e uma só não conta a
+        # história: o top slot sorteia um símbolo com multiplicador, a roda
+        # para em outro, e o multiplicador aplicado é o terceiro número. Por
+        # isso a coluna dele é mais alta e mais larga.
+        largura = 74 if self.jogo == "crazy_time" else 38
         self.hist_col = []
-        for _ in range(16):
-            col = ctk.CTkFrame(self.hist, fg_color="transparent", width=40)
+        for _ in range(16 if self.jogo != "crazy_time" else 11):
+            col = ctk.CTkFrame(self.hist, fg_color="transparent")
             col.pack(side="left", padx=2)
-            mult = ctk.CTkLabel(col, text="", width=38, height=14,
+            topo = ctk.CTkLabel(col, text="", width=largura, height=14,
+                                font=("Arial", 9), text_color="#7dd3fc")
+            if self.jogo == "crazy_time":
+                topo.pack()
+            mult = ctk.CTkLabel(col, text="", width=largura, height=14,
                                 font=("Arial", 10, "bold"), text_color=AMARELO)
             mult.pack()
-            num = ctk.CTkLabel(col, text="", width=38, height=30,
+            num = ctk.CTkLabel(col, text="", width=largura, height=30,
                                fg_color="transparent", corner_radius=6,
                                font=("Arial", 12, "bold"))
             num.pack()
-            marca = ctk.CTkLabel(col, text="", width=38, height=16,
+            marca = ctk.CTkLabel(col, text="", width=largura, height=16,
                                  font=("Arial", 13, "bold"))
             marca.pack()
-            self.hist_col.append({"mult": mult, "num": num, "marca": marca})
+            self.hist_col.append({"topo": topo, "mult": mult,
+                                  "num": num, "marca": marca})
 
         ctk.CTkLabel(esq, text="o que as IAs disseram nesta volta",
                      font=("Arial", 11, "bold"), text_color=FRACO
@@ -835,6 +877,7 @@ class PainelMesa(ctk.CTkFrame):
         """
         for i, col in enumerate(self.hist_col):
             if i >= len(rows):
+                col["topo"].configure(text="")
                 col["mult"].configure(text="")
                 col["num"].configure(text="", fg_color="transparent")
                 col["marca"].configure(text="")
@@ -843,6 +886,11 @@ class PainelMesa(ctk.CTkFrame):
             v = r.get("n")
             col["num"].configure(text=str(v), fg_color=cor_do_numero(v))
             col["mult"].configure(text=texto_multiplicador(r))
+            # o top slot em azul quando bateu, apagado quando foi miss:
+            # é a diferença entre "sorteou 5×3 e pagou" e "sorteou e perdeu"
+            t = top_slot(r)
+            col["topo"].configure(text=texto_top_slot(r),
+                                  text_color="#38bdf8" if t["bateu"] else FRACO)
             marca, cor = self._marca_do_giro(r)
             col["marca"].configure(text=marca, text_color=cor)
 
