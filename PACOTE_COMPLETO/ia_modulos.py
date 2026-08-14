@@ -1373,12 +1373,38 @@ class PipelinePerceptivo:
             taxa_janela=rel.get("taxa"),
         )
         self.lstm.ajustar(cmd["limiar_delta"])
-        if cmd.get("desativar_modelo"):
-            self.mem.set_modelo_ativo(False)
-            msgs.append("[Meta] MODELO DESATIVADO (só este protocolo) — ganho negativo n>=20")
+        # A REATIVAÇÃO EXPLORATÓRIA PRECISA DE UMA JANELA PARA EXISTIR.
+        #
+        # As duas regras se anulavam: a exploratória religava o modelo a cada
+        # 30 janelas, e a regra de ganho negativo o desligava no ciclo
+        # seguinte, antes de qualquer medição nova. Medido nos 205 giros reais
+        # de Lightning: o modelo desativou em n=118 e ficou desligado nos 144
+        # ciclos, com ZERO trocas de estado. A válvula de escape existia no
+        # papel e nunca produziu um único dado.
+        #
+        # Agora a reativação vem com carência: por CARENCIA_CICLOS ciclos o
+        # desligamento fica suspenso, e o modelo tem chance de mostrar o que
+        # faz. Isso não afrouxa o critério — passada a carência, se o ganho
+        # continuar negativo ele desliga de novo, agora com medição de
+        # verdade por trás. O que muda é a decisão passar a ser tomada sobre
+        # dado novo em vez de sobre a lembrança do dado velho.
+        CARENCIA_CICLOS = 25
+        _carencia = int(getattr(self, "_carencia_modelo", 0) or 0)
         if cmd.get("reativar_modelo"):
             self.mem.set_modelo_ativo(True)
-            msgs.append("[Meta] MODELO REATIVADO (este protocolo)")
+            self._carencia_modelo = CARENCIA_CICLOS
+            msgs.append(f"[Meta] MODELO REATIVADO — carência de {CARENCIA_CICLOS} "
+                        f"ciclos para provar")
+        elif cmd.get("desativar_modelo"):
+            if _carencia > 0:
+                self._carencia_modelo = _carencia - 1
+                msgs.append(f"[Meta] ganho negativo, mas em carência "
+                            f"({_carencia} ciclos restantes) — segue ativo")
+            else:
+                self.mem.set_modelo_ativo(False)
+                msgs.append("[Meta] MODELO DESATIVADO (só este protocolo) — ganho negativo n>=20")
+        elif _carencia > 0:
+            self._carencia_modelo = _carencia - 1
         msgs.append(f"[Meta] {msg_m} limiar={self.lstm.limiar:.3f}")
 
         # métricas no feed
