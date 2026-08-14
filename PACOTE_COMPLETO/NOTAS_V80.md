@@ -128,3 +128,55 @@ família inteira em vez de família filtrada pela região).
   Time, com a conta de quantas horas de mesa cada uma precisa (66 a 1088).
 - `relatorio_visual.py` — gera uma página com todas as medidas na mesma régua,
   centrada no acaso.
+
+---
+
+# v81 ULTIMATO — o que muda para rodar dias
+
+Esta versão não acrescenta teoria nenhuma. Ela existe para o software aguentar
+ficar ligado sem ninguém olhando, que é um problema diferente de funcionar por
+uma noite.
+
+## O bus enchia a memória
+
+O barramento de eventos era append-only, sem poda, e o `ler()` carregava o
+arquivo INTEIRO na memória a cada consulta. Medido: 1.279 ciclos de uma mesa
+geraram 7,5 MB.
+
+```
+3 dias, 4 mesas  ->  ~42 MB
+30 dias          -> ~420 MB
+```
+
+O disco aguentaria. A leitura não: depois de um mês, cada consulta carregaria
+420 MB para devolver 200 linhas. O software travaria de lentidão exatamente em
+quem deixa rodando — o uso para o qual ele existe.
+
+Correção: rotação por tamanho (teto de 8 MB, corta para 4 MB) e leitura só da
+cauda do arquivo. Medido depois: o arquivo oscila entre 4 e 8 MB para sempre,
+30.000 publicações levam 2,0 s, e as mensagens mais novas nunca se perdem.
+
+O corte é por BYTES, não por número de linhas. Cortar por linhas parece
+equivalente e não é: com mensagens de ~700 bytes, guardar 20.000 linhas dá
+13,6 MB — acima do teto — e o arquivo passava a rotacionar a cada publicação,
+lendo e reescrevendo 13 MB de cada vez.
+
+## Aviso quando um compromisso fecha
+
+Quem deixa rodando não quer aviso de cada giro; quer saber o momento em que uma
+hipótese pré-declarada sai de "acumulando" e vira "confirmada" ou "morta". Isso
+pode acontecer às três da manhã.
+
+`hipoteses_predeclaradas.avisar_mudanca_de_veredito()` dispara a notificação uma
+única vez por transição e guarda o que já avisou — reabrir o software não
+repete o aviso.
+
+## PROGRESSO.py
+
+Uma tela só, sem log: giros por mesa, duplicatas descartadas, horas de coleta,
+o estado de cada compromisso com barra de progresso e quantas ativações faltam,
+as quatro teorias de Crazy Time, e o catálogo da academia.
+
+```
+python PROGRESSO.py        (ou PROGRESSO.bat)
+```

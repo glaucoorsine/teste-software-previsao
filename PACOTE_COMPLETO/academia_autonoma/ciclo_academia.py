@@ -27,7 +27,8 @@ from .agentes_ocorrencia import cacar as cacar_ocorrencias, resumo as resumo_oco
 from .agentes_anomalia import cacar_anomalias, resumo_anomalias
 from .regras_do_operador import avaliar as avaliar_regras, resumo as resumo_regras
 from .hipoteses_predeclaradas import (registrar as registrar_predeclaradas,
-                                      resumo as resumo_predeclaradas)
+                                      resumo as resumo_predeclaradas,
+                                      avisar_mudanca_de_veredito as _avisar_pred)
 from .teorias_do_operador_ct import (avaliar_ct as _av_ct,
                                      resumo_ct as _res_ct)
 
@@ -387,6 +388,9 @@ def _ciclo_body(dataset_id: str, historico, settled=None, mults=None) -> Dict[st
                 if _lp:
                     for _l in _lp.split("\n"):
                         msgs.append(_l)
+                # o desfecho pode cair as tres da manha: avisa no celular
+                for _av in (_avisar_pred(dataset_id) or []):
+                    msgs.append(f"[Pre-declaradas] >>> {_av}")
         except Exception as e:
             msgs.append(f"[Pre-declaradas] erro: {type(e).__name__}: {e}")
         # As quatro teorias que o operador ditou para o Crazy Time. Falam de

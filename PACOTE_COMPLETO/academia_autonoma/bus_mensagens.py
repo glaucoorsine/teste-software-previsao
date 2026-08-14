@@ -62,14 +62,65 @@ def publicar(
         with p.open("a", encoding="utf-8") as f:
             f.write(json.dumps(msg, ensure_ascii=False) + "\n")
             f.flush()
+        _rotacionar(p)
     return msg
+
+
+# O bus era append-only sem poda nenhuma, e o `ler()` carregava o arquivo
+# INTEIRO na memória a cada consulta. Medido: 1.279 ciclos de uma mesa geraram
+# 7,5 MB. Projetando quatro mesas rodando dias seguidos:
+#     3 dias  -> ~42 MB
+#     30 dias -> ~420 MB
+# O disco aguenta, mas a leitura não: depois de um mês cada consulta ao bus
+# carregaria 420 MB para devolver 200 linhas. O software trava de lentidão
+# antes de faltar espaço — e trava justamente em quem deixa rodando, que é o
+# uso para o qual ele existe.
+MAX_BYTES_BUS = 8 * 1024 * 1024      # rotaciona acima disto
+# O corte é por TAMANHO, não por número de linhas. Cortar por linhas parece
+# equivalente e não é: com mensagens de ~700 bytes, guardar 20.000 linhas dá
+# 13,6 MB — acima do teto. O arquivo passava a rotacionar a CADA publicação,
+# lendo e reescrevendo 13 MB de cada vez. Guardando metade do teto, a rotação
+# só volta a acontecer milhares de mensagens depois, e o custo se dilui.
+MANTER_BYTES = MAX_BYTES_BUS // 2
+
+
+def _tail(p, n_bytes: int) -> List[str]:
+    """Últimas linhas do arquivo sem carregar o resto."""
+    try:
+        tam = p.stat().st_size
+        with p.open("rb") as f:
+            if tam > n_bytes:
+                f.seek(tam - n_bytes)
+                f.readline()          # descarta a linha partida ao meio
+            bruto = f.read()
+        return bruto.decode("utf-8", errors="replace").splitlines()
+    except Exception:
+        return []
+
+
+def _rotacionar(p) -> None:
+    """Corta o começo do log quando ele passa do teto, preservando o fim."""
+    try:
+        if p.stat().st_size <= MAX_BYTES_BUS:
+            return
+        linhas = _tail(p, MANTER_BYTES)
+        if not linhas:
+            return
+        tmp = p.with_suffix(".jsonl.tmp")
+        tmp.write_text("\n".join(linhas) + "\n", encoding="utf-8")
+        tmp.replace(p)
+    except Exception:
+        pass
+
 
 def ler(dataset_id: str, tipo: str = None, limit: int = 200) -> List[dict]:
     p = _path(dataset_id)
     if not p.is_file():
         return []
+    # lê só a cauda: 4 KB por mensagem pedida cobre folgado o tamanho real
+    # (~590 bytes), e mesmo com filtro por tipo sobra margem.
     out = []
-    for line in p.read_text(encoding="utf-8").splitlines()[-limit * 2:]:
+    for line in _tail(p, max(64 * 1024, limit * 4096)):
         try:
             m = json.loads(line)
         except Exception:

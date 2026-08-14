@@ -317,6 +317,45 @@ def avaliar(jogo: str) -> List[Dict[str, Any]]:
     return out
 
 
+def avisar_mudanca_de_veredito(jogo: str, log_fn=None) -> List[str]:
+    """
+    Avisa no celular quando um compromisso FECHA.
+
+    Este é o evento que interessa a quem deixa o software rodando dias: não o
+    sinal de cada giro, mas o momento em que uma hipótese pré-declarada sai de
+    "acumulando" e vira "confirmada" ou "morta". É o desfecho que se estava
+    esperando desde a declaração, e pode acontecer às três da manhã.
+
+    Avisa uma vez por transição e guarda o que já avisou — reabrir o software
+    não repete o aviso.
+    """
+    avisos: List[str] = []
+    store = _carregar(jogo)
+    mudou = False
+    for r in avaliar(jogo):
+        if r["veredito"] == "acumulando":
+            continue
+        st = store.get(r["id"]) or {}
+        if st.get("veredito_avisado") == r["veredito"]:
+            continue
+        st["veredito_avisado"] = r["veredito"]
+        store[r["id"]] = st
+        mudou = True
+        marca = "CONFIRMADA" if r["veredito"] == "confirmada" else "encerrada"
+        txt = (f"{r['id']} {marca} — {jogo}: {r['hits']}/{r['n']} = "
+               f"{r['taxa']:.1%} contra {r['base']:.1%} do acaso "
+               f"({r['razao']:.2f}x). {r['nome']}")
+        avisos.append(txt)
+        try:
+            from notificador import notificar
+            notificar(f"Compromisso {marca}: {r['id']}", txt, log_fn=log_fn)
+        except Exception:
+            pass
+    if mudou:
+        _salvar(jogo, store)
+    return avisos
+
+
 def resumo(jogo: str) -> str:
     linhas = avaliar(jogo)
     if not linhas:
