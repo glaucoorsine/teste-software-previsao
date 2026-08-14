@@ -1388,7 +1388,11 @@ class PipelinePerceptivo:
         # continuar negativo ele desliga de novo, agora com medição de
         # verdade por trás. O que muda é a decisão passar a ser tomada sobre
         # dado novo em vez de sobre a lembrança do dado velho.
-        CARENCIA_CICLOS = 25
+        # 12 e nao 25: a reativacao vem a cada 30 janelas, entao carencia de 25
+        # deixaria o modelo ligado ~83% do tempo mesmo perdendo -- consertar a
+        # valvula nao pode desligar a protecao junto. Com 12, ele ganha um teste
+        # real de 12 janelas e passa a maior parte do tempo fora quando perde.
+        CARENCIA_CICLOS = 12
         _carencia = int(getattr(self, "_carencia_modelo", 0) or 0)
         if cmd.get("reativar_modelo"):
             self.mem.set_modelo_ativo(True)
