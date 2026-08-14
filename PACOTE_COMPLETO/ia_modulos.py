@@ -346,6 +346,17 @@ class Critico:
             return "LSTM"
         if n.startswith("ACADEMIA_"):
             return "TEORIA:" + n[len("ACADEMIA_"):]
+        if n == "REGRA_OPERADOR":
+            # A regra do operador é uma teoria como as outras: declarada antes
+            # de medir, com mecanismo próprio (família do final na faixa
+            # quente), independente das familiaridades da academia. Ela já
+            # votava com peso, mas caía aqui no `return n` e virava uma família
+            # comum — então não entrava na contagem que abre o gatilho. Pesava
+            # e não contava, que é o pior dos dois mundos.
+            #
+            # Continua não abrindo gatilho sozinha: são precisas duas teorias
+            # distintas concordando. O que muda é que ela pode ser uma delas.
+            return "TEORIA:REGRA_OPERADOR"
         return n
 
     @staticmethod
