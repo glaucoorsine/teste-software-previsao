@@ -67,6 +67,23 @@ def _purge_invalid(events: List[dict], dataset_id: str) -> List[dict]:
         if v not in dom:
             continue
         settled = canonical_ts(e.get("settled"))
+        # GIRO SEM HORÁRIO NÃO ENTRA NA SEQUÊNCIA.
+        #
+        # Todo o estudo mede ORDEM — transição, janela, "o que vem depois".
+        # Um número sem carimbo de tempo não tem lugar na fila: a ordenação o
+        # joga numa posição indefinida e ele embaralha justamente aquilo que
+        # se está medindo. Aumentar o histórico assim não é ganhar dado, é
+        # perder o que já se tinha.
+        #
+        # Havia dois estragos ao mesmo tempo. Além da posição indefinida, o
+        # identificador desses eventos saía como `jogo|valor|i0` para todos —
+        # dois giros diferentes do mesmo número viravam um só no dedupe.
+        #
+        # Hoje isso é inofensivo porque as fontes de HTML não devolvem nada.
+        # No dia em que voltarem a funcionar (elas raspam número sem horário),
+        # entrariam corrompendo. Fechado antes.
+        if not settled:
+            continue
         eid = e.get("event_id") or event_key(dataset_id, v, settled)
         if eid in seen:
             continue
