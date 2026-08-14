@@ -187,8 +187,40 @@ def parse_items_roulette(items: List[dict]) -> List[dict]:
                     pass
             if _sorteados:
                 tags.append({"lucky": _sorteados})
-            if res.get("superBoost") or d.get("superBoost"):
+            # MEGA FIRE BLAZE — guardar o que veio dentro, não só o sim/não.
+            #
+            # Mesmo erro que os lucky numbers do Lightning: o código antigo
+            # registrava `{"fire": True}` e descartava o conteúdo. Se a API
+            # informa quais números pegaram fogo e com que multiplicador, isso
+            # estava sendo jogado fora, e nenhum estudo sobre multiplicador
+            # nesta mesa poderia funcionar.
+            #
+            # Como não dá para inspecionar a resposta ao vivo daqui, o payload
+            # é guardado inteiro quando é estruturado (dict ou lista) — o que
+            # não se sabe ler hoje fica registrado para ser lido depois. Perder
+            # dado é irreversível; guardar demais custa alguns bytes.
+            _boost = res.get("superBoost")
+            if _boost is None:
+                _boost = d.get("superBoost")
+            if _boost:
                 tags.append({"fire": True})
+                if isinstance(_boost, (dict, list)):
+                    tags.append({"fire_bruto": _boost})
+                _fn = res.get("fireNumbers") or d.get("fireNumbers") or []
+                _lista = []
+                for fb in (_fn if isinstance(_fn, list) else []):
+                    try:
+                        if isinstance(fb, dict):
+                            _num = int(fb.get("number", fb.get("n")))
+                            _mx = fb.get("roundedMultiplier") or fb.get("multiplier")
+                            _lista.append({"n": _num,
+                                           "x": int(_mx) if _mx else None})
+                        else:
+                            _lista.append({"n": int(fb), "x": None})
+                    except (TypeError, ValueError):
+                        pass
+                if _lista:
+                    tags.append({"fire_nums": _lista})
             rows.append({"n": n, "settled": settled, "tags": tags})
         except Exception:
             continue
