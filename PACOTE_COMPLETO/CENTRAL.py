@@ -476,9 +476,17 @@ class PainelMesa(ctk.CTkFrame):
             b.pack(side="left", padx=3)
             self.caixas.append(b)
 
-        self.placar = ctk.CTkLabel(esq, text="placar: —", font=("Arial", 14),
+        # Dois placares, e eles não medem a mesma coisa. O de cima conta
+        # JANELAS (a janela acertou se o número saiu em algum giro dela); o de
+        # baixo conta NÚMERO A NÚMERO, um por giro. Encolher os dois numa linha
+        # só, como eu tinha feito, escondeu justamente o segundo.
+        self.placar = ctk.CTkLabel(esq, text="janelas: —", font=("Arial", 14),
                                    text_color=TEXTO)
         self.placar.pack(anchor="w", pady=(10, 2))
+        self.placar_num = ctk.CTkLabel(esq, text="NÚMEROS   acertos 0 | erros 0",
+                                       font=("Arial", 14, "bold"),
+                                       text_color=AMARELO)
+        self.placar_num.pack(anchor="w", pady=(0, 2))
         self.contadores = ctk.CTkLabel(esq, text="", font=("Arial", 11),
                                        text_color=FRACO)
         self.contadores.pack(anchor="w")
@@ -740,11 +748,10 @@ class PainelMesa(ctk.CTkFrame):
             self.faixa.configure(text="AGUARDANDO — evidência insuficiente",
                                  text_color=VERMELHO)
         self.placar.configure(text=self._texto_placar(sug))
+        self.placar_num.configure(text=self._texto_numeros())
         c = sug.get("contadores") or {}
         self.contadores.configure(
-            text=f"giros {self.ok_num + self.err_num} "
-                 f"({self.ok_num} nos alvos) | "
-                 f"histórico {c.get('historico_bruto', 0)} | "
+            text=f"histórico {c.get('historico_bruto', 0)} | "
                  f"avaliadas {c.get('janelas_avaliadas', 0)} | "
                  f"pendentes {c.get('janelas_pendentes', 0)}")
         self._desenhar_hist(rows)
@@ -766,8 +773,26 @@ class PainelMesa(ctk.CTkFrame):
 
         threading.Thread(target=tarefa, daemon=True).start()
 
+    def _texto_numeros(self) -> str:
+        """Um giro, um voto: o número que saiu estava entre os sugeridos?
+
+        Mede coisa diferente do placar de janelas, e por isso vale ver os dois:
+        uma janela de 4 giros pode fechar como acerto com 1 acerto e 3 erros.
+        """
+        a, e = self.ok_num, self.err_num
+        tot = a + e
+        txt = f"NÚMEROS   acertos {a} | erros {e}"
+        if tot:
+            txt += f"   taxa {a / tot:.0%}"
+        return txt
+
     def _texto_placar(self, sug) -> str:
         """Acerto medido contra o acaso da MESMA aposta, não contra 1/37."""
+        if self.ok + self.err == 0:
+            # Sem janela fechada, o texto de sempre virava
+            # "Janelas 0|0 acaso_última≈0% (cobertura ≠ edge)", que não diz
+            # nada a quem está olhando e parece defeito.
+            return "JANELAS   nenhuma fechada ainda"
         mem = sug.get("mem_stats") or {}
         soma = mem.get("soma_p_esperado")
         try:
@@ -786,7 +811,8 @@ class PainelMesa(ctk.CTkFrame):
     def resumo(self) -> dict:
         return {"rotulo": self.rotulo, "estado": self.ultimo_estado,
                 "escolhas": list(self.escolhas), "restantes": self.restantes,
-                "ok": self.ok, "err": self.err}
+                "ok": self.ok, "err": self.err,
+                "ok_num": self.ok_num, "err_num": self.err_num}
 
     def encerrar(self):
         self.vivo = False
@@ -857,9 +883,12 @@ class Laboratorio(ctk.CTkFrame):
             nums.pack(anchor="w", padx=14)
             plac = ctk.CTkLabel(c, text="", font=("Arial", 12),
                                 text_color=FRACO)
-            plac.pack(anchor="w", padx=14, pady=(6, 14))
-            self.cartoes[jogo] = {"estado": est, "faixa": faixa,
-                                  "nums": nums, "placar": plac}
+            plac.pack(anchor="w", padx=14, pady=(6, 0))
+            pnum = ctk.CTkLabel(c, text="", font=("Arial", 12, "bold"),
+                                text_color=AMARELO)
+            pnum.pack(anchor="w", padx=14, pady=(0, 14))
+            self.cartoes[jogo] = {"estado": est, "faixa": faixa, "nums": nums,
+                                  "placar": plac, "placar_num": pnum}
         for col in (0, 1):
             grade.grid_columnconfigure(col, weight=1)
         for lin in (0, 1):
@@ -882,9 +911,13 @@ class Laboratorio(ctk.CTkFrame):
                                          text_color=VERMELHO)
                     c["nums"].configure(text="—")
                 tot = r["ok"] + r["err"]
-                taxa = (f"  ({r['ok'] / tot:.0%} das janelas)" if tot else "")
+                taxa = (f"  ({r['ok'] / tot:.0%})" if tot else "")
                 c["placar"].configure(
-                    text=f"{r['ok']} janelas certas · {r['err']} erradas{taxa}")
+                    text=f"janelas {r['ok']} certas · {r['err']} erradas{taxa}")
+                totn = r["ok_num"] + r["err_num"]
+                taxan = (f"  taxa {r['ok_num'] / totn:.0%}" if totn else "")
+                c["placar_num"].configure(
+                    text=f"números {r['ok_num']} · {r['err_num']}{taxan}")
         except Exception:
             pass
         self.after(3000, self._tick)

@@ -38,6 +38,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
@@ -54,17 +55,66 @@ CABECALHO = {
 TIMEOUT = 25
 
 # --- a sequência (o que interessa de verdade)
+#
+# Cada mesa tem uma LISTA de candidatos, não um endereço só. Mega Fire e Crazy
+# Time não tinham endereço nenhum e voltavam com zero giros; o nome exato que o
+# site usa na URL não dá para adivinhar sentado aqui, mas dá para tentar os
+# nomes plausíveis em ordem e ficar com o que responder. O que funcionou é
+# gravado em Logs/fontes_descobertas.json, então a descoberta acontece uma vez
+# e nas próximas o acerto vem primeiro.
+BASE_TRACKPOT = "https://api.trackpotapi.com/api/trackersino/{}/history"
 SEQUENCIA = {
-    "lightning": "https://api.trackpotapi.com/api/trackersino/lightningroulette/history",
-    "immersive": "https://api.trackpotapi.com/api/trackersino/immersive-roulette/history",
+    "lightning": [BASE_TRACKPOT.format("lightningroulette")],
+    "immersive": [BASE_TRACKPOT.format("immersive-roulette")],
+    "mega_fire": [BASE_TRACKPOT.format(s) for s in (
+        "mega-fire-blaze-roulette", "megafireblazeroulette",
+        "mega-fire-blaze", "megafireblaze", "fire-blaze-roulette")],
+    "crazy_time": [BASE_TRACKPOT.format(s) for s in (
+        "crazytime", "crazy-time", "crazytimebonus")],
 }
 PARAMS_SEQ = {"window": "72h", "limit": 1000}
 
 # --- os agregados de multiplicador
 AGREGADOS = {
-    "lightning": "https://www.tracksino.com/lightning-roulette",
-    "crazy_time": "https://www.tracksino.com/crazytime",
+    "lightning": ["https://www.tracksino.com/lightning-roulette"],
+    "crazy_time": ["https://www.tracksino.com/crazytime"],
+    "immersive": ["https://www.tracksino.com/immersive-roulette",
+                  "https://www.tracksino.com/immersiveroulette"],
+    "mega_fire": ["https://www.tracksino.com/mega-fire-blaze-roulette",
+                  "https://www.tracksino.com/megafireblazeroulette"],
 }
+
+MEMORIA = Path(__file__).resolve().parent / "Logs" / "fontes_descobertas.json"
+
+
+def _lembradas() -> dict:
+    try:
+        return json.loads(MEMORIA.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _lembrar(chave: str, url: str) -> None:
+    """Guarda o endereço que respondeu, para não refazer a busca toda vez."""
+    try:
+        MEMORIA.parent.mkdir(parents=True, exist_ok=True)
+        d = _lembradas()
+        if d.get(chave) == url:
+            return
+        d[chave] = url
+        MEMORIA.write_text(json.dumps(d, ensure_ascii=False, indent=1),
+                           encoding="utf-8")
+    except OSError:
+        pass
+
+
+def candidatos(mapa: dict, jogo: str, sufixo: str) -> List[str]:
+    """Os endereços a tentar, com o que já funcionou na frente."""
+    lista = list(mapa.get(jogo) or [])
+    bom = _lembradas().get(f"{jogo}:{sufixo}")
+    if bom:
+        lista = [bom] + [u for u in lista if u != bom]
+    return lista
 
 CAMPOS_TEMPO = ("finalized_at", "observed_at", "time_spin_stop", "timestamp",
                 "occured_at", "occurred_at", "created_at", "settled_at")
@@ -137,14 +187,31 @@ def _luckies(row: dict) -> List[dict]:
 
 
 def buscar_sequencia(jogo: str) -> Tuple[List[dict], Optional[str]]:
-    """Giros com horário e multiplicadores, prontos para o buffer."""
-    url = SEQUENCIA.get(jogo)
-    if not url:
+    """Giros com horário e multiplicadores, prontos para o buffer.
+
+    Tenta os endereços candidatos em ordem e fica com o primeiro que devolver
+    giros de verdade. Um 404 num nome que eu chutei não é falha: é a busca
+    andando para o próximo.
+    """
+    urls = candidatos(SEQUENCIA, jogo, "seq")
+    if not urls:
         return [], "sem endpoint de sequência para este jogo"
     if requests is None:
         return [], "biblioteca requests ausente"
+    tentativas = []
+    for url in urls:
+        linhas, aviso = _uma_sequencia(url)
+        if linhas:
+            _lembrar(f"{jogo}:seq", url)
+            return linhas, aviso
+        tentativas.append(f"{url.rsplit('/', 2)[-2]}: {aviso}")
+    return [], "nenhum endereço respondeu — " + " | ".join(tentativas[:4])
+
+
+def _uma_sequencia(url: str) -> Tuple[List[dict], Optional[str]]:
     try:
-        r = requests.get(url, params=PARAMS_SEQ, headers=CABECALHO, timeout=TIMEOUT)
+        r = requests.get(url, params=PARAMS_SEQ, headers=CABECALHO,
+                         timeout=TIMEOUT)
     except Exception as e:
         return [], f"{type(e).__name__}: {str(e)[:70]}"
     if r.status_code != 200:
@@ -195,11 +262,22 @@ def buscar_agregados(jogo: str) -> Tuple[Dict[str, Any], Optional[str]]:
     O bloco vem no formato "devalue" do Nuxt: uma lista onde números são
     referências para outras posições da mesma lista. Por isso o `puxa()`.
     """
-    url = AGREGADOS.get(jogo)
-    if not url:
+    urls = candidatos(AGREGADOS, jogo, "agg")
+    if not urls:
         return {}, "sem página de agregados para este jogo"
     if requests is None:
         return {}, "biblioteca requests ausente"
+    tentativas = []
+    for url in urls:
+        dados, aviso = _uns_agregados(url)
+        if dados:
+            _lembrar(f"{jogo}:agg", url)
+            return dados, aviso
+        tentativas.append(f"{url.rsplit('/', 1)[-1]}: {aviso}")
+    return {}, "nenhuma página respondeu — " + " | ".join(tentativas[:3])
+
+
+def _uns_agregados(url: str) -> Tuple[Dict[str, Any], Optional[str]]:
     try:
         r = requests.get(url, headers=CABECALHO, timeout=TIMEOUT)
     except Exception as e:
@@ -301,12 +379,40 @@ def coletar(jogo: str) -> Dict[str, Any]:
 
 
 def resumo(r: Dict[str, Any]) -> str:
-    L = [f"[Sites] {r['jogo']}: {len(r['sequencia'])} giros com horário"]
+    """O que veio de cada site, em uma leitura.
+
+    As mesas não devolvem a mesma coisa: a roleta traz premiações e número a
+    número, o Crazy Time traz símbolo, top slot e coinflip. O resumo antigo
+    assumia o formato da roleta e quebrava no Crazy Time com KeyError, o que
+    derrubava a aba inteira — inclusive as três mesas que tinham respondido.
+    """
+    L = [f"[Sites] {r['jogo']}: {len(r.get('sequencia') or [])} giros "
+         f"com horário"]
     a = r.get("agregados") or {}
-    if a.get("total_giros"):
-        L.append(f"   agregados: {a['total_premiacoes']} premiações em "
-                 f"{a['total_giros']} giros")
-    com_mult = sum(1 for x in r["sequencia"] if any("lucky" in t for t in x["tags"]))
+    total = a.get("total_giros")
+    if total:
+        premios = a.get("total_premiacoes")
+        if premios is not None:
+            L.append(f"   agregados: {premios} premiações em {total} giros")
+        else:
+            L.append(f"   agregados: {total} giros")
+        simbolos = a.get("por_simbolo") or {}
+        if simbolos:
+            vistos = sorted(simbolos.items(),
+                            key=lambda kv: -(kv[1].get("saiu") or 0))[:6]
+            L.append("   símbolos: " + ", ".join(
+                f"{k}×{v.get('saiu')}" for k, v in vistos))
+        numeros = a.get("por_numero") or {}
+        if numeros:
+            L.append(f"   {len(numeros)} números com contagem própria")
+        for nome, rotulo in (("top_slot", "top slot"),
+                             ("top_slot_multi", "multiplicador do top slot"),
+                             ("coinflip", "coinflip")):
+            bloco = a.get(nome) or {}
+            if bloco:
+                L.append(f"   {rotulo}: {len(bloco)} entradas")
+    com_mult = sum(1 for x in (r.get("sequencia") or [])
+                   if any("lucky" in t for t in x.get("tags") or []))
     if com_mult:
         L.append(f"   {com_mult} giros trazem a rodada de multiplicadores")
     for av in r.get("avisos") or []:

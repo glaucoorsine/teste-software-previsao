@@ -118,8 +118,8 @@ class MesaFalsa(CENTRAL.PainelMesa):
         self.vivo = True
         self.ultimo_estado = "teste"
         self.arquivo = CENTRAL.PASTA / CENTRAL.ESTADO[jogo]
-        for n in ("faixa", "placar", "contadores", "hist", "feed", "st",
-                  "academia"):
+        for n in ("faixa", "placar", "placar_num", "contadores", "hist",
+                  "feed", "st", "academia"):
             setattr(self, n, Boneco())
         self.caixas = [Boneco() for _ in range(7)]
         self._carregar()
@@ -242,9 +242,36 @@ txt = m6._texto_placar({"mem_stats": {}})
 print("       ", txt)
 checa(isinstance(txt, str) and len(txt) > 10, "placar montado")
 
-print("\n[9] resumo alimenta o cartão do Painel")
+novo = MesaFalsa("mega_fire")
+novo.ok = novo.err = 0
+t0 = novo._texto_placar({"mem_stats": {}})
+print("       ", t0)
+checa("nenhuma fechada ainda" in t0,
+      "sem janela fechada, diz isso em vez de 'acaso_última≈0%'", t0)
+checa("≈0%" not in t0, "e não mostra número que confunde")
+
+print("\n[9] o placar de NÚMEROS aparece, e é diferente do de janelas")
+m7 = MesaFalsa("lightning")
+m7.ok_num, m7.err_num = 9, 21
+m7.ok, m7.err = 7, 3
+m7._aplicar({"pad5": [], "modo": "AGUARDANDO"}, [{"n": 5, "settled": "q"}])
+alvo_num = m7.placar_num.cfg.get("text", "")
+print("       ", alvo_num)
+checa("acertos 9" in alvo_num and "erros 21" in alvo_num,
+      "mostra acerto e erro por número", alvo_num)
+checa("30%" in alvo_num, "e a taxa deles", alvo_num)
+checa(m7.placar.cfg.get("text") != alvo_num,
+      "não é o mesmo texto do placar de janelas")
+zerado = MesaFalsa("immersive")
+zerado.ok_num = zerado.err_num = 0
+checa("acertos 0" in zerado._texto_numeros(),
+      "com zero giros ainda aparece, em vez de sumir",
+      zerado._texto_numeros())
+
+print("\n[9b] resumo alimenta o cartão do Painel")
 r = m5.resumo()
-checa(set(r) == {"rotulo", "estado", "escolhas", "restantes", "ok", "err"},
+checa(set(r) == {"rotulo", "estado", "escolhas", "restantes", "ok", "err",
+                 "ok_num", "err_num"},
       "resumo tem tudo que o cartão precisa", sorted(r))
 
 # ═════════════════════════════════════════════════ a tela antes de abrir
