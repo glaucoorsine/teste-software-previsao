@@ -34,6 +34,7 @@ import multiprocessing as mp
 import os
 import queue as _queue
 import secrets
+import sys
 import threading
 import traceback
 from datetime import datetime
@@ -980,22 +981,32 @@ class Laboratorio(ctk.CTkFrame):
     # ------------------------------------------------------------- progresso
     def _progresso(self):
         t = self.abas.tab("Progresso")
+        topo = ctk.CTkFrame(t, fg_color="transparent")
+        topo.pack(fill="x", padx=18, pady=(14, 8))
+        ctk.CTkLabel(topo, text="Quanto já foi juntado",
+                     font=("Arial", 22, "bold"), text_color=TEXTO
+                     ).pack(side="left")
+        bt = ctk.CTkButton(topo, text="Atualizar", width=130)
+        bt.pack(side="left", padx=16)
         cx = ctk.CTkTextbox(t, fg_color=CARTAO, font=("Consolas", 11))
-        cx.pack(fill="both", expand=True, padx=16, pady=(16, 8))
+        cx.pack(fill="both", expand=True, padx=16, pady=(0, 16))
 
         def atualizar():
             cx.delete("1.0", "end")
             cx.insert("1.0", "montando…")
 
             def tarefa():
+                # Em processo separado, e não com redirect_stdout: aquele troca
+                # a saída do processo INTEIRO, não só desta thread. Rodando ao
+                # fundo, ele engolia o que qualquer outra parte imprimisse
+                # enquanto o relatório era montado.
                 try:
-                    import contextlib
-                    import io
-                    import runpy
-                    buf = io.StringIO()
-                    with contextlib.redirect_stdout(buf):
-                        runpy.run_path(str(RAIZ / "PROGRESSO.py"), run_name="_")
-                    texto = buf.getvalue()
+                    import subprocess
+                    r = subprocess.run([sys.executable, str(RAIZ / "PROGRESSO.py")],
+                                       cwd=str(RAIZ), capture_output=True,
+                                       text=True, timeout=180,
+                                       encoding="utf-8", errors="replace")
+                    texto = r.stdout or r.stderr or "(sem saída)"
                 except Exception as e:
                     texto = f"não foi possível montar: {type(e).__name__}: {e}"
                 self.after(0, lambda: (cx.delete("1.0", "end"),
@@ -1003,20 +1014,31 @@ class Laboratorio(ctk.CTkFrame):
 
             threading.Thread(target=tarefa, daemon=True).start()
 
-        ctk.CTkButton(t, text="Atualizar", command=atualizar
-                      ).pack(anchor="w", padx=16, pady=(0, 14))
+        bt.configure(command=atualizar)
         atualizar()
 
     # ---------------------------------------------------------------- fontes
     def _fontes(self):
         t = self.abas.tab("Fontes")
-        ctk.CTkLabel(t, text="O que cada site está devolvendo",
+        topo = ctk.CTkFrame(t, fg_color="transparent")
+        topo.pack(fill="x", padx=18, pady=(14, 8))
+        ctk.CTkLabel(topo, text="O que cada site está devolvendo",
                      font=("Arial", 22, "bold"), text_color=TEXTO
-                     ).pack(anchor="w", padx=18, pady=(14, 8))
+                     ).pack(side="left")
+        # O botão fica ao lado do título, não embaixo da caixa: com a caixa
+        # ocupando a altura toda, um botão no rodapé some na borda da tela e a
+        # aba parece um retângulo preto sem nada para fazer.
+        bt = ctk.CTkButton(topo, text="Consultar os sites agora", width=210)
+        bt.pack(side="left", padx=16)
         cx = ctk.CTkTextbox(t, fg_color=CARTAO, font=("Consolas", 11))
-        cx.pack(fill="both", expand=True, padx=16, pady=(0, 8))
+        cx.pack(fill="both", expand=True, padx=16, pady=(0, 16))
+        cx.insert("1.0", "Clique em “Consultar os sites agora”.\n\n"
+                         "Cada mesa é consultada em sequência e a resposta de "
+                         "cada site aparece aqui — o que veio, quantos giros, "
+                         "e o que não respondeu.\nLeva alguns segundos.")
 
         def olhar():
+            bt.configure(state="disabled", text="consultando…")
             cx.delete("1.0", "end")
             cx.insert("1.0", "consultando os sites…")
 
@@ -1024,18 +1046,25 @@ class Laboratorio(ctk.CTkFrame):
                 linhas = []
                 try:
                     from coletor_sites import coletar, resumo
-                    for jogo, _ in JOGOS:
-                        linhas += [resumo(coletar(jogo)), ""]
+                    for jogo, rotulo in JOGOS:
+                        try:
+                            linhas += [resumo(coletar(jogo)), ""]
+                        except Exception as e:
+                            # Um site fora do ar não pode esconder os outros
+                            # três: cada mesa responde por si.
+                            linhas += [f"{rotulo}: {type(e).__name__}: {e}", ""]
                 except Exception as e:
                     linhas.append(f"{type(e).__name__}: {e}")
-                texto = "\n".join(linhas)
+                texto = "\n".join(linhas) or "(nenhum site respondeu)"
                 self.after(0, lambda: (cx.delete("1.0", "end"),
-                                       cx.insert("1.0", texto)))
+                                       cx.insert("1.0", texto),
+                                       bt.configure(
+                                           state="normal",
+                                           text="Consultar os sites agora")))
 
             threading.Thread(target=tarefa, daemon=True).start()
 
-        ctk.CTkButton(t, text="Consultar os sites agora", command=olhar
-                      ).pack(anchor="w", padx=16, pady=(0, 14))
+        bt.configure(command=olhar)
 
     # ---------------------------------------------------------------- avisos
     def _avisos(self):

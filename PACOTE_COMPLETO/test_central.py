@@ -20,12 +20,24 @@ sys.path.insert(0, str(RAIZ))
 
 
 class Boneco:
-    """Widget de mentira: aceita tudo, guarda o que foi configurado."""
+    """Widget de mentira: aceita tudo, guarda o que foi configurado.
 
-    def __init__(self, *a, **k):
+    Anota também a ordem em que foi empacotado dentro do pai, porque é disso
+    que depende um botão aparecer ou sumir na borda da tela.
+    """
+
+    def __init__(self, master=None, *a, **k):
         self.cfg = dict(k)
         self.texto = ""
         self.filhos = []
+        self.master = master
+        self.empacotado = None
+        self.abas_criadas = {}
+        if isinstance(master, Boneco):
+            master.filhos.append(self)
+
+    def pack(self, **k):
+        self.empacotado = k
 
     def __getattr__(self, _):
         return lambda *a, **k: None
@@ -46,9 +58,9 @@ class Boneco:
         return list(self.filhos)
 
     def tab(self, nome):
-        return self.filhos_por_nome.setdefault(nome, Boneco())
-
-    filhos_por_nome: dict = {}
+        # Nada de hasattr aqui: o __getattr__ acima responde a qualquer nome,
+        # então toda checagem de existência daria verdadeiro.
+        return self.abas_criadas.setdefault(nome, Boneco())
 
 
 class Variavel:
@@ -322,6 +334,44 @@ t2 = CENTRAL.juntar_repetidas(variado)
 checa(len([x for x in t2.splitlines() if x.strip()]) == 2,
       "segundos diferentes não são juntados", t2)
 checa("×" not in t2, "e nada de contador onde não houve repetição")
+
+print("\n[16] botão de ação não fica escondido embaixo da caixa")
+
+
+class LabFalso(CENTRAL.Laboratorio):
+    """Só as abas — sem mesas, sem cérebro."""
+
+    def __init__(self):
+        self.abas = Boneco()
+
+    def after(self, ms, fn=None, *a):
+        if callable(fn) and ms < 1000:
+            fn(*a)
+
+
+def botao_visivel(aba) -> bool:
+    """Um botão empacotado depois de uma caixa que come a altura toda vai
+    parar na borda de baixo e some da vista. Se houver botão, ele tem que
+    aparecer antes do primeiro widget com expand."""
+    vistos = []
+    for w in aba.filhos:
+        if w.empacotado is None:
+            continue
+        vistos.append((type(w).__name__, w.empacotado.get("expand")))
+    primeiro_expand = next((i for i, (_, ex) in enumerate(vistos) if ex), None)
+    botoes = [i for i, (tipo, _) in enumerate(vistos) if tipo == "CTkButton"]
+    if not botoes or primeiro_expand is None:
+        return True
+    return min(botoes) < primeiro_expand
+
+
+lab = LabFalso()
+lab._fontes()
+lab._progresso()
+for nome in ("Fontes", "Progresso"):
+    aba = lab.abas.tab(nome)
+    checa(botao_visivel(aba), f"aba {nome}: botão antes da caixa que expande",
+          [(type(w).__name__, w.empacotado) for w in aba.filhos])
 
 alvo.unlink(missing_ok=True)
 print()
