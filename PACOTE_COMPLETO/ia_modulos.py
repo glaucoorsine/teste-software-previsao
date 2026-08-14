@@ -889,9 +889,16 @@ class Memoria:
             n_ag = int(self.d.get("n_aguardando_total") or 0)
         cob = Metricas.cobertura(n, n + n_ag)
         tm, tb, ganho = Metricas.ganho_baseline_janela(av)
+        # Ganho separado por tipo de decisão: a sombra aposta um conjunto largo
+        # e o OPERAR um estreito. Somando os dois num número só, o desempenho de
+        # um vetava o outro — populações diferentes, comparação sem sentido.
+        av_op = [a for a in av if a.get("modo") == "OPERAR"]
+        tm_op, tb_op, ganho_op = Metricas.ganho_baseline_janela(av_op)
         return {
             "n": n, "taxa": taxa, "ic95": ic, "brier": brier, "logloss": ll,
             "cobertura": cob, "taxa_modelo": tm, "taxa_baseline": tb, "ganho": ganho,
+            "n_operar": len(av_op), "taxa_operar": tm_op,
+            "taxa_baseline_operar": tb_op, "ganho_operar": ganho_op,
             "modelo_ativo": self.modelo_ativo_atual(),
             "n_aguardando": n_ag,
             "protocolo": PIPELINE_VERSION,
@@ -1789,12 +1796,24 @@ class PipelinePerceptivo:
             modo="AGUARDANDO"
 
         # confiança calibrada insuficiente → SEM EVIDÊNCIA operacional
+        #
+        # `conf` é a confiança calibrada DO LSTM. É a régua certa quando os
+        # números vieram dele. Quando vieram do consenso das teorias, ele não
+        # opinou sobre esses números — vetar por uma confiança que não é sobre
+        # eles calava o consenso sempre que o LSTM estivesse fraco ou desligado.
+        #
+        # Medido no histórico dele: o gatilho ABRIA ("consenso sozinho — 3
+        # números com ≥2 teorias concordando") e morria na linha seguinte, em
+        # 160 de 160 voltas. Zero sugestões em todo o histórico.
         sombra_alvos = list(alvos) if alvos else []
-        if modo=="GATILHO_OK" and conf < self.lstm.limiar:
+        if modo == "GATILHO_OK" and conf < self.lstm.limiar and not via_consenso:
             # guarda candidatos experimentais antes de limpar orientação pública
             sombra_alvos = list(alvos) if alvos else list(base_alvos or [])[:self.k_alvos]
             alvos=[]; modo="AGUARDANDO"
             msgs.append("[Gatilho] SEM EVIDÊNCIA calibrada — conf < limiar")
+        elif modo == "GATILHO_OK" and conf < self.lstm.limiar and via_consenso:
+            msgs.append("[Gatilho] confiança do LSTM baixa, mas os números "
+                        "vieram do consenso das teorias — não veta")
 
         # ========== POLÍTICA CONSERVADORA ==========
         # rel_n = janelas de DECISÃO já avaliadas (métrica científica)
@@ -1820,9 +1839,26 @@ class PipelinePerceptivo:
         MIN_JANELAS_METRICAS = 20
 
         # 2/3 — ganho ≤ 0 vs baseline (só após MIN_JANELAS_METRICAS)
-        if ganho is not None and ganho < -0.02 and rel_n >= MIN_JANELAS_METRICAS:
+        #
+        # Cada tipo de decisão é julgado pelo desempenho DAQUELE tipo. SOMBRA e
+        # OPERAR não apostam a mesma coisa: a sombra usa um conjunto largo (a
+        # união das hipóteses), o OPERAR usa só o que passou no consenso. Num
+        # número só, o desempenho do conjunto largo vetava o estreito — e como
+        # esta instalação nunca saiu de SOMBRA, a conta que barrava o consenso
+        # era 100% sobre outra coisa. Enquanto não houver MIN_JANELAS_METRICAS
+        # janelas de OPERAR fechadas não existe evidência contra operar, e
+        # exigi-la antes de deixar operar é o mesmo laço já desfeito no
+        # histórico mínimo.
+        _ganho_op = rel.get("ganho_operar")
+        _n_op = int(rel.get("n_operar") or 0)
+        if _n_op >= MIN_JANELAS_METRICAS and _ganho_op is not None and _ganho_op < -0.02:
             operavel = False
-            motivo_bloq.append(f"ganho<0 vs baseline ({ganho:.3f}) n_aval={rel_n}")
+            motivo_bloq.append(f"ganho<0 vs baseline em OPERAR "
+                               f"({_ganho_op:.3f}) n_operar={_n_op}")
+        elif ganho is not None and ganho < -0.02 and rel_n >= MIN_JANELAS_METRICAS:
+            msgs.append(f"[Métricas] a sombra está {abs(ganho):.1%} abaixo do "
+                        f"baseline (n={rel_n}) — anotado, mas ela aposta um "
+                        f"conjunto mais largo que o consenso, então não veta")
         elif ganho is not None and abs(ganho) <= 0.02 and rel_n >= MIN_JANELAS_METRICAS:
             msgs.append(f"[Métricas] ganho≈0 vs baseline ({ganho:.3f}) — empate, não bloqueia por ganho")
 
@@ -1855,10 +1891,21 @@ class PipelinePerceptivo:
             motivo_bloq.append(f"taxa~acaso_janela ({taxa_m:.3f}≤{p_acaso_janela*1.05:.3f}) n_aval={rel_n}")
 
         # 7 — Brier ruim → sobe limiar e bloqueia
+        #
+        # Terceira métrica DO LSTM que vetava a sugestão das teorias. O Brier
+        # mede a calibração das probabilidades que o modelo emite; se os números
+        # não saíram dele, o Brier dele não fala sobre eles. Medido no histórico
+        # dele: 0,2803 contra um teto de 0,28 — bloqueio por três milésimos, em
+        # toda volta, sobre uma sugestão que o modelo nem produziu. O limiar
+        # continua subindo, porque isso sim é sobre o LSTM.
         if brier is not None and brier > 0.28:
             self.lstm.limiar = min(0.16, self.lstm.limiar + 0.01)
-            operavel = False
-            motivo_bloq.append(f"Brier alto {brier:.3f}")
+            if not via_consenso:
+                operavel = False
+                motivo_bloq.append(f"Brier alto {brier:.3f}")
+            else:
+                msgs.append(f"[Métricas] Brier do LSTM alto ({brier:.3f}), mas "
+                            "a sugestão veio das teorias — não bloqueia")
 
         # 7 — teste negativo suspeito
         neg = self.mem.d.get("negativo") or {}
@@ -1959,7 +2006,14 @@ class PipelinePerceptivo:
         cand_sombra = list(dict.fromkeys(str(x) if self.is_ct else x for x in cand_sombra))[:self.k_alvos]
         # SOMBRA continua DEPOIS de 20 avaliadas se não houver OPERAR público
         pode_sombra = bool(cand_sombra) and n_hist >= MIN_HIST
-        status_op = "OPERAR" if (operavel and modo == "GATILHO_OK" and alvos and rel_n >= MIN_JANELAS_METRICAS and modelo_ativo) else "NAO_OPERAR"
+        # `modelo_ativo` diz que o LSTM vem batendo a baseline. É a condição
+        # certa para confiar numa sugestão DELE. Quando os números vieram do
+        # consenso das teorias ele não participou — exigi-lo aqui reimpunha, na
+        # decisão final, exatamente o veto que as ressalvas de cima já tinham
+        # tirado. A sombra e o portão do FDR continuam valendo; o que muda é de
+        # quem se cobra a régua.
+        _modelo_ok = modelo_ativo or via_consenso
+        status_op = "OPERAR" if (operavel and modo == "GATILHO_OK" and alvos and rel_n >= MIN_JANELAS_METRICAS and _modelo_ok) else "NAO_OPERAR"
         if status_op == "OPERAR":
             modo_out = "OPERAR"
             msgs.append(f"[Conservador] OPERAR k={len(alvos)} janela≤{janela_base} conf={conf:.3f}")
@@ -1968,9 +2022,15 @@ class PipelinePerceptivo:
             modo_out = "SOMBRA"
             status_op = "SOMBRA"
             fase = "aquecimento" if rel_n < MIN_JANELAS_METRICAS else "monitor"
+            # O motivo do bloqueio precisa aparecer AQUI. Sem ele, a mensagem
+            # dizia que estava em sombra sem dizer por quê, e achar a causa
+            # exigia instrumentar o código por fora — foi o que aconteceu.
+            _pq = "; ".join(motivo_bloq) if motivo_bloq else (
+                "gatilho não abriu" if modo != "GATILHO_OK"
+                else "sem alvos" if not alvos else "—")
             msgs.append(
                 f"[Sombra/{fase}] k={len(alvos)} hist={n_hist} avaliadas={rel_n} (mín. {MIN_JANELAS_METRICAS}) "
-                f"modelo_ativo={modelo_ativo} — sem orientação pública"
+                f"modelo_ativo={modelo_ativo} — sem orientação pública | motivo: {_pq}"
             )
         elif modo == "AGUARDANDO":
             modo_out = "AGUARDANDO"
