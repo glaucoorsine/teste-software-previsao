@@ -122,6 +122,8 @@ class MesaFalsa(CENTRAL.PainelMesa):
                   "feed", "st", "academia"):
             setattr(self, n, Boneco())
         self.caixas = [Boneco() for _ in range(7)]
+        self.hist_caixas = [Boneco() for _ in range(16)]
+        self.lendo_academia = False
         self._carregar()
 
     def after(self, ms, fn=None, *a):
@@ -362,7 +364,49 @@ checa(len([x for x in t2.splitlines() if x.strip()]) == 2,
       "segundos diferentes não são juntados", t2)
 checa("×" not in t2, "e nada de contador onde não houve repetição")
 
-print("\n[16] botão de ação não fica escondido embaixo da caixa")
+print("\n[16] o histórico reaproveita os rótulos em vez de recriá-los")
+mh = MesaFalsa("lightning")
+antes_ids = [id(c) for c in mh.hist_caixas]
+mh._desenhar_hist([{"n": n} for n in (7, 0, 32, 5)])
+checa([id(c) for c in mh.hist_caixas] == antes_ids,
+      "os mesmos widgets continuam lá — nada é destruído")
+checa(mh.hist_caixas[0].cfg.get("text") == "7", "primeiro giro desenhado",
+      mh.hist_caixas[0].cfg.get("text"))
+checa(mh.hist_caixas[1].cfg.get("fg_color") == "#16a34a",
+      "o zero fica verde", mh.hist_caixas[1].cfg.get("fg_color"))
+checa(mh.hist_caixas[4].cfg.get("text") == "",
+      "sobra de caixa fica apagada", mh.hist_caixas[4].cfg.get("text"))
+mh._desenhar_hist([{"n": 1}])
+checa(mh.hist_caixas[1].cfg.get("text") == "",
+      "e some ao encurtar o histórico", mh.hist_caixas[1].cfg.get("text"))
+
+print("\n[17] leitura da academia não empilha")
+
+
+class MesaLenta(MesaFalsa):
+    """Mesa cuja leitura de banco demora — o caso que empilhava threads."""
+
+    def __init__(self, jogo):
+        super().__init__(jogo)
+        self.leituras = 0
+
+    def _academia(self):
+        # cópia fiel da trava real, sem tocar no banco
+        if self.lendo_academia:
+            return
+        self.lendo_academia = True
+        self.leituras += 1
+
+
+ml = MesaLenta("lightning")
+for _ in range(5):
+    ml._academia()          # nenhuma termina: a trava fica presa de propósito
+checa(ml.leituras == 1, "cinco voltas seguidas leem uma vez só", ml.leituras)
+ml.lendo_academia = False   # a leitura terminou
+ml._academia()
+checa(ml.leituras == 2, "liberada, volta a ler", ml.leituras)
+
+print("\n[18] botão de ação não fica escondido embaixo da caixa")
 
 
 class LabFalso(CENTRAL.Laboratorio):

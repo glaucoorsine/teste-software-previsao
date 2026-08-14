@@ -424,6 +424,7 @@ class PainelMesa(ctk.CTkFrame):
         self.ultimo_resultado = None
         self.seq_giro = 0
         self.ocupado = False
+        self.lendo_academia = False
         self.vivo = True
         self.ultimo_estado = "iniciando"
         self.arquivo = PASTA / ESTADO[jogo]
@@ -495,6 +496,13 @@ class PainelMesa(ctk.CTkFrame):
                      text_color=FRACO).pack(anchor="w", pady=(12, 4))
         self.hist = ctk.CTkFrame(esq, fg_color="transparent")
         self.hist.pack(fill="x")
+        self.hist_caixas = []
+        for _ in range(16):
+            c = ctk.CTkLabel(self.hist, text="", width=34, height=30,
+                             fg_color="transparent", corner_radius=6,
+                             font=("Arial", 12, "bold"))
+            c.pack(side="left", padx=2)
+            self.hist_caixas.append(c)
 
         ctk.CTkLabel(esq, text="o que as IAs disseram nesta volta",
                      font=("Arial", 11, "bold"), text_color=FRACO
@@ -701,13 +709,19 @@ class PainelMesa(ctk.CTkFrame):
         self.after(0, lambda: self.st.configure(text=texto, text_color=cor))
 
     def _desenhar_hist(self, rows):
-        for w in self.hist.winfo_children():
-            w.destroy()
-        for r in rows[:16]:
-            v = r.get("n")
-            ctk.CTkLabel(self.hist, text=str(v), width=34, height=30,
-                         fg_color=cor_do_numero(v), corner_radius=6,
-                         font=("Arial", 12, "bold")).pack(side="left", padx=2)
+        """Reaproveita os rótulos em vez de recriá-los.
+
+        Destruir e recriar dezesseis widgets por mesa a cada volta são 64
+        widgets refeitos o tempo todo na thread da interface — é o que fazia o
+        painel de uma mesa sumir e voltar. Agora eles nascem uma vez e só
+        trocam texto e cor.
+        """
+        for i, cx in enumerate(self.hist_caixas):
+            if i < len(rows):
+                v = rows[i].get("n")
+                cx.configure(text=str(v), fg_color=cor_do_numero(v))
+            else:
+                cx.configure(text="", fg_color="transparent")
 
     def _aplicar(self, sug, rows):
         modo = sug.get("modo") or ""
@@ -760,7 +774,17 @@ class PainelMesa(ctk.CTkFrame):
         self._academia()
 
     def _academia(self):
-        """O que os agentes desta mesa fizeram nas últimas voltas."""
+        """O que os agentes desta mesa fizeram nas últimas voltas.
+
+        Só uma leitura por vez. Sem esta trava, cada volta da mesa disparava
+        mais uma thread de banco; se a leitura demorasse mais que a volta, elas
+        empilhavam e passavam a disputar o mesmo SQLite — com quatro mesas
+        fazendo isso, é o que deixava a interface pesada e o Painel parado.
+        """
+        if self.lendo_academia:
+            return
+        self.lendo_academia = True
+
         def tarefa():
             try:
                 from academia_agentes import feed_tail
@@ -768,6 +792,8 @@ class PainelMesa(ctk.CTkFrame):
                 texto = "\n".join(reversed(linhas)) or "(sem registro ainda)"
             except Exception as e:
                 texto = f"{type(e).__name__}: {e}"
+            finally:
+                self.lendo_academia = False
             self.after(0, lambda: (self.academia.delete("1.0", "end"),
                                    self.academia.insert("1.0", texto)))
 
@@ -918,8 +944,18 @@ class Laboratorio(ctk.CTkFrame):
                 taxan = (f"  taxa {r['ok_num'] / totn:.0%}" if totn else "")
                 c["placar_num"].configure(
                     text=f"números {r['ok_num']} · {r['err_num']}{taxan}")
-        except Exception:
-            pass
+        except Exception as e:
+            # Antes isto era `except: pass`. Um erro aqui congelava o Painel em
+            # silêncio, e de fora parecia travamento sem causa nenhuma. Agora
+            # fica no log e aparece na tela.
+            registrar(f"Painel: {type(e).__name__}: {e}")
+            try:
+                for c in self.cartoes.values():
+                    c["estado"].configure(
+                        text=f"painel com erro ({type(e).__name__}) — "
+                             f"veja Logs/central_log.txt", text_color=VERMELHO)
+            except Exception:
+                pass
         self.after(3000, self._tick)
 
     # ------------------------------------------------------------------- IAs
@@ -984,15 +1020,24 @@ class Laboratorio(ctk.CTkFrame):
                      font=("Arial", 22, "bold"), text_color=TEXTO
                      ).pack(anchor="w", padx=18, pady=(14, 2))
         ctk.CTkLabel(t, text="As quatro mesas juntas, do mais recente para o "
-                             "mais antigo. Atualiza sozinho a cada 5 segundos.",
+                             "mais antigo. Atualiza sozinho a cada 8 segundos.",
                      font=("Arial", 12), text_color=FRACO
                      ).pack(anchor="w", padx=18, pady=(0, 8))
         self.conversa_box = ctk.CTkTextbox(t, fg_color=CARTAO,
                                            font=("Consolas", 11))
         self.conversa_box.pack(fill="both", expand=True, padx=16, pady=(0, 16))
+        self.lendo_conversa = False
         self._tick_conversa()
 
     def _tick_conversa(self):
+        # Mesma trava das mesas: uma leitura por vez. As quatro mesas já leem o
+        # banco; mais uma thread a cada poucos segundos sem esperar a anterior
+        # era o que sobrecarregava.
+        if self.lendo_conversa:
+            self.after(8000, self._tick_conversa)
+            return
+        self.lendo_conversa = True
+
         def tarefa():
             try:
                 from academia_agentes import feed_tail
@@ -1005,11 +1050,13 @@ class Laboratorio(ctk.CTkFrame):
                          or "(a academia ainda não registrou nada)")
             except Exception as e:
                 texto = f"{type(e).__name__}: {e}"
+            finally:
+                self.lendo_conversa = False
             self.after(0, lambda: (self.conversa_box.delete("1.0", "end"),
                                    self.conversa_box.insert("1.0", texto)))
 
         threading.Thread(target=tarefa, daemon=True).start()
-        self.after(5000, self._tick_conversa)
+        self.after(8000, self._tick_conversa)
 
     # ------------------------------------------------------------- progresso
     def _progresso(self):
