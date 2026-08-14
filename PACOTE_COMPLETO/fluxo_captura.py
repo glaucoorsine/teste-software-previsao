@@ -157,15 +157,36 @@ def parse_items_roulette(items: List[dict]) -> List[dict]:
                 d.get("settledAt") or d.get("settled") or it.get("settledAt") or it.get("settled")
             )
             tags = []
+            # GUARDAR A RODADA DE MULTIPLICADORES INTEIRA, não só quando bate.
+            #
+            # O Lightning sorteia de 1 a 5 lucky numbers em TODA rodada, cada um
+            # com seu multiplicador. O código antigo só registrava quando o lucky
+            # calhava de ser o número que saiu: em 205 giros reais isso deixou 10
+            # registros, de umas 600 premiações que de fato aconteceram.
+            #
+            # Qualquer estudo sobre multiplicador feito em cima disso enxergava
+            # 2% do fenômeno — e é por isso que a métrica antiga de "o que vai
+            # vir multiplicado" acertava de vez em quando e errava quase sempre.
+            #
+            # `x` continua sendo só o acerto (nada que já dependia dele muda).
+            # `lucky` passa a carregar a rodada completa: quais números foram
+            # sorteados e com que multiplicador, tenham saído ou não.
             lucky = res.get("luckyNumbersList") or d.get("luckyNumbersList") or []
+            _sorteados = []
             for ln in lucky:
                 try:
-                    num = int(ln.get("number", ln))
-                    mult = ln.get("roundedMultiplier") or ln.get("multiplier")
-                    if num == n and mult:
-                        tags.append({"x": mult})
+                    num = int(ln.get("number", ln)) if isinstance(ln, dict) else int(ln)
+                    mult = None
+                    if isinstance(ln, dict):
+                        mult = ln.get("roundedMultiplier") or ln.get("multiplier")
+                    if mult:
+                        _sorteados.append({"n": num, "x": int(mult)})
+                        if num == n:
+                            tags.append({"x": mult})
                 except Exception:
                     pass
+            if _sorteados:
+                tags.append({"lucky": _sorteados})
             if res.get("superBoost") or d.get("superBoost"):
                 tags.append({"fire": True})
             rows.append({"n": n, "settled": settled, "tags": tags})

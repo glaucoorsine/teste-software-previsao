@@ -31,6 +31,8 @@ from .hipoteses_predeclaradas import (registrar as registrar_predeclaradas,
                                       avisar_mudanca_de_veredito as _avisar_pred)
 from .teorias_do_operador_ct import (avaliar_ct as _av_ct,
                                      resumo_ct as _res_ct)
+from .agentes_multiplicador import (cacar_multiplicadores as _cacar_mult,
+                                   resumo_multiplicadores as _res_mult)
 
 # Os caçadores são caros (reordenações). Rodar a cada giro seria inviável e
 # desnecessário: o retrato deles muda devagar. A cada N ciclos é suficiente.
@@ -397,6 +399,23 @@ def _ciclo_body(dataset_id: str, historico, settled=None, mults=None) -> Dict[st
         # eventos raros (o CrazyBonus sai 1 vez em 54 giros), entao passam
         # muito tempo em "amostra pequena" -- e e' exatamente por isso que
         # ficam registradas: a mesa roda todo dia e o contador nao esquece.
+        # os quinze do multiplicador: so onde existe multiplicador
+        if dataset_id in ("lightning", "mega_fire"):
+            try:
+                _evs = []
+                try:
+                    from fluxo_captura import buffer_path, _purge_invalid
+                    import json as _json
+                    _d = _json.loads(buffer_path(dataset_id).read_text(encoding="utf-8"))
+                    _evs = sorted(_purge_invalid(_d.get("events") or [], dataset_id),
+                                  key=lambda e: e.get("settled") or "")
+                except Exception:
+                    _evs = []
+                if _evs:
+                    for _l in _res_mult(_cacar_mult(_evs)).split("\n"):
+                        msgs.append(_l)
+            except Exception as e:
+                msgs.append(f"[Multiplicadores] erro: {type(e).__name__}: {e}")
         if dataset_id == "crazy_time":
             try:
                 _rct = _av_ct([str(x) for x in reversed(hist)])

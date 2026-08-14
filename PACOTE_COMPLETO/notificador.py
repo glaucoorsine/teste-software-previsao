@@ -6,7 +6,16 @@ Configure em `notificacoes.json` (criado com o modelo na primeira execução):
 
     {"canal": "ntfy", "topico": "algo-bem-unico-que-so-voce-sabe"}
 
-Dois canais:
+Três canais:
+
+  whatsapp  — {"canal":"whatsapp","telefone":"5531999998888","apikey":"123456"}
+              Via CallMeBot, que é o único caminho de WhatsApp viável para uso
+              pessoal: a API oficial da Meta exige empresa verificada,
+              aprovação de modelo de mensagem e provedor pago.
+              Para habilitar (uma vez): salve +34 644 51 95 23 nos contatos,
+              mande "I allow callmebot to send me messages", e o bot responde
+              com a apikey. Limite de ~1 mensagem por minuto — sobra, porque o
+              gatilho abre em ~11% dos giros.
 
   ntfy      — sem conta, sem cadastro. Instale o app "ntfy" (iOS/Android),
               assine o mesmo tópico, pronto. O tópico é a senha: quem souber
@@ -39,10 +48,16 @@ MODELO = {
     "topico": "",
     "token": "",
     "chat_id": "",
+    "telefone": "",
+    "apikey": "",
     "_ajuda": (
-        "canal: 'ntfy' (mais simples, sem conta) ou 'telegram' ou 'nenhum'. "
-        "Para ntfy: instale o app ntfy no celular, escolha um tópico único e "
-        "assine ele. Para telegram: crie um bot no @BotFather."
+        "canal: 'whatsapp', 'ntfy', 'telegram' ou 'nenhum'. "
+        "WhatsApp (CallMeBot): salve +34 644 51 95 23 nos contatos, mande "
+        "'I allow callmebot to send me messages', copie a apikey que ele "
+        "responder e preencha telefone (com codigo do pais, ex 5531999998888) "
+        "e apikey aqui. "
+        "ntfy: instale o app ntfy, escolha um topico unico e assine ele. "
+        "telegram: crie um bot no @BotFather."
     ),
 }
 
@@ -73,6 +88,8 @@ def ativo() -> bool:
         return bool(c.get("topico"))
     if canal == "telegram":
         return bool(c.get("token") and c.get("chat_id"))
+    if canal == "whatsapp":
+        return bool(c.get("telefone") and c.get("apikey"))
     return False
 
 
@@ -97,6 +114,28 @@ def _enviar(titulo: str, corpo: str) -> Optional[str]:
             r = requests.post(
                 f"https://api.telegram.org/bot{c['token']}/sendMessage",
                 json={"chat_id": c["chat_id"], "text": f"{titulo}\n{corpo}"},
+                timeout=TIMEOUT_S)
+            r.raise_for_status()
+            return None
+        if canal == "whatsapp":
+            # CallMeBot: o único caminho de WhatsApp que funciona para uso
+            # pessoal sem conta comercial. A API oficial da Meta exige empresa
+            # verificada, aprovação de modelo de mensagem e um provedor pago —
+            # inviável para um estudo de uma pessoa só.
+            #
+            # Como habilitar (uma vez, leva 2 minutos):
+            #   1. salve o número +34 644 51 95 23 nos contatos
+            #   2. mande por WhatsApp: "I allow callmebot to send me messages"
+            #   3. o bot responde com uma apikey — ponha aqui no arquivo
+            #
+            # Limite do serviço: mais ou menos uma mensagem por minuto. Como o
+            # gatilho abre em ~11% dos giros e a mesa gira a cada 48s, isso
+            # sobra — mas se um dia apertar, o INTERVALO_MIN_S segura.
+            r = requests.get(
+                "https://api.callmebot.com/whatsapp.php",
+                params={"phone": c.get("telefone", ""),
+                        "text": f"{titulo}\n{corpo}",
+                        "apikey": c.get("apikey", "")},
                 timeout=TIMEOUT_S)
             r.raise_for_status()
             return None
