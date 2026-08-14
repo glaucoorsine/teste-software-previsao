@@ -32,12 +32,14 @@ from .hipoteses_predeclaradas import (registrar as registrar_predeclaradas,
 from .teorias_do_operador_ct import (avaliar_ct as _av_ct,
                                      resumo_ct as _res_ct)
 from .agentes_multiplicador import (cacar_multiplicadores as _cacar_mult,
-                                   resumo_multiplicadores as _res_mult)
+                                   resumo_multiplicadores as _res_mult,
+                                   analisar_agregados as _agg_mult)
 
 # Os caçadores são caros (reordenações). Rodar a cada giro seria inviável e
 # desnecessário: o retrato deles muda devagar. A cada N ciclos é suficiente.
 CACADORES_A_CADA = 15
 _ultimo_cacar = {}
+_passo_agg = {}
 
 # Quantas teorias ainda sem amostra suficiente de sombra o catálogo tolera antes
 # de os agentes pararem de propor novas. Ver "[Freio] " em _ciclo_body.
@@ -414,6 +416,26 @@ def _ciclo_body(dataset_id: str, historico, settled=None, mults=None) -> Dict[st
                 if _evs:
                     for _l in _res_mult(_cacar_mult(_evs)).split("\n"):
                         msgs.append(_l)
+                # agregados dos sites: milhares de premiacoes ja contadas,
+                # respondem sozinhos o que a coleta ao vivo levaria semanas
+                _n_agg = _passo_agg.get(dataset_id, 0)
+                _passo_agg[dataset_id] = _n_agg + 1
+                if _n_agg % 60 == 0:
+                    try:
+                        from coletor_sites import buscar_agregados
+                        _agg, _err = buscar_agregados(dataset_id)
+                        if _agg:
+                            _lista = _agg_mult(_agg)
+                            _m = sum(1 for a in _lista if a.get("p") is not None)
+                            for a in _lista:
+                                if a.get("p") is None or a["p"] > 0.10:
+                                    continue
+                                msgs.append(f"[Sites] {a['achado']}: "
+                                            f"{a['hits']}/{a['n']} p={a['p']:.4f}")
+                        elif _err:
+                            msgs.append(f"[Sites] agregados: {_err}")
+                    except Exception as _e:
+                        msgs.append(f"[Sites] erro: {type(_e).__name__}")
             except Exception as e:
                 msgs.append(f"[Multiplicadores] erro: {type(e).__name__}: {e}")
         if dataset_id == "crazy_time":

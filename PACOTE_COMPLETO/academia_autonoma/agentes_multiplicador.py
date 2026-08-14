@@ -479,3 +479,78 @@ def resumo_multiplicadores(r: Dict[str, Any]) -> str:
         if a.get("nota"):
             L.append(f"       {a['nota']}")
     return "\n".join(L)
+
+
+# ------------------------------------------------- agregados vindos dos sites
+def analisar_agregados(agg: Dict[str, Any]) -> List[dict]:
+    """
+    Duas perguntas que os agregados do tracksino respondem sozinhos, sem
+    esperar coleta — porque trazem milhares de premiações já contadas.
+
+    M16. Algum número é escolhido lucky mais vezes do que devia?
+         Se o sorteio for justo, cada um aparece 1/37 das vezes.
+
+    M17. O multiplicador médio é o mesmo para todos os números?
+         Se for justo, todos convergem para o mesmo valor. Diferença
+         sistemática significa que o sorteio do multiplicador olha o número.
+
+    E no Crazy Time, a versão que o próprio site já contou:
+
+    M18. O multiplicador do topo cai sobre o símbolo que a roda vai parar
+         mais do que a frequência daquele símbolo? Se cair, os dois sorteios
+         não são independentes.
+    """
+    out: List[dict] = []
+    if not agg:
+        return out
+
+    # --- roleta
+    pn = agg.get("por_numero") or {}
+    luckies = [(k, v.get("foi_lucky")) for k, v in pn.items()
+               if isinstance(v.get("foi_lucky"), int)]
+    total = sum(v for _, v in luckies)
+    if total >= 500 and len(luckies) >= 30:
+        base = 1.0 / len(luckies)
+        top, q = max(luckies, key=lambda kv: kv[1])
+        p = min(1.0, _p_ge(q, total, base) * len(luckies))
+        out.append(_achado("M16_LUCKY_DESIGUAL",
+                           f"o número {top} foi escolhido lucky",
+                           q, total, base, p, alvos=[int(top)],
+                           nota=f"{len(luckies)} números, barra já corrigida"))
+        medias = [(k, v.get("multiplicador_medio")) for k, v in pn.items()
+                  if isinstance(v.get("multiplicador_medio"), (int, float))]
+        if len(medias) >= 30:
+            vals = [m for _, m in medias]
+            media = sum(vals) / len(vals)
+            desvio = (sum((x - media) ** 2 for x in vals) / len(vals)) ** 0.5
+            alto = max(medias, key=lambda kv: kv[1])
+            baixo = min(medias, key=lambda kv: kv[1])
+            out.append(_achado("M17_MULTI_MEDIO",
+                               f"multiplicador médio: {media:.1f} "
+                               f"(de {baixo[1]:.1f} no {baixo[0]} a "
+                               f"{alto[1]:.1f} no {alto[0]})",
+                               0, len(medias), None, None,
+                               nota=f"desvio {desvio:.1f} — descritivo, "
+                                    f"sem teste"))
+
+    # --- crazy time
+    ts = agg.get("top_slot") or {}
+    simb = agg.get("por_simbolo") or {}
+    tot_giros = agg.get("total_giros") or 0
+    if ts and simb and tot_giros:
+        for k, v in ts.items():
+            sorteado = v.get("sorteado")
+            bateu = v.get("bateu")
+            saiu = (simb.get(k) or {}).get("saiu")
+            if not (isinstance(sorteado, int) and isinstance(bateu, int)
+                    and isinstance(saiu, int) and sorteado >= 40):
+                continue
+            base = saiu / tot_giros
+            if base <= 0 or base >= 1:
+                continue
+            p = min(1.0, _p_ge(bateu, sorteado, base) * len(ts))
+            out.append(_achado(f"M18_TOPSLOT_{k}",
+                               f"o topo escolheu {k} e a roda parou nele",
+                               bateu, sorteado, base, p,
+                               nota="barra já corrigida pelos símbolos testados"))
+    return out

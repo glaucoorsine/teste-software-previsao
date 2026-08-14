@@ -44,7 +44,15 @@ def snap_path(dataset_id: str) -> Path:
     return SNAP_DIR / f"{dataset_id}_last_snap.json"
 
 
-MIN_SEG_RODADA = 20.0   # nenhuma rodada ao vivo fecha em menos que isto
+# Nenhuma rodada ao vivo fecha em menos que isto: as mesas giram a 40-70s e
+# 20s e' folgado de proposito, para nao descartar giro legitimo em mesa rapida.
+MIN_SEG_RODADA = 20.0
+
+# De quantos em quantos ciclos vale bater nos sites. A fonte principal ja cobre
+# o giro a giro; os sites servem para o historico profundo, que nao muda a cada
+# 45 segundos.
+PUXAR_SITES_A_CADA = 40
+_passo_sites: Dict[str, int] = {}
 
 
 def _seg_entre(a, b) -> Optional[float]:
@@ -322,6 +330,7 @@ def capturar(
       err: mensagem ou None
       mults: lista de multiplicadores (roleta)
     """
+    fontes_extra: List[str] = []
     api = API_BY_GAME.get(dataset_id)
     if not api:
         return {"rows": [], "novo_head": False, "head_id": None, "err": "dataset desconhecido", "mults": []}
@@ -364,6 +373,30 @@ def capturar(
     # 400 dava ~5h de mesa e truncava coleta longa: quem deixasse rodando o
     # dia inteiro perdia o começo. 20000 cobre semanas e o arquivo continua
     # pequeno (~2 MB por mesa).
+    # HISTÓRICO PROFUNDO DOS SITES.
+    #
+    # A API principal devolve as últimas dezenas de rodadas; o casinotrackpot
+    # devolve até mil das últimas 72 horas, com os lucky numbers e o
+    # multiplicador de cada uma. Puxar de vez em quando enche o buffer com
+    # semanas do que a coleta ao vivo levaria semanas para juntar.
+    #
+    # É de vez em quando de propósito: a fonte principal já cobre o giro a giro,
+    # e bater na outra a cada 45 segundos seria peso sem ganho. O dedupe do
+    # merge cuida da sobreposição, e giro sem horário nem chega aqui.
+    try:
+        _n = _passo_sites.get(dataset_id, 0)
+        _passo_sites[dataset_id] = _n + 1
+        if _n % PUXAR_SITES_A_CADA == 0:
+            from coletor_sites import buscar_sequencia
+            _extra, _av = buscar_sequencia(dataset_id)
+            if _extra:
+                brutos = list(brutos) + _extra
+                fontes_extra.append(f"sites:{len(_extra)}")
+            if _av:
+                fontes_extra.append(f"sites_aviso:{_av}")
+    except Exception as _e:
+        fontes_extra.append(f"sites_erro:{type(_e).__name__}")
+
     merged = merge(bp, dataset_id, brutos, max_keep=MAX_GIROS_BUFFER)
     events = _purge_invalid(merged.get("events") or [], dataset_id)
 
@@ -410,7 +443,6 @@ def capturar(
     last_head = last.get("head_id")
     novo_head = bool(head_id and head_id != last_head)
 
-    fontes_extra = []
     try:
         from fontes_externas import capturar_multi_fonte
         # Uma única agregação: bases_estudo + tracksino + HTML.
