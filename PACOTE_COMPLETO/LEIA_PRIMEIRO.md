@@ -1,26 +1,38 @@
 # Por onde começar
 
-## Abra só um arquivo: `CENTRAL.bat`
+## Abra um arquivo só: `CENTRAL.bat`
 
-Ele sobe as quatro mesas ao mesmo tempo — Lightning, Mega Fire, Immersive e
-Crazy Time — dentro de **uma janela só**. A aba de cima escolhe o que aparece.
+Na primeira vez ele pergunta **como você quer ser avisado no celular**, antes
+de abrir qualquer coisa. Escolhe, testa ali mesmo, e entra. Da segunda vez em
+diante vai direto pro laboratório.
 
-Antes eram oito executáveis e oito janelas: pra olhar o Immersive você tinha
-que caçar qual era na barra de tarefas. Agora não.
+Depois disso, tudo está em uma janela: as quatro mesas rodando ao mesmo tempo,
+os agentes da academia e o que as IAs estão conversando. A aba de cima escolhe
+o que aparece.
 
 ### As abas
 
 | Aba | O que tem |
 |---|---|
-| **Todas** | As quatro lado a lado: estado, placar e sinal. É a tela pra bater o olho e ver onde tem entrada. |
-| **Lightning / Mega Fire / Immersive / Crazy Time** | A mesa inteira: sugestão, janela, placar, histórico e o que as IAs disseram. |
+| **Painel** | As quatro mesas em cartões: sinal, placar e estado. É a tela pra bater o olho e ver onde tem entrada. |
+| **Lightning / Mega Fire / Immersive / Crazy Time** | A mesa inteira: sugestão, janela aberta, placar, histórico, o que as IAs disseram nesta volta e a academia daquela mesa ao vivo. |
+| **IAs** | Os agentes da academia, um a um: tipo, estado, tamanho da amostra e o que cada um achou. Troca de mesa no menu. |
+| **Conversa** | O que as quatro estão fazendo agora, mais recente primeiro. Atualiza sozinho a cada 5 segundos. |
 | **Progresso** | Quanto histórico já foi juntado e o que as teorias estão acumulando. |
-| **Avisos** | Confere a notificação no celular e manda um teste na hora. |
-| **Fontes** | Consulta os sites e mostra o que cada um está devolvendo. |
+| **Fontes** | O que cada site está devolvendo. |
+| **Avisos** | O canal configurado, um teste na hora, e o botão de trocar de canal. |
 
-Os `.bat` numerados continuam ali e funcionam igual. Se um dia você quiser
-abrir uma mesa sozinha — pra deixar só o Crazy Time num monitor, por exemplo
-— use o `.bat` dela. Pro dia a dia, `CENTRAL.bat` resolve.
+### Sobre o aviso no celular
+
+O **ntfy** é o mais simples: instale o app, assine o tópico, pronto. Sem
+cadastro, sem bot, sem apikey. O tópico é sorteado pra você — e o alfabeto
+não tem `0/O` nem `1/l`, porque você vai digitar esse nome à mão e um
+caractere ambíguo ali vira uma hora procurando por que o aviso não chega.
+
+O ntfy tem **dois lados**: trocar o nome no software não muda o que o
+aplicativo escuta. Se você não assinar no app, nada chega e nada avisa que
+falhou. Por isso a tela de abertura manda um teste de verdade — se chegou no
+celular, está provado.
 
 ### A primeira volta demora
 
@@ -39,6 +51,15 @@ medindo tudo — o que chega na tela é só o que passou no corte.
 ### Antes da primeira vez
 
 1. `0_INSTALAR_DEPENDENCIAS.bat` — uma vez só.
-2. `CONFIGURAR_AVISOS.bat` — se quiser aviso no celular. Ele pergunta o
-   canal, guia o passo a passo e manda um teste na hora.
-3. `CENTRAL.bat` — e é isso.
+2. `CENTRAL.bat` — ele cuida do resto, inclusive do aviso no celular.
+
+Os `.bat` numerados continuam funcionando, caso você queira abrir uma mesa
+sozinha num monitor. Pro dia a dia, `CENTRAL.bat` resolve.
+
+### Conferindo se está tudo de pé
+
+```
+python test_central.py       a janela, a conferência de acerto, a tela de abertura
+python test_notificador.py   o aviso saindo com números, janela e taxa
+python test_fluxo_captura.py a captura e o histórico
+```

@@ -1,25 +1,31 @@
 # -*- coding: utf-8 -*-
 """
-CENTRAL — uma janela só, com abas, para tudo.
+CENTRAL — o laboratório inteiro em uma janela.
 
     CENTRAL.bat        (ou: python CENTRAL.py)
 
-Antes eram oito executáveis e oito janelas: para olhar o Immersive era preciso
-caçar qual delas era na barra de tarefas. Aqui as quatro mesas rodam ao mesmo
-tempo dentro de uma janela, e a aba escolhe o que aparece.
+Abre pedindo como você quer ser avisado no celular, porque descobrir que o
+aviso não estava configurado depois de três horas de mesa é o pior jeito de
+descobrir. Configurado isso, entra no laboratório: as quatro mesas rodando ao
+mesmo tempo, os agentes da academia, e o que as IAs estão conversando — tudo
+em abas, uma janela só.
 
-O QUE MUDA ALÉM DA COMODIDADE
------------------------------
-Com as quatro no mesmo processo, a aba "Todas" mostra o estado das quatro lado
-a lado — dá para ver de relance qual está em SOMBRA, qual abriu gatilho e qual
-está com a API instável, sem abrir nada.
+O QUE CADA ABA MOSTRA
+---------------------
+Painel      as quatro mesas lado a lado: sinal, placar e estado
+uma mesa    a sugestão, a janela aberta, o histórico e o que as IAs disseram
+IAs         os agentes da academia daquela mesa, um a um, com o que acharam
+Conversa    o que as quatro estão fazendo agora, em tempo real
+Progresso   quanto histórico já foi juntado
+Fontes      o que cada site está devolvendo
+Avisos      o canal de notificação, e um teste na hora
 
 UMA MESA QUE TRAVA NÃO DERRUBA AS OUTRAS
 ----------------------------------------
 Cada mesa tem seu próprio processo de cérebro e sua própria thread de captura,
 com o erro isolado. Quem falha aparece com aviso na aba dela e as demais
-seguem. Este era o risco real de juntar tudo, e é por isso que a captura roda
-em thread e o cérebro em processo separado — nunca dentro da interface.
+seguem. Este é o risco real de juntar tudo, e é por isso que a captura roda em
+thread e o cérebro em processo separado — nunca dentro da interface.
 """
 from __future__ import annotations
 
@@ -27,6 +33,7 @@ import json
 import multiprocessing as mp
 import os
 import queue as _queue
+import secrets
 import threading
 import traceback
 from datetime import datetime
@@ -61,6 +68,22 @@ ESPERA_1A_S = 300
 ESPERA_S = 90
 ATRASO_ENTRE_MESAS_S = 20
 
+# Sem vogais parecidas nem 0/O, 1/l: o tópico do ntfy vai ser digitado à mão
+# no celular, e um caractere ambíguo vira uma hora procurando por que o aviso
+# não chega.
+ALFABETO = "abcdefghjkmnpqrstuvwxyz23456789"
+
+FUNDO = "#0b1220"
+CARTAO = "#111c2e"
+BORDA = "#1e293b"
+TEXTO = "#e2e8f0"
+FRACO = "#94a3b8"
+VERDE = "#22c55e"
+VERMELHO = "#ef4444"
+AMARELO = "#eab308"
+ROXO = "#a78bfa"
+AZUL = "#38bdf8"
+
 
 def registrar(msg: str) -> None:
     try:
@@ -69,6 +92,16 @@ def registrar(msg: str) -> None:
             f.write(f"{datetime.now():%d/%m %H:%M:%S} | {msg}\n")
     except OSError:
         pass
+
+
+def topico_novo() -> str:
+    """Nome que ninguém adivinha — no ntfy o tópico é a senha.
+
+    O prefixo também sai do alfabeto seguro: "lab-" parece inofensivo, mas o
+    `l` é justamente o que se confunde com `1` na hora de digitar no celular.
+    """
+    return "mesa-" + "-".join(
+        "".join(secrets.choice(ALFABETO) for _ in range(5)) for _ in range(3))
 
 
 def cor_do_numero(v) -> str:
@@ -81,6 +114,293 @@ def cor_do_numero(v) -> str:
     return "#dc2626" if n in VERMELHOS else "#1f2937"
 
 
+def precisa_configurar() -> bool:
+    """Primeira vez, ou canal desligado: vale perguntar antes de entrar."""
+    try:
+        import notificador
+        return (notificador._cfg().get("canal") or "nenhum").lower() == "nenhum"
+    except Exception:
+        return True
+
+
+def linha_do_feed(e: dict, largura_agente: int = 18) -> str:
+    """Uma linha legível do que um agente fez.
+
+    O registro traz `etapa` e `resultado`, e muitas vezes os dois são a mesma
+    palavra — imprimir os dois lado a lado enche a tela de "modelo.opiniao
+    modelo.opiniao", que não conta nada. Aqui o segundo campo só aparece
+    quando acrescenta informação, e a amostra entra porque é ela que diz se
+    aquilo já tem peso ou ainda é palpite de dois casos.
+    """
+    hora = str(e.get("horario") or "")[11:19]
+    agente = str(e.get("agente") or "")[:largura_agente]
+    etapa = str(e.get("etapa") or "")
+    resultado = str(e.get("resultado") or "")
+    acao = str(e.get("acao") or "")
+    detalhe = ""
+    if resultado and resultado != etapa:
+        detalhe = resultado
+    elif acao and acao != etapa:
+        detalhe = acao
+    amostra = e.get("amostra") or 0
+    if amostra:
+        detalhe = (detalhe + f"  (n={amostra})").strip()
+    return f"{hora}  {agente:<{largura_agente}} {etapa[:26]:<26} {detalhe[:40]}"
+
+
+def juntar_repetidas(itens, limite: int = 200) -> str:
+    """Monta a Conversa juntando os registros iguais do mesmo instante.
+
+    A academia grava a opinião de cada agente a cada volta, e no mesmo segundo
+    os quatro se revezam — ESTATISTICO, ANOMALIA, REGIME, SEQ_MARKOV, e de
+    novo. Não são linhas repetidas em seguida, é um ciclo que se repete, então
+    juntar só o que vem colado não resolve: a tela continua uma parede.
+    Aqui o agrupamento é pelo evento inteiro (hora, mesa, agente, etapa), que
+    é o que realmente identifica "isto é a mesma coisa outra vez".
+    """
+    ordem: list = []
+    conta: dict = {}
+    exemplo: dict = {}
+    for hora, rotulo, e in itens:
+        chave = (hora, rotulo, e.get("agente"), e.get("etapa"),
+                 e.get("resultado"), e.get("acao"))
+        if chave not in conta:
+            if len(ordem) >= limite:
+                continue
+            ordem.append(chave)
+            conta[chave] = 0
+            exemplo[chave] = (rotulo, e)
+        conta[chave] += 1
+    saida = []
+    for chave in ordem:
+        rotulo, e = exemplo[chave]
+        n = conta[chave]
+        saida.append(f"{rotulo:<11} " + linha_do_feed(e)
+                     + (f"   ×{n}" if n > 1 else ""))
+    return "\n".join(saida)
+
+
+def erro_de_rede(msg: str) -> bool:
+    """Falha de conexão não é falha de configuração.
+
+    Sem separar as duas, o aviso manda procurar defeito no aplicativo quando
+    o problema era a internet.
+    """
+    return any(p in (msg or "") for p in
+               ("ProxyError", "ConnectionError", "Timeout", "SSLError",
+                "NameResolution", "ConnectTimeout", "MaxRetry"))
+
+
+# ══════════════════════════════════════════════════════════ tela de abertura
+class TelaConfig(ctk.CTkFrame):
+    """Como você quer ser avisado — perguntado antes de abrir o laboratório."""
+
+    def __init__(self, master, ao_terminar):
+        super().__init__(master, fg_color=FUNDO)
+        self.ao_terminar = ao_terminar
+        self.canal = "ntfy"
+        self.topico = topico_novo()
+
+        ctk.CTkLabel(self, text="Antes de começar",
+                     font=("Arial", 26, "bold"), text_color=TEXTO
+                     ).pack(anchor="w", padx=36, pady=(34, 2))
+        ctk.CTkLabel(self, text="Como você quer receber o aviso quando "
+                                "aparecer uma entrada?",
+                     font=("Arial", 14), text_color=FRACO
+                     ).pack(anchor="w", padx=36, pady=(0, 18))
+
+        escolha = ctk.CTkFrame(self, fg_color="transparent")
+        escolha.pack(anchor="w", padx=36)
+        self.var = ctk.StringVar(value="ntfy")
+        opcoes = [("ntfy", "ntfy — o mais simples: instale o app e pronto. "
+                           "Sem cadastro, sem bot, sem apikey."),
+                  ("whatsapp", "WhatsApp — chega junto com suas mensagens, "
+                               "mas depende do CallMeBot autorizar."),
+                  ("telegram", "Telegram — precisa criar um bot no @BotFather."),
+                  ("nenhum", "Agora não — entrar sem aviso no celular.")]
+        for valor, texto in opcoes:
+            ctk.CTkRadioButton(escolha, text=texto, variable=self.var,
+                               value=valor, font=("Arial", 13),
+                               text_color=TEXTO, command=self._trocar
+                               ).pack(anchor="w", pady=5)
+
+        self.area = ctk.CTkFrame(self, fg_color=CARTAO, border_width=1,
+                                 border_color=BORDA, corner_radius=10)
+        self.area.pack(fill="x", padx=36, pady=18)
+
+        self.aviso = ctk.CTkLabel(self, text="", font=("Arial", 13),
+                                  justify="left", wraplength=820,
+                                  text_color=FRACO)
+        self.aviso.pack(anchor="w", padx=36)
+
+        rodape = ctk.CTkFrame(self, fg_color="transparent")
+        rodape.pack(anchor="w", padx=36, pady=20)
+        self.bt_testar = ctk.CTkButton(rodape, text="Testar agora",
+                                       width=150, command=self._testar)
+        self.bt_testar.pack(side="left", padx=(0, 10))
+        ctk.CTkButton(rodape, text="Entrar no laboratório  →", width=220,
+                      fg_color=VERDE, hover_color="#16a34a",
+                      text_color="#052e16", font=("Arial", 14, "bold"),
+                      command=self._entrar).pack(side="left")
+
+        self._trocar()
+
+    # ------------------------------------------------------------------ meio
+    def _limpar(self):
+        for w in self.area.winfo_children():
+            w.destroy()
+
+    def _trocar(self):
+        self.canal = self.var.get()
+        self._limpar()
+        self.aviso.configure(text="")
+        if self.canal == "ntfy":
+            self._campos_ntfy()
+        elif self.canal == "whatsapp":
+            self._campos_whatsapp()
+        elif self.canal == "telegram":
+            self._campos_telegram()
+        else:
+            ctk.CTkLabel(self.area, text="Você pode ligar o aviso depois, "
+                                         "pela aba Avisos.",
+                         text_color=FRACO, font=("Arial", 13)
+                         ).pack(anchor="w", padx=16, pady=16)
+
+    def _campos_ntfy(self):
+        ctk.CTkLabel(self.area, text="1.  No celular, instale o aplicativo  "
+                                     "ntfy  (Android ou iPhone)",
+                     font=("Arial", 14), text_color=TEXTO
+                     ).pack(anchor="w", padx=16, pady=(16, 4))
+        ctk.CTkLabel(self.area, text="2.  Abra o app, toque no  +  e assine "
+                                     "exatamente este tópico:",
+                     font=("Arial", 14), text_color=TEXTO
+                     ).pack(anchor="w", padx=16, pady=(6, 8))
+        cx = ctk.CTkFrame(self.area, fg_color="#0b1220", corner_radius=8)
+        cx.pack(anchor="w", padx=16, pady=(0, 8))
+        self.e_top = ctk.CTkEntry(cx, width=430, font=("Consolas", 18),
+                                  fg_color="#0b1220", border_width=0,
+                                  text_color=VERDE)
+        self.e_top.insert(0, self.topico)
+        self.e_top.pack(side="left", padx=10, pady=8)
+        ctk.CTkButton(cx, text="sortear outro", width=120,
+                      fg_color="#1f2937", hover_color="#334155",
+                      command=self._sortear).pack(side="left", padx=(0, 10))
+        ctk.CTkLabel(self.area,
+                     text=("Copie letra por letra. Esse nome é a senha: quem "
+                           "souber, recebe os seus avisos.\n"
+                           "O ntfy tem dois lados — trocar o nome aqui NÃO muda "
+                           "o que o aplicativo escuta. Se você não assinar no "
+                           "app, nada chega e nada avisa que falhou."),
+                     font=("Arial", 12), text_color=FRACO, justify="left",
+                     wraplength=780).pack(anchor="w", padx=16, pady=(0, 16))
+
+    def _campos_whatsapp(self):
+        ctk.CTkLabel(self.area,
+                     text=("1.  Salve nos contatos:   +34 644 51 95 23\n"
+                           "2.  Mande a ele, por WhatsApp, exatamente:\n"
+                           "        I allow callmebot to send me messages\n"
+                           "3.  Ele responde com uma apikey. Cole abaixo."),
+                     font=("Arial", 13), text_color=TEXTO, justify="left"
+                     ).pack(anchor="w", padx=16, pady=(16, 10))
+        linha = ctk.CTkFrame(self.area, fg_color="transparent")
+        linha.pack(anchor="w", padx=16, pady=(0, 16))
+        self.e_tel = ctk.CTkEntry(linha, width=260,
+                                  placeholder_text="telefone, ex 5531999998888")
+        self.e_tel.pack(side="left", padx=(0, 8))
+        self.e_key = ctk.CTkEntry(linha, width=200, placeholder_text="apikey")
+        self.e_key.pack(side="left")
+
+    def _campos_telegram(self):
+        ctk.CTkLabel(self.area,
+                     text=("1.  No Telegram, fale com @BotFather e mande /newbot\n"
+                           "2.  Ele devolve um token\n"
+                           "3.  Mande qualquer mensagem para o SEU bot\n"
+                           "4.  Abra  api.telegram.org/botSEU_TOKEN/getUpdates  "
+                           "e procure  \"chat\":{\"id\":NUMERO"),
+                     font=("Arial", 13), text_color=TEXTO, justify="left"
+                     ).pack(anchor="w", padx=16, pady=(16, 10))
+        linha = ctk.CTkFrame(self.area, fg_color="transparent")
+        linha.pack(anchor="w", padx=16, pady=(0, 16))
+        self.e_tok = ctk.CTkEntry(linha, width=300, placeholder_text="token")
+        self.e_tok.pack(side="left", padx=(0, 8))
+        self.e_cid = ctk.CTkEntry(linha, width=180, placeholder_text="chat_id")
+        self.e_cid.pack(side="left")
+
+    def _sortear(self):
+        self.topico = topico_novo()
+        self.e_top.delete(0, "end")
+        self.e_top.insert(0, self.topico)
+
+    # ----------------------------------------------------------------- saída
+    def montar_cfg(self) -> dict:
+        c = {"canal": self.canal, "topico": "", "token": "", "chat_id": "",
+             "telefone": "", "apikey": ""}
+        if self.canal == "ntfy":
+            c["topico"] = self.e_top.get().strip()
+        elif self.canal == "whatsapp":
+            c["telefone"] = "".join(ch for ch in self.e_tel.get() if ch.isdigit())
+            c["apikey"] = self.e_key.get().strip()
+        elif self.canal == "telegram":
+            c["token"] = self.e_tok.get().strip()
+            c["chat_id"] = self.e_cid.get().strip()
+        return c
+
+    def salvar(self) -> dict:
+        cfg = self.montar_cfg()
+        try:
+            import notificador
+            notificador.CFG.write_text(
+                json.dumps(cfg, ensure_ascii=False, indent=1), encoding="utf-8")
+        except OSError as e:
+            registrar(f"config: {e}")
+        return cfg
+
+    def _testar(self):
+        cfg = self.salvar()
+        if cfg["canal"] == "nenhum":
+            self.aviso.configure(text="Nenhum canal escolhido — não há o que "
+                                      "testar.", text_color=FRACO)
+            return
+        self.bt_testar.configure(state="disabled", text="enviando…")
+
+        def tarefa():
+            try:
+                import importlib
+                import notificador
+                importlib.reload(notificador)
+                if not notificador.ativo():
+                    msg, cor = ("Faltou preencher algum campo — o canal ficou "
+                                "incompleto.", VERMELHO)
+                else:
+                    err = notificador._enviar(
+                        "Laboratorio - teste",
+                        "Se você está lendo isto no celular, os avisos de "
+                        "entrada vão chegar.")
+                    if not err:
+                        msg, cor = ("Enviado. Olhe o celular agora. Se não "
+                                    "chegou, o app não está assinando este "
+                                    "tópico.", VERDE)
+                    elif erro_de_rede(err):
+                        msg, cor = (f"Isto foi a conexão, não a sua "
+                                    f"configuração: o computador não "
+                                    f"conseguiu falar com o servidor. ({err})",
+                                    AMARELO)
+                    else:
+                        msg, cor = (f"Não foi: {err}", VERMELHO)
+            except Exception as e:
+                msg, cor = (f"{type(e).__name__}: {e}", VERMELHO)
+            self.after(0, lambda: (self.aviso.configure(text=msg, text_color=cor),
+                                   self.bt_testar.configure(
+                                       state="normal", text="Testar agora")))
+
+        threading.Thread(target=tarefa, daemon=True).start()
+
+    def _entrar(self):
+        self.salvar()
+        self.ao_terminar()
+
+
+# ═══════════════════════════════════════════════════════════════ uma mesa
 class PainelMesa(ctk.CTkFrame):
     """Uma mesa: captura, cérebro, e o que aparece na tela."""
 
@@ -107,42 +427,7 @@ class PainelMesa(ctk.CTkFrame):
         self.ultimo_estado = "iniciando"
         self.arquivo = PASTA / ESTADO[jogo]
         self._carregar()
-
-        topo = ctk.CTkFrame(self, fg_color="transparent")
-        topo.pack(fill="x", padx=12, pady=(10, 4))
-        ctk.CTkLabel(topo, text=rotulo,
-                     font=("Arial", 18, "bold")).pack(side="left")
-        self.st = ctk.CTkLabel(topo, text="iniciando…", text_color="#a78bfa")
-        self.st.pack(side="left", padx=12)
-
-        self.faixa = ctk.CTkLabel(
-            self, text="AGUARDANDO", font=("Arial", 15, "bold"),
-            text_color="#ef4444")
-        self.faixa.pack(anchor="w", padx=14, pady=(2, 6))
-
-        cx = ctk.CTkFrame(self, border_width=2, border_color="#22c55e")
-        cx.pack(fill="x", padx=12, pady=4)
-        ctk.CTkLabel(cx, text="SUGESTÃO", font=("Arial", 11),
-                     text_color="#94a3b8").pack(anchor="w", padx=8, pady=(6, 0))
-        linha = ctk.CTkFrame(cx, fg_color="transparent")
-        linha.pack(padx=8, pady=8)
-        self.caixas = []
-        for _ in range(7):
-            b = ctk.CTkLabel(linha, text="—", width=52, height=44,
-                             fg_color="#334155", corner_radius=8,
-                             font=("Arial", 17, "bold"))
-            b.pack(side="left", padx=3)
-            self.caixas.append(b)
-
-        self.placar = ctk.CTkLabel(self, text="placar: —", font=("Arial", 13))
-        self.placar.pack(anchor="w", padx=14, pady=2)
-        self.contadores = ctk.CTkLabel(self, text="", font=("Arial", 11),
-                                       text_color="#94a3b8")
-        self.contadores.pack(anchor="w", padx=14)
-        self.hist = ctk.CTkFrame(self, fg_color="transparent")
-        self.hist.pack(fill="x", padx=12, pady=6)
-        self.feed = ctk.CTkTextbox(self, height=200)
-        self.feed.pack(fill="both", expand=True, padx=12, pady=(4, 10))
+        self._montar()
 
         self.entrada, self.saida = mp.Queue(), mp.Queue()
         self.processo = mp.Process(target=process_cerebro,
@@ -150,6 +435,71 @@ class PainelMesa(ctk.CTkFrame):
                                    daemon=True)
         self.processo.start()
         self.after(1200 + ordem * ATRASO_ENTRE_MESAS_S * 1000, self.rodar)
+
+    # ------------------------------------------------------------- interface
+    def _montar(self):
+        topo = ctk.CTkFrame(self, fg_color="transparent")
+        topo.pack(fill="x", padx=16, pady=(12, 4))
+        ctk.CTkLabel(topo, text=self.rotulo, font=("Arial", 22, "bold"),
+                     text_color=AZUL).pack(side="left")
+        self.st = ctk.CTkLabel(topo, text="iniciando…", text_color=ROXO,
+                               font=("Arial", 13))
+        self.st.pack(side="left", padx=14)
+
+        corpo = ctk.CTkFrame(self, fg_color="transparent")
+        corpo.pack(fill="both", expand=True, padx=16, pady=6)
+        esq = ctk.CTkFrame(corpo, fg_color="transparent")
+        esq.pack(side="left", fill="both", expand=True)
+        dir_ = ctk.CTkFrame(corpo, fg_color=CARTAO, border_width=1,
+                            border_color=BORDA, corner_radius=10, width=380)
+        dir_.pack(side="right", fill="both", padx=(12, 0))
+        dir_.pack_propagate(False)
+
+        self.faixa = ctk.CTkLabel(esq, text="AGUARDANDO",
+                                  font=("Arial", 16, "bold"),
+                                  text_color=VERMELHO)
+        self.faixa.pack(anchor="w", pady=(2, 8))
+
+        cx = ctk.CTkFrame(esq, fg_color=CARTAO, border_width=2,
+                          border_color=VERDE, corner_radius=10)
+        cx.pack(fill="x")
+        ctk.CTkLabel(cx, text="SUGESTÃO", font=("Arial", 11, "bold"),
+                     text_color=FRACO).pack(anchor="w", padx=12, pady=(10, 0))
+        linha = ctk.CTkFrame(cx, fg_color="transparent")
+        linha.pack(padx=12, pady=10)
+        self.caixas = []
+        for _ in range(7):
+            b = ctk.CTkLabel(linha, text="—", width=56, height=48,
+                             fg_color="#334155", corner_radius=8,
+                             font=("Arial", 19, "bold"))
+            b.pack(side="left", padx=3)
+            self.caixas.append(b)
+
+        self.placar = ctk.CTkLabel(esq, text="placar: —", font=("Arial", 14),
+                                   text_color=TEXTO)
+        self.placar.pack(anchor="w", pady=(10, 2))
+        self.contadores = ctk.CTkLabel(esq, text="", font=("Arial", 11),
+                                       text_color=FRACO)
+        self.contadores.pack(anchor="w")
+
+        ctk.CTkLabel(esq, text="últimos giros", font=("Arial", 11, "bold"),
+                     text_color=FRACO).pack(anchor="w", pady=(12, 4))
+        self.hist = ctk.CTkFrame(esq, fg_color="transparent")
+        self.hist.pack(fill="x")
+
+        ctk.CTkLabel(esq, text="o que as IAs disseram nesta volta",
+                     font=("Arial", 11, "bold"), text_color=FRACO
+                     ).pack(anchor="w", pady=(14, 4))
+        self.feed = ctk.CTkTextbox(esq, height=170, fg_color=CARTAO,
+                                   font=("Consolas", 11))
+        self.feed.pack(fill="both", expand=True)
+
+        ctk.CTkLabel(dir_, text="ACADEMIA — ao vivo",
+                     font=("Arial", 12, "bold"), text_color=FRACO
+                     ).pack(anchor="w", padx=12, pady=(12, 6))
+        self.academia = ctk.CTkTextbox(dir_, fg_color="#0b1220",
+                                       font=("Consolas", 10))
+        self.academia.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
     # --------------------------------------------------------------- estado
     def _carregar(self):
@@ -280,14 +630,14 @@ class PainelMesa(ctk.CTkFrame):
             rows = cap.get("rows") or []
             if not rows:
                 self._estado(f"sem dados: {str(cap.get('err') or '')[:34]}",
-                             "#ef4444")
+                             VERMELHO)
                 return
             offline = bool(cap.get("offline"))
             mudou = bool(cap.get("novo_head"))
             if offline:
-                self._estado("API instável — histórico salvo", "#eab308")
+                self._estado("API instável — histórico salvo", AMARELO)
             else:
-                self._estado("operacional", "#22c55e")
+                self._estado("operacional", VERDE)
             if not mudou:
                 # Mesmo giro de antes: só redesenha. Reenviar ao cérebro
                 # contaria o mesmo evento duas vezes e sujaria o placar.
@@ -301,29 +651,27 @@ class PainelMesa(ctk.CTkFrame):
             else:
                 limpar_ciclo_ativo(self.jogo)
 
-            pendente = self.ultimo_resultado
             self.entrada.put({"nums": [r.get("n") for r in rows],
                               "settled": [r.get("settled") for r in rows],
                               "mults": cap.get("mults") or [],
                               "ok": self.ok, "err": self.err,
-                              "last_result": pendente,
+                              "last_result": self.ultimo_resultado,
                               "active_selection": list(self.escolhas),
                               "head_id": cap.get("head_id")})
             if self.primeira:
-                self._estado("preparando o cérebro (primeira volta)", "#a78bfa")
+                self._estado("preparando o cérebro (primeira volta)", ROXO)
             try:
                 sug = self.saida.get(
                     timeout=ESPERA_1A_S if self.primeira else ESPERA_S)
             except _queue.Empty:
                 # Não apaga o resultado pendente: a próxima volta reenvia,
                 # senão o cérebro perde o retorno daquele giro para sempre.
-                self._estado("cérebro sem resposta", "#eab308")
+                self._estado("cérebro sem resposta", AMARELO)
                 return
             if self.primeira:
                 self.primeira = False
                 self._estado("API instável — histórico salvo" if offline
-                             else "operacional",
-                             "#eab308" if offline else "#22c55e")
+                             else "operacional", AMARELO if offline else VERDE)
             self.ultimo_resultado = None
             if cap.get("head_id"):
                 try:
@@ -333,12 +681,12 @@ class PainelMesa(ctk.CTkFrame):
             self.after(0, lambda s=sug, r=rows: self._aplicar(s, r))
         except Exception as e:
             registrar(f"{self.jogo}: {type(e).__name__}: {e}")
-            self._estado(f"erro: {type(e).__name__}", "#ef4444")
+            self._estado(f"erro: {type(e).__name__}", VERMELHO)
             self.aviso_geral(self.jogo, f"erro: {type(e).__name__}")
         finally:
             self.ocupado = False
 
-    # ------------------------------------------------------------- interface
+    # ------------------------------------------------------------- desenho
     def _estado(self, texto, cor):
         self.ultimo_estado = texto
         self.after(0, lambda: self.st.configure(text=texto, text_color=cor))
@@ -346,9 +694,9 @@ class PainelMesa(ctk.CTkFrame):
     def _desenhar_hist(self, rows):
         for w in self.hist.winfo_children():
             w.destroy()
-        for r in rows[:14]:
+        for r in rows[:16]:
             v = r.get("n")
-            ctk.CTkLabel(self.hist, text=str(v), width=34, height=28,
+            ctk.CTkLabel(self.hist, text=str(v), width=34, height=30,
                          fg_color=cor_do_numero(v), corner_radius=6,
                          font=("Arial", 12, "bold")).pack(side="left", padx=2)
 
@@ -385,11 +733,11 @@ class PainelMesa(ctk.CTkFrame):
             b.configure(text=str(v) if v is not None else "—",
                         fg_color=cor_do_numero(v) if v is not None else "#334155")
         if self.escolhas:
-            self.faixa.configure(text=f"SINAL — janela {self.restantes}",
-                                 text_color="#22c55e")
+            self.faixa.configure(text=f"SINAL — janela de {self.restantes} giros",
+                                 text_color=VERDE)
         else:
             self.faixa.configure(text="AGUARDANDO — evidência insuficiente",
-                                 text_color="#ef4444")
+                                 text_color=VERMELHO)
         self.placar.configure(text=self._texto_placar(sug))
         c = sug.get("contadores") or {}
         self.contadores.configure(
@@ -401,6 +749,21 @@ class PainelMesa(ctk.CTkFrame):
         self._desenhar_hist(rows)
         self.feed.delete("1.0", "end")
         self.feed.insert("1.0", "\n".join(sug.get("msgs") or []))
+        self._academia()
+
+    def _academia(self):
+        """O que os agentes desta mesa fizeram nas últimas voltas."""
+        def tarefa():
+            try:
+                from academia_agentes import feed_tail
+                linhas = [linha_do_feed(e) for e in feed_tail(self.jogo, 60)]
+                texto = "\n".join(reversed(linhas)) or "(sem registro ainda)"
+            except Exception as e:
+                texto = f"{type(e).__name__}: {e}"
+            self.after(0, lambda: (self.academia.delete("1.0", "end"),
+                                   self.academia.insert("1.0", texto)))
+
+        threading.Thread(target=tarefa, daemon=True).start()
 
     def _texto_placar(self, sug) -> str:
         """Acerto medido contra o acaso da MESMA aposta, não contra 1/37."""
@@ -419,13 +782,10 @@ class PainelMesa(ctk.CTkFrame):
         except Exception:
             return f"janelas {self.ok} certas | {self.err} erradas"
 
-    def resumo(self) -> str:
-        if self.escolhas:
-            n = "SINAL " + " ".join(str(x) for x in self.escolhas)
-        else:
-            n = "aguardando"
-        return (f"{self.rotulo:<12} {self.ultimo_estado:<30} "
-                f"{self.ok}✓/{self.err}✗  {n}")
+    def resumo(self) -> dict:
+        return {"rotulo": self.rotulo, "estado": self.ultimo_estado,
+                "escolhas": list(self.escolhas), "restantes": self.restantes,
+                "ok": self.ok, "err": self.err}
 
     def encerrar(self):
         self.vivo = False
@@ -436,16 +796,13 @@ class PainelMesa(ctk.CTkFrame):
             pass
 
 
-class Central(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("Central — laboratório de mesas ao vivo")
-        self.geometry("1080x760")
-        ctk.set_appearance_mode("dark")
-
-        self.abas = ctk.CTkTabview(self)
+# ═══════════════════════════════════════════════════════ o laboratório
+class Laboratorio(ctk.CTkFrame):
+    def __init__(self, master):
+        super().__init__(master, fg_color=FUNDO)
+        self.abas = ctk.CTkTabview(self, fg_color=FUNDO)
         self.abas.pack(fill="both", expand=True, padx=8, pady=8)
-        self.abas.add("Todas")
+        self.abas.add("Painel")
         self.paineis = {}
         for i, (jogo, rotulo) in enumerate(JOGOS):
             self.abas.add(rotulo)
@@ -453,113 +810,222 @@ class Central(ctk.CTk):
                            ordem=i)
             p.pack(fill="both", expand=True)
             self.paineis[jogo] = p
-        for extra in ("Progresso", "Avisos", "Fontes"):
+        for extra in ("IAs", "Conversa", "Progresso", "Fontes", "Avisos"):
             self.abas.add(extra)
 
-        self._montar_todas()
-        self._montar_progresso()
-        self._montar_avisos()
-        self._montar_fontes()
-        self.protocol("WM_DELETE_WINDOW", self._fechar)
-        self._tick_resumo()
+        self._painel()
+        self._ias()
+        self._conversa()
+        self._progresso()
+        self._fontes()
+        self._avisos()
+        self._tick()
 
     def _aviso(self, jogo, texto):
         registrar(f"AVISO {jogo}: {texto}")
 
-    def _montar_todas(self):
-        t = self.abas.tab("Todas")
+    # ---------------------------------------------------------------- painel
+    def _painel(self):
+        t = self.abas.tab("Painel")
         ctk.CTkLabel(t, text="As quatro mesas agora",
-                     font=("Arial", 17, "bold")).pack(anchor="w", padx=14, pady=(12, 6))
-        self.resumo_box = ctk.CTkTextbox(t, height=220, font=("Consolas", 13))
-        self.resumo_box.pack(fill="x", padx=12, pady=6)
-        ctk.CTkLabel(t, text=("Cada mesa roda no seu próprio processo. Uma que "
-                              "falhe aparece com aviso aqui e não derruba as outras."),
-                     text_color="#94a3b8", wraplength=900,
-                     justify="left").pack(anchor="w", padx=14, pady=8)
+                     font=("Arial", 22, "bold"), text_color=TEXTO
+                     ).pack(anchor="w", padx=18, pady=(14, 2))
+        ctk.CTkLabel(t, text="Cada mesa roda no seu próprio processo. Uma que "
+                             "falhe aparece com aviso aqui e não derruba as "
+                             "outras.",
+                     font=("Arial", 12), text_color=FRACO
+                     ).pack(anchor="w", padx=18, pady=(0, 12))
+        grade = ctk.CTkFrame(t, fg_color="transparent")
+        grade.pack(fill="both", expand=True, padx=14)
+        self.cartoes = {}
+        for i, (jogo, rotulo) in enumerate(JOGOS):
+            c = ctk.CTkFrame(grade, fg_color=CARTAO, border_width=1,
+                             border_color=BORDA, corner_radius=12)
+            c.grid(row=i // 2, column=i % 2, padx=8, pady=8, sticky="nsew")
+            ctk.CTkLabel(c, text=rotulo, font=("Arial", 17, "bold"),
+                         text_color=AZUL).pack(anchor="w", padx=14, pady=(12, 0))
+            est = ctk.CTkLabel(c, text="iniciando…", font=("Arial", 11),
+                               text_color=ROXO)
+            est.pack(anchor="w", padx=14)
+            faixa = ctk.CTkLabel(c, text="AGUARDANDO",
+                                 font=("Arial", 14, "bold"),
+                                 text_color=VERMELHO)
+            faixa.pack(anchor="w", padx=14, pady=(8, 4))
+            nums = ctk.CTkLabel(c, text="—", font=("Consolas", 20, "bold"),
+                                text_color=TEXTO)
+            nums.pack(anchor="w", padx=14)
+            plac = ctk.CTkLabel(c, text="", font=("Arial", 12),
+                                text_color=FRACO)
+            plac.pack(anchor="w", padx=14, pady=(6, 14))
+            self.cartoes[jogo] = {"estado": est, "faixa": faixa,
+                                  "nums": nums, "placar": plac}
+        for col in (0, 1):
+            grade.grid_columnconfigure(col, weight=1)
+        for lin in (0, 1):
+            grade.grid_rowconfigure(lin, weight=1)
 
-    def _montar_progresso(self):
+    def _tick(self):
+        try:
+            for jogo, p in self.paineis.items():
+                r = p.resumo()
+                c = self.cartoes[jogo]
+                c["estado"].configure(text=r["estado"])
+                if r["escolhas"]:
+                    c["faixa"].configure(
+                        text=f"SINAL — janela de {r['restantes']}",
+                        text_color=VERDE)
+                    c["nums"].configure(
+                        text="  ".join(str(x) for x in r["escolhas"]))
+                else:
+                    c["faixa"].configure(text="AGUARDANDO",
+                                         text_color=VERMELHO)
+                    c["nums"].configure(text="—")
+                tot = r["ok"] + r["err"]
+                taxa = (f"  ({r['ok'] / tot:.0%} das janelas)" if tot else "")
+                c["placar"].configure(
+                    text=f"{r['ok']} janelas certas · {r['err']} erradas{taxa}")
+        except Exception:
+            pass
+        self.after(3000, self._tick)
+
+    # ------------------------------------------------------------------- IAs
+    def _ias(self):
+        t = self.abas.tab("IAs")
+        topo = ctk.CTkFrame(t, fg_color="transparent")
+        topo.pack(fill="x", padx=18, pady=(14, 6))
+        ctk.CTkLabel(topo, text="Os agentes da academia",
+                     font=("Arial", 22, "bold"), text_color=TEXTO
+                     ).pack(side="left")
+        self.ia_jogo = ctk.StringVar(value=JOGOS[0][0])
+        ctk.CTkOptionMenu(topo, values=[j for j, _ in JOGOS],
+                          variable=self.ia_jogo, width=150,
+                          command=lambda _=None: self._ver_ias()
+                          ).pack(side="left", padx=14)
+        ctk.CTkButton(topo, text="Atualizar", width=110,
+                      command=self._ver_ias).pack(side="left")
+        self.ia_box = ctk.CTkTextbox(t, fg_color=CARTAO,
+                                     font=("Consolas", 11))
+        self.ia_box.pack(fill="both", expand=True, padx=16, pady=(6, 16))
+        self._ver_ias()
+
+    def _ver_ias(self):
+        jogo = self.ia_jogo.get()
+        self.ia_box.delete("1.0", "end")
+        self.ia_box.insert("1.0", "consultando a academia…")
+
+        def tarefa():
+            try:
+                from academia_agentes import snapshot_somente_leitura
+                snap = snapshot_somente_leitura(jogo)
+                ags = snap.get("agentes") or []
+                L = [f"{len(ags)} agentes em {jogo}", ""]
+                L.append(f"{'id':<5}{'nome':<26}{'tipo':<14}"
+                         f"{'estado':<10}{'amostra':>8}  o que achou")
+                L.append("─" * 116)
+                for a in ags:
+                    L.append(f"{str(a.get('id'))[:4]:<5}"
+                             f"{str(a.get('nome'))[:25]:<26}"
+                             f"{str(a.get('tipo'))[:13]:<14}"
+                             f"{str(a.get('estado'))[:9]:<10}"
+                             f"{a.get('amostra', 0):>8}  "
+                             f"{str(a.get('ultima_descoberta') or '—')[:48]}")
+                trib = snap.get("tribunal")
+                if trib:
+                    L += ["", "TRIBUNAL", str(trib)[:900]]
+                crit = snap.get("critico")
+                if crit:
+                    L += ["", "CRÍTICO", str(crit)[:900]]
+                texto = "\n".join(L)
+            except Exception as e:
+                texto = f"não foi possível ler a academia: {type(e).__name__}: {e}"
+            self.after(0, lambda: (self.ia_box.delete("1.0", "end"),
+                                   self.ia_box.insert("1.0", texto)))
+
+        threading.Thread(target=tarefa, daemon=True).start()
+
+    # -------------------------------------------------------------- conversa
+    def _conversa(self):
+        t = self.abas.tab("Conversa")
+        ctk.CTkLabel(t, text="O que as IAs estão fazendo agora",
+                     font=("Arial", 22, "bold"), text_color=TEXTO
+                     ).pack(anchor="w", padx=18, pady=(14, 2))
+        ctk.CTkLabel(t, text="As quatro mesas juntas, do mais recente para o "
+                             "mais antigo. Atualiza sozinho a cada 5 segundos.",
+                     font=("Arial", 12), text_color=FRACO
+                     ).pack(anchor="w", padx=18, pady=(0, 8))
+        self.conversa_box = ctk.CTkTextbox(t, fg_color=CARTAO,
+                                           font=("Consolas", 11))
+        self.conversa_box.pack(fill="both", expand=True, padx=16, pady=(0, 16))
+        self._tick_conversa()
+
+    def _tick_conversa(self):
+        def tarefa():
+            try:
+                from academia_agentes import feed_tail
+                tudo = []
+                for jogo, rotulo in JOGOS:
+                    for e in feed_tail(jogo, 25):
+                        tudo.append((e.get("horario") or "", rotulo, e))
+                tudo.sort(key=lambda x: x[0], reverse=True)
+                texto = (juntar_repetidas(tudo[:400])
+                         or "(a academia ainda não registrou nada)")
+            except Exception as e:
+                texto = f"{type(e).__name__}: {e}"
+            self.after(0, lambda: (self.conversa_box.delete("1.0", "end"),
+                                   self.conversa_box.insert("1.0", texto)))
+
+        threading.Thread(target=tarefa, daemon=True).start()
+        self.after(5000, self._tick_conversa)
+
+    # ------------------------------------------------------------- progresso
+    def _progresso(self):
         t = self.abas.tab("Progresso")
-        cx = ctk.CTkTextbox(t, font=("Consolas", 12))
-        cx.pack(fill="both", expand=True, padx=12, pady=12)
+        cx = ctk.CTkTextbox(t, fg_color=CARTAO, font=("Consolas", 11))
+        cx.pack(fill="both", expand=True, padx=16, pady=(16, 8))
 
         def atualizar():
             cx.delete("1.0", "end")
-            try:
-                import io
-                import contextlib
-                import runpy
-                buf = io.StringIO()
-                with contextlib.redirect_stdout(buf):
-                    runpy.run_path(str(RAIZ / "PROGRESSO.py"), run_name="_")
-                cx.insert("1.0", buf.getvalue())
-            except Exception as e:
-                cx.insert("1.0", f"não foi possível montar: {type(e).__name__}: {e}")
+            cx.insert("1.0", "montando…")
 
-        ctk.CTkButton(t, text="Atualizar", command=atualizar).pack(pady=(0, 10))
+            def tarefa():
+                try:
+                    import contextlib
+                    import io
+                    import runpy
+                    buf = io.StringIO()
+                    with contextlib.redirect_stdout(buf):
+                        runpy.run_path(str(RAIZ / "PROGRESSO.py"), run_name="_")
+                    texto = buf.getvalue()
+                except Exception as e:
+                    texto = f"não foi possível montar: {type(e).__name__}: {e}"
+                self.after(0, lambda: (cx.delete("1.0", "end"),
+                                       cx.insert("1.0", texto)))
+
+            threading.Thread(target=tarefa, daemon=True).start()
+
+        ctk.CTkButton(t, text="Atualizar", command=atualizar
+                      ).pack(anchor="w", padx=16, pady=(0, 14))
         atualizar()
 
-    def _montar_avisos(self):
-        t = self.abas.tab("Avisos")
-        ctk.CTkLabel(t, text="Notificação no celular",
-                     font=("Arial", 17, "bold")).pack(anchor="w", padx=14, pady=(12, 4))
-        est = ctk.CTkLabel(t, text="", justify="left", wraplength=900)
-        est.pack(anchor="w", padx=14, pady=6)
-
-        def ver():
-            try:
-                import notificador
-                c = notificador._cfg()
-                canal = (c.get("canal") or "nenhum").lower()
-                linhas = [f"canal: {canal}"]
-                if canal == "ntfy":
-                    # O tópico é o que mais dá problema: se o que está aqui não
-                    # for igualzinho ao assinado no app, nada chega e nada
-                    # avisa. Mostrar na tela evita ir caçar no arquivo.
-                    linhas.append(f"tópico: {c.get('topico') or '(vazio)'}")
-                    linhas.append("o app do celular precisa estar assinando "
-                                  "exatamente esse nome")
-                elif canal == "telegram":
-                    linhas.append(f"chat_id: {c.get('chat_id') or '(vazio)'}")
-                elif canal == "whatsapp":
-                    linhas.append(f"telefone: {c.get('telefone') or '(vazio)'}")
-                linhas.append("pronto para enviar: "
-                              + ("sim" if notificador.ativo() else "não"))
-                est.configure(text="\n".join(linhas))
-            except Exception as e:
-                est.configure(text=f"{type(e).__name__}: {e}")
-
-        def testar():
-            try:
-                import notificador
-                est.configure(text=notificador.testar())
-            except Exception as e:
-                est.configure(text=f"{type(e).__name__}: {e}")
-
-        ctk.CTkButton(t, text="Ver configuração", command=ver).pack(anchor="w", padx=14, pady=4)
-        ctk.CTkButton(t, text="Enviar teste agora", command=testar).pack(anchor="w", padx=14, pady=4)
-        ctk.CTkLabel(t, text=("Para configurar, rode CONFIGURAR_AVISOS.bat — ele "
-                              "pergunta o canal, guia o passo a passo do WhatsApp "
-                              "e envia um teste na hora."),
-                     text_color="#94a3b8", wraplength=900,
-                     justify="left").pack(anchor="w", padx=14, pady=10)
-        ver()
-
-    def _montar_fontes(self):
+    # ---------------------------------------------------------------- fontes
+    def _fontes(self):
         t = self.abas.tab("Fontes")
-        cx = ctk.CTkTextbox(t, font=("Consolas", 12))
-        cx.pack(fill="both", expand=True, padx=12, pady=12)
+        ctk.CTkLabel(t, text="O que cada site está devolvendo",
+                     font=("Arial", 22, "bold"), text_color=TEXTO
+                     ).pack(anchor="w", padx=18, pady=(14, 8))
+        cx = ctk.CTkTextbox(t, fg_color=CARTAO, font=("Consolas", 11))
+        cx.pack(fill="both", expand=True, padx=16, pady=(0, 8))
 
         def olhar():
             cx.delete("1.0", "end")
-            cx.insert("1.0", "consultando os sites…\n")
+            cx.insert("1.0", "consultando os sites…")
 
             def tarefa():
                 linhas = []
                 try:
                     from coletor_sites import coletar, resumo
                     for jogo, _ in JOGOS:
-                        linhas.append(resumo(coletar(jogo)))
-                        linhas.append("")
+                        linhas += [resumo(coletar(jogo)), ""]
                 except Exception as e:
                     linhas.append(f"{type(e).__name__}: {e}")
                 texto = "\n".join(linhas)
@@ -568,21 +1034,124 @@ class Central(ctk.CTk):
 
             threading.Thread(target=tarefa, daemon=True).start()
 
-        ctk.CTkButton(t, text="Consultar os sites agora",
-                      command=olhar).pack(pady=(0, 10))
+        ctk.CTkButton(t, text="Consultar os sites agora", command=olhar
+                      ).pack(anchor="w", padx=16, pady=(0, 14))
 
-    def _tick_resumo(self):
+    # ---------------------------------------------------------------- avisos
+    def _avisos(self):
+        t = self.abas.tab("Avisos")
+        ctk.CTkLabel(t, text="Notificação no celular",
+                     font=("Arial", 22, "bold"), text_color=TEXTO
+                     ).pack(anchor="w", padx=18, pady=(14, 8))
+        self.av_box = ctk.CTkLabel(t, text="", justify="left", wraplength=880,
+                                   font=("Consolas", 13), text_color=TEXTO)
+        self.av_box.pack(anchor="w", padx=18, pady=6)
+        linha = ctk.CTkFrame(t, fg_color="transparent")
+        linha.pack(anchor="w", padx=16, pady=10)
+        ctk.CTkButton(linha, text="Ver configuração", width=170,
+                      command=self._ver_avisos).pack(side="left", padx=(0, 10))
+        ctk.CTkButton(linha, text="Enviar teste agora", width=170,
+                      command=self._testar_aviso).pack(side="left", padx=(0, 10))
+        ctk.CTkButton(linha, text="Trocar canal", width=150, fg_color="#1f2937",
+                      hover_color="#334155",
+                      command=self._trocar_canal).pack(side="left")
+        self._ver_avisos()
+
+    def _trocar_canal(self):
         try:
-            linhas = [p.resumo() for p in self.paineis.values()]
-            self.resumo_box.delete("1.0", "end")
-            self.resumo_box.insert("1.0", "\n".join(linhas))
-        except Exception:
-            pass
-        self.after(3000, self._tick_resumo)
+            self.master.reconfigurar()
+        except Exception as e:
+            self.av_box.configure(text=f"{type(e).__name__}: {e}")
 
-    def _fechar(self):
+    def _ver_avisos(self):
+        try:
+            import notificador
+            c = notificador._cfg()
+            canal = (c.get("canal") or "nenhum").lower()
+            L = [f"canal: {canal}"]
+            if canal == "ntfy":
+                # O tópico é o que mais dá problema: se o que está aqui não for
+                # igualzinho ao assinado no app, nada chega e nada avisa.
+                L.append(f"tópico: {c.get('topico') or '(vazio)'}")
+                L.append("o app do celular precisa estar assinando exatamente "
+                         "esse nome")
+            elif canal == "telegram":
+                L.append(f"chat_id: {c.get('chat_id') or '(vazio)'}")
+            elif canal == "whatsapp":
+                L.append(f"telefone: {c.get('telefone') or '(vazio)'}")
+            L.append("pronto para enviar: "
+                     + ("sim" if notificador.ativo() else "não"))
+            self.av_box.configure(text="\n".join(L))
+        except Exception as e:
+            self.av_box.configure(text=f"{type(e).__name__}: {e}")
+
+    def _testar_aviso(self):
+        def tarefa():
+            try:
+                import notificador
+                txt = notificador.testar()
+            except Exception as e:
+                txt = f"{type(e).__name__}: {e}"
+            self.after(0, lambda: self.av_box.configure(text=txt))
+
+        threading.Thread(target=tarefa, daemon=True).start()
+
+    def encerrar(self):
         for p in self.paineis.values():
             p.encerrar()
+
+
+# ══════════════════════════════════════════════════════════════════ janela
+class Central(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("Laboratório — as quatro mesas ao vivo")
+        self.geometry("1280x860")
+        ctk.set_appearance_mode("dark")
+        self.configure(fg_color=FUNDO)
+        self.lab = None
+        self.config_tela = None
+        self.protocol("WM_DELETE_WINDOW", self._fechar)
+        if precisa_configurar():
+            self._abrir_config()
+        else:
+            self._abrir_lab()
+
+    def _abrir_config(self):
+        if self.lab is not None:
+            return                       # laboratório já rodando: nunca derruba
+        self.config_tela = TelaConfig(self, self._abrir_lab)
+        self.config_tela.pack(fill="both", expand=True)
+
+    def _abrir_lab(self):
+        if self.config_tela is not None:
+            self.config_tela.destroy()
+            self.config_tela = None
+        if self.lab is None:
+            self.lab = Laboratorio(self)
+            self.lab.pack(fill="both", expand=True)
+
+    def reconfigurar(self):
+        """Trocar canal com o laboratório aberto.
+
+        Os cérebros já estão rodando: derrubar a tela para reconfigurar mataria
+        as quatro mesas. Por isso a troca acontece numa janela à parte.
+        """
+        topo = ctk.CTkToplevel(self)
+        topo.title("Trocar canal de aviso")
+        topo.geometry("900x620")
+        topo.configure(fg_color=FUNDO)
+
+        def fechar():
+            topo.destroy()
+            if self.lab is not None:
+                self.lab._ver_avisos()
+
+        TelaConfig(topo, fechar).pack(fill="both", expand=True)
+
+    def _fechar(self):
+        if self.lab is not None:
+            self.lab.encerrar()
         self.destroy()
 
 

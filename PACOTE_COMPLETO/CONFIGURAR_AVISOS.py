@@ -32,8 +32,12 @@ ALFABETO = "abcdefghjkmnpqrstuvwxyz23456789"
 
 
 def topico_novo() -> str:
-    """Nome que ninguém adivinha — no ntfy o tópico é a senha."""
-    return "lab-" + "-".join(
+    """Nome que ninguém adivinha — no ntfy o tópico é a senha.
+
+    O prefixo também sai do alfabeto seguro: "lab-" parece inofensivo, mas o
+    `l` é justamente o que se confunde com `1` na hora de digitar no celular.
+    """
+    return "mesa-" + "-".join(
         "".join(secrets.choice(ALFABETO) for _ in range(5)) for _ in range(3))
 
 
