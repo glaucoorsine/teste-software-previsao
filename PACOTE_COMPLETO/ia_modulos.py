@@ -2028,23 +2028,22 @@ class PipelinePerceptivo:
             _motivos = list(motivo_bloq)
         except NameError:
             _motivos = []
-        # O SOFTWARE ENTREGA A PREVISÃO.
+        # AGUARDANDO É RESPOSTA, NÃO FALHA.
         #
-        # Antes, `pad_ui` só era preenchido em OPERAR ou JANELA_ATIVA. Como o
-        # motor vive em SOMBRA enquanto não há teoria validada — e teoria não
-        # validava nunca —, a tela mostrava "AGUARDANDO" indefinidamente e a
-        # notificação, que depende de haver entrada publicada, nunca disparava.
-        # O software calculava 7 números a cada giro, escrevia no log, e não
-        # entregava nada a ninguém. Virou instrumento de leitura.
+        # Este software não prevê o tempo todo: ele procura o MOMENTO de
+        # prever. A sombra roda ao fundo aprendendo, e a previsão só sai
+        # quando o gatilho reconhece a hora. Publicar a cada giro transforma
+        # previsão em ruído com número, e destrói o único filtro que existe
+        # entre "o consenso calculou algo" e "vale a pena olhar".
         #
-        # Agora a previsão sai sempre que existe consenso. O que muda entre os
-        # estados não é SE aparece, é COM QUE ETIQUETA aparece — e a taxa de
-        # acerto medida viaja junto (campo `taxa_acerto`), para o número nunca
-        # ser lido separado do histórico dele. Esconder a previsão não a torna
-        # mais honesta; mostrar sem o placar é que seria desonesto.
-        if _modo_final in ("JANELA_ATIVA", "OPERAR") and _status in ("OPERAR", "JANELA_ATIVA"):
+        # (Esta linha já foi quebrada uma vez: eu li o "AGUARDANDO" perpétuo
+        # como defeito de entrega e liberei a saída em todo giro. O defeito
+        # nunca foi o aviso — era o momento certo não chegar nunca, porque
+        # nenhuma teoria votava e o caminho do consenso não podia abrir.
+        # Conserta-se o gatilho, não a etiqueta.)
+        if _modo_final == "JANELA_ATIVA":
             pad_ui = list(alvos)
-        elif alvos:
+        elif _modo_final == "OPERAR" and _status == "OPERAR":
             pad_ui = list(alvos)
         else:
             pad_ui = []
