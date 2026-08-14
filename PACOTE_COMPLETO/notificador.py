@@ -93,6 +93,23 @@ def ativo() -> bool:
     return False
 
 
+def _ascii(txt: str) -> str:
+    """Cabeçalho HTTP não aceita acento.
+
+    O código antigo jogava bytes UTF-8 dentro de latin-1, e o travessão de
+    "LIGHTNING — sinal" chegava no celular como "LIGHTNING â sinal". Aqui a
+    acentuação é rebaixada para o equivalente sem acento, que continua legível,
+    em vez de virar lixo.
+    """
+    import unicodedata
+    trocas = {"—": "-", "–": "-", "“": '"', "”": '"', "’": "'", "×": "x"}
+    for de, para in trocas.items():
+        txt = txt.replace(de, para)
+    plano = unicodedata.normalize("NFKD", txt)
+    return "".join(c for c in plano if not unicodedata.combining(c)) \
+        .encode("ascii", "ignore").decode("ascii")
+
+
 def _enviar(titulo: str, corpo: str) -> Optional[str]:
     try:
         import requests
@@ -105,7 +122,7 @@ def _enviar(titulo: str, corpo: str) -> Optional[str]:
             r = requests.post(
                 f"https://ntfy.sh/{c['topico']}",
                 data=corpo.encode("utf-8"),
-                headers={"Title": titulo.encode("utf-8").decode("latin-1", "ignore"),
+                headers={"Title": _ascii(titulo),
                          "Priority": "high", "Tags": "game_die"},
                 timeout=TIMEOUT_S)
             r.raise_for_status()

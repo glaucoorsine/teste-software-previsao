@@ -17,12 +17,24 @@ daqui a três horas de mesa perdida.
 from __future__ import annotations
 
 import json
+import secrets
 import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent
 sys.path.insert(0, str(RAIZ))
 CFG = RAIZ / "notificacoes.json"
+
+# Sem vogais parecidas nem 0/O, 1/l: o tópico vai ser digitado à mão no
+# celular, e um caractere ambíguo aqui vira uma hora procurando por que o
+# aviso não chega.
+ALFABETO = "abcdefghjkmnpqrstuvwxyz23456789"
+
+
+def topico_novo() -> str:
+    """Nome que ninguém adivinha — no ntfy o tópico é a senha."""
+    return "lab-" + "-".join(
+        "".join(secrets.choice(ALFABETO) for _ in range(5)) for _ in range(3))
 
 
 def sim(p, padrao=True):
@@ -41,9 +53,11 @@ def cabeca(t):
 
 cabeca("COMO VOCÊ QUER RECEBER OS AVISOS DE ENTRADA?")
 print()
-print("  1) WhatsApp    — chega junto com suas outras mensagens")
-print("  2) Telegram    — mais confiável, mas precisa do app")
-print("  3) ntfy        — sem cadastro, mas exige assinar o tópico no app")
+print("  1) ntfy        — o mais simples: instale o app e pronto.")
+print("                   Sem cadastro, sem bot, sem apikey.")
+print("  2) WhatsApp    — chega junto com suas outras mensagens,")
+print("                   mas depende do CallMeBot autorizar")
+print("  3) Telegram    — precisa criar um bot no @BotFather")
 print("  4) desligar")
 print()
 op = input("  Escolha [1-4]: ").strip() or "1"
@@ -52,6 +66,32 @@ cfg = {"canal": "nenhum", "topico": "", "token": "", "chat_id": "",
        "telefone": "", "apikey": ""}
 
 if op == "1":
+    cabeca("NTFY — dois passos")
+    print()
+    print("  1. No celular, instale o aplicativo  ntfy  (Android ou iPhone).")
+    print()
+    print("  2. Abra o app, toque no  +  e assine EXATAMENTE este tópico:")
+    print()
+    top = (input("     (ENTER para eu sortear um nome seguro, ou digite o seu): ")
+           .strip())
+    if not top:
+        top = topico_novo()
+    print()
+    print("     ┌" + "─" * 52 + "┐")
+    print(f"     │  {top:<50}│")
+    print("     └" + "─" * 52 + "┘")
+    print()
+    print("  Copie letra por letra. Esse nome é a senha: quem souber, recebe")
+    print("  os seus avisos — por isso não é um nome bonitinho.")
+    print()
+    print("  E atenção ao que já te derrubou uma vez: o ntfy tem DOIS lados.")
+    print("  Trocar o nome aqui NÃO muda o que o aplicativo está escutando.")
+    print("  Se você não assinar no app, nada chega e nada avisa que falhou.")
+    print()
+    cfg.update({"canal": "ntfy", "topico": top})
+    input("  Quando tiver assinado no app, aperte ENTER para eu testar.")
+
+elif op == "2":
     cabeca("WHATSAPP — três passos, uma vez só")
     print()
     print("  1. Salve este número nos seus contatos:")
@@ -72,7 +112,7 @@ if op == "1":
     key = input("  A apikey que o bot respondeu: ").strip()
     cfg.update({"canal": "whatsapp", "telefone": tel, "apikey": key})
 
-elif op == "2":
+elif op == "3":
     cabeca("TELEGRAM")
     print()
     print("  1. No Telegram, fale com @BotFather e mande /newbot")
@@ -85,24 +125,6 @@ elif op == "2":
     tok = input("  Token do bot: ").strip()
     cid = input("  chat_id: ").strip()
     cfg.update({"canal": "telegram", "token": tok, "chat_id": cid})
-
-elif op == "3":
-    cabeca("NTFY")
-    print()
-    print("  ATENÇÃO — este é o que já deu problema antes.")
-    print("  O ntfy tem DOIS lados. Trocar o tópico aqui NÃO muda o que o")
-    print("  aplicativo está escutando. Depois de escolher o nome abaixo,")
-    print("  abra o app ntfy no celular e ASSINE exatamente esse mesmo nome.")
-    print()
-    print("  O nome funciona como senha: quem souber, recebe seus avisos.")
-    print("  Use algo que ninguém adivinharia.")
-    print()
-    top = input("  Nome do tópico: ").strip()
-    cfg.update({"canal": "ntfy", "topico": top})
-    if top:
-        print()
-        print(f"  >>> AGORA abra o app ntfy e assine o tópico:  {top}")
-        input("      Quando tiver assinado, aperte ENTER para testar.")
 
 else:
     cabeca("AVISOS DESLIGADOS")
@@ -132,6 +154,15 @@ try:
     if err:
         print(f"  NÃO FOI: {err}")
         print()
+        # Falha de rede não é falha de configuração. Sem separar as duas, o
+        # aviso manda procurar defeito no app quando o problema era a internet.
+        if any(p in err for p in ("ProxyError", "ConnectionError", "Timeout",
+                                  "SSLError", "NameResolution", "ConnectTimeout")):
+            print("  Isto foi a conexão, não a sua configuração.")
+            print("  O computador não conseguiu falar com o servidor.")
+            print("  Confira a internet (ou se um firewall/antivírus está")
+            print("  bloqueando) e rode este configurador de novo.")
+            raise SystemExit(1)
         if cfg["canal"] == "whatsapp":
             print("  Causas comuns:")
             print("   - a apikey está errada ou veio com espaço")

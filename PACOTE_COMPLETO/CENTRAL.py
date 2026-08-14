@@ -509,9 +509,22 @@ class Central(ctk.CTk):
             try:
                 import notificador
                 c = notificador._cfg()
-                est.configure(
-                    text=f"canal: {c.get('canal')}\n"
-                         f"pronto para enviar: {'sim' if notificador.ativo() else 'não'}")
+                canal = (c.get("canal") or "nenhum").lower()
+                linhas = [f"canal: {canal}"]
+                if canal == "ntfy":
+                    # O tópico é o que mais dá problema: se o que está aqui não
+                    # for igualzinho ao assinado no app, nada chega e nada
+                    # avisa. Mostrar na tela evita ir caçar no arquivo.
+                    linhas.append(f"tópico: {c.get('topico') or '(vazio)'}")
+                    linhas.append("o app do celular precisa estar assinando "
+                                  "exatamente esse nome")
+                elif canal == "telegram":
+                    linhas.append(f"chat_id: {c.get('chat_id') or '(vazio)'}")
+                elif canal == "whatsapp":
+                    linhas.append(f"telefone: {c.get('telefone') or '(vazio)'}")
+                linhas.append("pronto para enviar: "
+                              + ("sim" if notificador.ativo() else "não"))
+                est.configure(text="\n".join(linhas))
             except Exception as e:
                 est.configure(text=f"{type(e).__name__}: {e}")
 
