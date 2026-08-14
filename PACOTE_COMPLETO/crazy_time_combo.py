@@ -359,6 +359,14 @@ class App(ctk.CTk):
                     if _m.startswith("[Gatilho] consenso sozinho"):
                         _q = _m.split("—", 1)[-1].strip()[:90]
                         break
+                # o placar viaja junto com a previsao: o numero nunca chega
+                # ao celular separado da taxa de acerto que ele vem tendo
+                _tx = sug.get("taxa_acerto")
+                _ac = sug.get("acaso_k")
+                if _tx is not None:
+                    _placar = (f"acerto {_tx:.0%}"
+                               + (f" vs acaso {_ac:.0%} ({_tx/_ac:.2f}x)" if _ac else ""))
+                    _q = (_q + " | " + _placar).strip(" |") if _q else _placar
                 notificar_sinal(GAME, self.escolhas, modo=modo,
                                 janela=self.restantes, extra=_q, log_fn=log)
             except Exception as _e:

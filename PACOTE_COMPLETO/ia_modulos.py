@@ -2028,14 +2028,53 @@ class PipelinePerceptivo:
             _motivos = list(motivo_bloq)
         except NameError:
             _motivos = []
-        # UI pública só com OPERAR / janela ativa; SOMBRA registra mas não orienta
-        if _modo_final == "JANELA_ATIVA":
+        # O SOFTWARE ENTREGA A PREVISÃO.
+        #
+        # Antes, `pad_ui` só era preenchido em OPERAR ou JANELA_ATIVA. Como o
+        # motor vive em SOMBRA enquanto não há teoria validada — e teoria não
+        # validava nunca —, a tela mostrava "AGUARDANDO" indefinidamente e a
+        # notificação, que depende de haver entrada publicada, nunca disparava.
+        # O software calculava 7 números a cada giro, escrevia no log, e não
+        # entregava nada a ninguém. Virou instrumento de leitura.
+        #
+        # Agora a previsão sai sempre que existe consenso. O que muda entre os
+        # estados não é SE aparece, é COM QUE ETIQUETA aparece — e a taxa de
+        # acerto medida viaja junto (campo `taxa_acerto`), para o número nunca
+        # ser lido separado do histórico dele. Esconder a previsão não a torna
+        # mais honesta; mostrar sem o placar é que seria desonesto.
+        if _modo_final in ("JANELA_ATIVA", "OPERAR") and _status in ("OPERAR", "JANELA_ATIVA"):
             pad_ui = list(alvos)
-        elif _modo_final == "OPERAR" and _status == "OPERAR":
+        elif alvos:
             pad_ui = list(alvos)
         else:
             pad_ui = []
+        # A taxa de acerto acompanha a previsão em todo lugar: tela, log e
+        # notificação. É o número que o operador cobra, e ele não pode ficar
+        # escondido dentro de um painel de estatística separado.
+        try:
+            _ac = int((mem_stats or {}).get("acertos_aval") or 0)
+            _er = int((mem_stats or {}).get("erros_aval") or 0)
+        except (TypeError, ValueError, AttributeError):
+            _ac = _er = 0
+        _tot_aval = _ac + _er
+        _taxa_acerto = (_ac / _tot_aval) if _tot_aval else None
+        # O ACASO TEM QUE SER O DA MESMA APOSTA.
+        # O placar conta JANELA: o número sair em até `janela` giros. Comparar
+        # isso contra k/37 (que é a chance de UM giro) infla tudo: com 7
+        # números em 3 giros o acaso já é 46,5%, não 18,9%. Um placar de 54,5%
+        # lido contra 18,9% pareceria 2,9x de vantagem quando é 1,17x.
+        _k = len(pad_ui) or self.k_alvos
+        _j = max(1, int(janela or 1))
+        _acaso_k = 1.0 - (1.0 - _k / max(1, self.n_classes)) ** _j
+        if _tot_aval:
+            msgs.append(
+                f"[Placar] {_ac}/{_tot_aval} = {_ac/_tot_aval:.1%} | "
+                f"acaso ({_k} números em {_j} giros) = {_acaso_k:.1%} | "
+                f"{(_ac/_tot_aval)/_acaso_k:.2f}x"
+            )
         return {
+            "taxa_acerto": _taxa_acerto, "acertos_aval": _ac, "erros_aval": _er,
+            "acaso_k": _acaso_k,
             "pad5": pad_ui, "anti5": [], "janela": janela, "msgs": msgs,
             "device": str(self.lstm.device), "modo": _modo_final, "conf": conf,
             "probs": {str(k): round(float(v),4) for k,v in top_p},
