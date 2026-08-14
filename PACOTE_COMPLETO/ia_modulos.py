@@ -1288,6 +1288,27 @@ class MetaSupervisora:
 # RESULTADO.bat antes e depois para comparar as duas com o mesmo critério.
 CONSENSO_PURO = True
 
+# As famílias de finais que ele ensinou: 0,1,3,6 · 0,2,7,8 · 4,5,9.
+# O zero pertence a duas, e nos exemplos dele as duas valem — "veio 20 e logo
+# depois o 2" usa (0,2,7,8), "veio 1 e logo depois 21" usa (0,1,3,6). Por isso
+# a união, e não a primeira que casar.
+FAMILIAS_FINAIS = ((0, 1, 3, 6), (0, 2, 7, 8), (4, 5, 9))
+
+
+def _familia_completa(x: int) -> list:
+    """Todos os números da mesa cujo final está na família do final de `x`."""
+    try:
+        f = int(x) % 10
+    except (TypeError, ValueError):
+        return []
+    finais = set()
+    for g in FAMILIAS_FINAIS:
+        if f in g:
+            finais |= set(g)
+    if not finais:
+        return []
+    return sorted(y for y in range(37) if y % 10 in finais)
+
 
 class PipelinePerceptivo:
     # Quantas teorias DISTINTAS precisam concordar para o número entrar.
@@ -1722,13 +1743,39 @@ class PipelinePerceptivo:
                         _cron.append(int(_x))
                     except (TypeError, ValueError):
                         pass
-                _nums_op = _h4(_cron)
-                if _nums_op:
+                # A FAMÍLIA INTEIRA VOTA, sem eu cortar antes.
+                #
+                # Eu vinha entregando só 7 números, escolhidos pela "faixa
+                # quente". Medido no histórico dele, esse corte é que estraga:
+                #
+                #     immersive   família crua 1,06x   com meu corte 1,02x
+                #     mega_fire   família crua 1,08x   com meu corte 0,92x
+                #
+                # A tese dele nunca foi que a família toda é a aposta — foi que
+                # a família é o CANDIDATO e o cruzamento com as outras teorias
+                # decide o que jogar. Quem tem que estreitar é o consenso, que
+                # olha o que as outras fontes dizem, não um filtro meu decidindo
+                # sozinho antes da votação começar.
+                #
+                # A ordem aqui é a numérica, de propósito: o peso decai por
+                # posição, e eu não tenho evidência de qual número da família
+                # merece vir na frente. Ordenar por palpite seria refazer o
+                # mesmo erro em outro lugar.
+                _fam = _familia_completa(_cron[-1]) if _cron else []
+                if _fam:
                     hips.append({"nome": "REGRA_OPERADOR",
-                                 "nums": [str(x) for x in _nums_op],
+                                 "nums": [str(x) for x in _fam],
                                  "peso": 2.0})
                     msgs.append(f"[Regra do operador] família de {_cron[-1]} "
-                                f"na faixa quente → {_nums_op}")
+                                f"({len(_fam)} números) entra na votação; "
+                                f"quem estreita é o consenso")
+                _nums_op = _h4(_cron)
+                if _nums_op:
+                    # a versão estreitada continua votando, como voz separada,
+                    # para dar para comparar as duas ao vivo na sombra
+                    hips.append({"nome": "REGRA_OPERADOR_ESTREITA",
+                                 "nums": [str(x) for x in _nums_op],
+                                 "peso": 1.0})
             except Exception as _e:
                 msgs.append(f"[Regra do operador] erro: {type(_e).__name__}: {_e}")
 
