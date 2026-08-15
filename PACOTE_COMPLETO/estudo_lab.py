@@ -289,7 +289,7 @@ def _norm(x):
 
 def estudar(jogo: str, historico: list, mults=None) -> dict:
     """Roda os 12 estudos e grava na biblioteca do jogo."""
-    is_ct = jogo == "crazy_time"
+    is_ct = str(jogo).startswith("crazy_time")
     itens = []
     if is_ct:
         for fn in AGENTES_CT:

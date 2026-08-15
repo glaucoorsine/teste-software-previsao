@@ -23,7 +23,7 @@ RAIZ = Path(__file__).resolve().parent
 sys.path.insert(0, str(RAIZ))
 os.chdir(RAIZ)
 
-JOGOS = ["lightning", "mega_fire", "immersive", "crazy_time"]
+JOGOS = ["lightning", "mega_fire", "immersive", "crazy_time", "crazy_time_a"]
 LARG = 78
 
 

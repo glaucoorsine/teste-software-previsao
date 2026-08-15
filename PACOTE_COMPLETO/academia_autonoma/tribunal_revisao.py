@@ -52,7 +52,7 @@ TRIBUNAL_AGENTES = [
 # último julgamento por jogo (para a Central ler sem reexecutar)
 # NUNCA misturar mega_fire / lightning / crazy_time / immersive
 _LAST_BY_JOGO: dict = {}
-_JOGOS_VALIDOS = ("mega_fire", "lightning", "crazy_time", "immersive")
+_JOGOS_VALIDOS = ("mega_fire", "lightning", "crazy_time", "crazy_time_a", "immersive")
 
 
 def _path_jogo(jogo: str):

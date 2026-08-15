@@ -35,7 +35,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent
 LOG = RAIZ / "Logs" / "central_log.txt"
-JOGOS = ("lightning", "mega_fire", "immersive", "crazy_time")
+JOGOS = ("lightning", "mega_fire", "immersive", "crazy_time", "crazy_time_a")
 N_CLASSES = {"lightning": 37, "mega_fire": 37, "immersive": 37,
              "crazy_time": 54}
 

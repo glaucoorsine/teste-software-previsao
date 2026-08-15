@@ -128,6 +128,10 @@ class MesaFalsa(CENTRAL.PainelMesa):
         self.acertos_keys = set()
         self.erros_keys = set()
         self.lendo_academia = False
+        self.fontes_da_janela = {}
+        self.jogadores = None
+        self.mesa_cheia = None
+        self.ultimo_publico = 9e18      # nunca consulta no teste
         self._carregar()
 
     def after(self, ms, fn=None, *a):

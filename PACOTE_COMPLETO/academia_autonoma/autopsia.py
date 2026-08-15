@@ -54,7 +54,8 @@ def _arquivo(jogo: str) -> Path:
 
 def registrar(jogo: str, escolhidos: List, saiu: Any, acertou: bool,
               candidatos_por_fonte: Dict[str, List] = None,
-              giros: int = 0) -> Dict[str, Any]:
+              giros: int = 0, jogadores: int = None,
+              mesa_cheia: bool = None) -> Dict[str, Any]:
     """Disseca uma janela fechada e guarda o laudo.
 
     `candidatos_por_fonte` é o que cada teoria propôs ANTES do corte das sete
@@ -78,6 +79,10 @@ def registrar(jogo: str, escolhidos: List, saiu: Any, acertou: bool,
         "quando": time.time(), "saiu": alvo, "acertou": bool(acertou),
         "escolhidos": escolhidos_s, "giros": int(giros or 0),
         "tipo": tipo, "quem_tinha": quem_tinha, "n_fontes": len(fontes),
+        # quantas pessoas estavam na mesa quando esta janela correu.
+        # Sem guardar isto, a percepcao dele -- "com mais gente online a
+        # previsao fica mais facil" -- nao teria como ser medida depois.
+        "jogadores": jogadores, "mesa_cheia": mesa_cheia,
     }
     try:
         PASTA.mkdir(parents=True, exist_ok=True)
@@ -125,8 +130,18 @@ def diagnostico(jogo: str, ultimos: int = 400) -> Dict[str, Any]:
     for x in erros:
         for nome in (x.get("quem_tinha") or []):
             ignorados[nome] += 1
+    # A PERCEPCAO DELE, medida: a mesa cheia acerta mais?
+    cheia = [x for x in laudos if x.get("mesa_cheia") is True]
+    vazia = [x for x in laudos if x.get("mesa_cheia") is False]
+    taxa_cheia = (sum(1 for x in cheia if x.get("acertou")) / len(cheia)
+                  if cheia else None)
+    taxa_vazia = (sum(1 for x in vazia if x.get("acertou")) / len(vazia)
+                  if vazia else None)
+
     n_err = len(erros) or 1
     return {
+        "n_cheia": len(cheia), "n_vazia": len(vazia),
+        "taxa_cheia": taxa_cheia, "taxa_vazia": taxa_vazia,
         "n": len(laudos), "acertos": len(acertos), "erros": len(erros),
         "cegueira": tipos.get("cegueira", 0),
         "votacao": tipos.get("votacao", 0),
@@ -154,6 +169,10 @@ def resumo(jogo: str, ultimos: int = 400) -> str:
     if d["ignorados"]:
         L.append("   quem tinha o número nos ERROS e foi ignorado: "
                  + ", ".join(f"{n}({c})" for n, c in d["ignorados"]))
+    if d.get("taxa_cheia") is not None and d.get("taxa_vazia") is not None:
+        L.append(f"   mesa CHEIA {d['taxa_cheia']:.0%} em {d['n_cheia']} janelas · "
+                 f"mesa vazia {d['taxa_vazia']:.0%} em {d['n_vazia']} — "
+                 f"a percepção dele, medida")
     if d["n"] < MIN_PARA_CONCLUIR:
         L.append(f"   ⚠ só {d['n']} janelas — ainda é cedo para concluir")
     elif d.get("p_votacao", 0) > 0.4:

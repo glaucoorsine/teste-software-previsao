@@ -743,7 +743,7 @@ class Memoria:
             # acumula p_esperado da JANELA que fechou (mesma escala de y)
             try:
                 from metricas_honestas import p_esperado_para
-                is_ct = self.jogo == "crazy_time"
+                is_ct = str(self.jogo).startswith("crazy_time")
                 pe = p_esperado_para(ult.get("alvos") or [], int(ult.get("janela") or 3), is_ct=is_ct)
                 y = 1.0 if acertou_janela else 0.0
                 acc = self.d.setdefault("cobertura_acc", {"soma_y": 0.0, "soma_p": 0.0, "n": 0})
@@ -1355,7 +1355,7 @@ class PipelinePerceptivo:
 
     def __init__(self, jogo: str = "mega_fire"):
         self.jogo = jogo
-        self.is_ct = (jogo == "crazy_time")
+        self.is_ct = str(jogo).startswith("crazy_time")
         self.qual = QualidadeDados()
         self.ctx = Contexto()
         self.perc = Percepcao()

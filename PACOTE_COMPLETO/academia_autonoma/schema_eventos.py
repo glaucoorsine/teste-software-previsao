@@ -13,6 +13,9 @@ DOMAIN_BY_DATASET = {
     "lightning": ROULETTE_DOMAIN,
     "immersive": ROULETTE_DOMAIN,
     "crazy_time": CT_DOMAIN,
+    # Crazy Time A: mesma roda, mesa separada. Os giros nao se
+    # misturam -- e outra roda fisica, com outro crupie.
+    "crazy_time_a": CT_DOMAIN,
 }
 
 @dataclass

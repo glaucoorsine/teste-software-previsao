@@ -33,7 +33,7 @@ os.environ["ACADEMIA_DATA_DIR"] = args.dados or os.path.join(RAIZ, "_dados_ao_vi
 os.chdir(RAIZ)
 
 CT_DOM = {"1","2","5","10","CoinFlip","CashHunt","Pachinko","CrazyBonus"}
-is_ct = args.jogo == "crazy_time"
+is_ct = str(args.jogo).startswith("crazy_time")
 
 # ---------- ler os giros ----------
 bruto = open(args.arquivo, encoding="utf-8").read()

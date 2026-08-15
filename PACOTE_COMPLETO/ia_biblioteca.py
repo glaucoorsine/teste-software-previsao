@@ -2227,7 +2227,7 @@ class MetaSupervisora:
             problemas.append(f"fixação em alvo {top_fix} ({frac_fix*100:.0f}% das menções)")
             self.politica["anti_fixacao"] = True
             # Crazy Time: setores 1 e 2
-            if str(top_fix) in ("1", "2") and self.jogo == "crazy_time":
+            if str(top_fix) in ("1", "2") and str(self.jogo).startswith("crazy_time"):
                 self.pesos_tecnicas["setor_1"] = 0.35
                 self.pesos_tecnicas["setor_2"] = 0.35
                 self.pesos_tecnicas["bonus_atrasado"] = min(3.0, float(self.pesos_tecnicas.get("bonus_atrasado", 1.0)) * 1.4)

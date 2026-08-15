@@ -36,6 +36,7 @@ import queue as _queue
 import secrets
 import sys
 import threading
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -48,14 +49,16 @@ RAIZ = Path(__file__).resolve().parent
 PASTA = RAIZ / "Logs"
 LOG = PASTA / "central_log.txt"
 JOGOS = [("lightning", "Lightning"), ("mega_fire", "Mega Fire"),
-         ("immersive", "Immersive"), ("crazy_time", "Crazy Time")]
+         ("immersive", "Immersive"), ("crazy_time", "Crazy Time"),
+         ("crazy_time_a", "Crazy Time A")]
 
 # Mesmo arquivo que o combo daquela mesa usa: o placar que ele já acumulou
 # continua de onde parou, em vez de zerar por trocar de janela.
 ESTADO = {"lightning": "lightning_combo_state.json",
           "mega_fire": "mega_fire_combo_state.json",
           "immersive": "immersive_combo_state.json",
-          "crazy_time": "crazy_time_state.json"}
+          "crazy_time": "crazy_time_state.json",
+          "crazy_time_a": "crazy_time_a_state.json"}
 
 VERMELHOS = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
 PERIODO_S = 10          # de quanto em quanto cada mesa consulta
@@ -554,6 +557,12 @@ class PainelMesa(ctk.CTkFrame):
         self.ocupado = False
         self.lendo_academia = False
         self.fontes_da_janela = {}
+        # quantas pessoas estao na mesa. A percepcao dele -- "com mais gente
+        # online a previsao fica mais facil" -- so vira medicao se este numero
+        # for gravado junto de cada janela.
+        self.jogadores = None
+        self.mesa_cheia = None
+        self.ultimo_publico = 0.0
         self.vivo = True
         self.ultimo_estado = "iniciando"
         self.arquivo = PASTA / ESTADO[jogo]
@@ -634,14 +643,14 @@ class PainelMesa(ctk.CTkFrame):
         # história: o top slot sorteia um símbolo com multiplicador, a roda
         # para em outro, e o multiplicador aplicado é o terceiro número. Por
         # isso a coluna dele é mais alta e mais larga.
-        largura = 74 if self.jogo == "crazy_time" else 38
+        largura = 74 if str(self.jogo).startswith("crazy_time") else 38
         self.hist_col = []
         for _ in range(16 if self.jogo != "crazy_time" else 11):
             col = ctk.CTkFrame(self.hist, fg_color="transparent")
             col.pack(side="left", padx=2)
             topo = ctk.CTkLabel(col, text="", width=largura, height=14,
                                 font=("Arial", 9), text_color="#7dd3fc")
-            if self.jogo == "crazy_time":
+            if str(self.jogo).startswith("crazy_time"):
                 topo.pack()
             mult = ctk.CTkLabel(col, text="", width=largura, height=14,
                                 font=("Arial", 10, "bold"), text_color=AMARELO)
@@ -775,7 +784,7 @@ class PainelMesa(ctk.CTkFrame):
                 self.soma_p += p_esperado_para(
                     self.ultimas_escolhas or self.escolhas,
                     int(self.ultima_janela or 4),
-                    is_ct=(self.jogo == "crazy_time"))
+                    is_ct=(str(self.jogo).startswith("crazy_time")))
             except Exception:
                 pass
             self.ultimo_resultado = {"saiu": n, "acertou": fechou_bem,
@@ -793,7 +802,8 @@ class PainelMesa(ctk.CTkFrame):
                 _l = _autopsia(
                     self.jogo, self.ultimas_escolhas or [], n, fechou_bem,
                     candidatos_por_fonte=getattr(self, "fontes_da_janela", {}),
-                    giros=int(self.ultima_janela or 0))
+                    giros=int(self.ultima_janela or 0),
+                    jogadores=self.jogadores, mesa_cheia=self.mesa_cheia)
                 registrar(f"{self.jogo} AUTOPSIA {_l.get('tipo')} "
                           f"saiu={n} tinha={_l.get('quem_tinha')}")
             except Exception as e:
@@ -854,6 +864,7 @@ class PainelMesa(ctk.CTkFrame):
                 self.after(0, lambda r=rows: self._desenhar_hist(r))
                 return
 
+            self._ver_publico()
             self.validar(rows[0])
             if self.escolhas and self.restantes > 0:
                 salvar_ciclo_ativo(self.jogo, self.escolhas, self.restantes,
@@ -1006,6 +1017,32 @@ class PainelMesa(ctk.CTkFrame):
         self.feed.insert("1.0", "\n".join(sug.get("msgs") or []))
         self._academia()
 
+    def _ver_publico(self):
+        """Quantas pessoas estão na mesa agora.
+
+        Consulta lenta de propósito — de dez em dez minutos. O número muda
+        devagar e a fonte é um site que já bloqueou pedido demais antes.
+        Falha em silêncio: se não vier, a janela roda igual, só sem esse dado.
+        """
+        agora = time.time()
+        if agora - self.ultimo_publico < 600:
+            return
+        self.ultimo_publico = agora
+
+        def tarefa():
+            try:
+                from fonte_gamblingcounting import coletar
+                d = coletar(self.jogo)
+                if d.get("jogadores"):
+                    self.jogadores = d["jogadores"]
+                    self.mesa_cheia = d.get("mesa_cheia")
+                    registrar(f"{self.jogo} PUBLICO {self.jogadores} "
+                              f"cheia={self.mesa_cheia}")
+            except Exception as e:
+                registrar(f"{self.jogo} publico: {type(e).__name__}")
+
+        threading.Thread(target=tarefa, daemon=True).start()
+
     def _academia(self):
         """O que os agentes desta mesa fizeram nas últimas voltas.
 
@@ -1068,7 +1105,7 @@ class PainelMesa(ctk.CTkFrame):
                 float(soma if soma is not None else self.soma_p),
                 alvos_ultima=self.ultimas_escolhas or self.escolhas,
                 janela_ultima=int(self.ultima_janela or 4),
-                is_ct=(self.jogo == "crazy_time"),
+                is_ct=(str(self.jogo).startswith("crazy_time")),
                 exp_acertos=int(mem.get("acertos_aval") or 0),
                 exp_erros=int(mem.get("erros_aval") or 0))
         except Exception:

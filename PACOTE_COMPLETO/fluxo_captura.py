@@ -26,6 +26,19 @@ API_BY_GAME = {
     "lightning": "https://api-cs.casino.org/svc-evolution-game-events/api/lightningroulette",
     "immersive": "https://api-cs.casino.org/svc-evolution-game-events/api/immersiveroulette",
     "crazy_time": "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime",
+    # Crazy Time A e uma segunda mesa do mesmo jogo. O nome no endpoint nao
+    # da para adivinhar daqui, entao a lista abaixo e tentada em ordem e a
+    # primeira que responder fica valendo.
+    "crazy_time_a": "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimea",
+}
+
+# Candidatos alternativos por mesa, tentados quando o principal nao responde.
+API_ALTERNATIVAS = {
+    "crazy_time_a": [
+        "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime-a",
+        "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimeA",
+        "https://api-cs.casino.org/svc-evolution-game-events/api/crazy-time-a",
+    ],
 }
 
 HEADERS = {
