@@ -2212,6 +2212,26 @@ class PipelinePerceptivo:
                     + f" (peso {_s.get('peso_total',0)})"
                 )
             msgs.append("[Consenso/votos] " + " | ".join(_linhas))
+        # A MESMA COISA, EM PORTUGUES.
+        #
+        # Ele disse: "nao entendo o consenso das ias". A linha acima e minha,
+        # nao dele: "peso 8.555" e numero de programa, nao razao. Sem entender
+        # por que o numero entrou, ele nao consegue julgar se o software errou
+        # por azar ou por defeito -- e esse julgamento e o trabalho dele.
+        try:
+            from explicador import explicar as _explicar
+            _fpn = {}
+            for _h in hips:
+                for _x in (_h.get("nums") or []):
+                    _fpn.setdefault(str(_x).strip(), []).append(_h.get("nome", "?"))
+            _txt = _explicar(aprovados[:self.k_alvos], _fpn,
+                             n_efetivo=locals().get("_ef"))
+            if _txt:
+                msgs.append("")
+                msgs.extend(_txt.split("\n"))
+                msgs.append("")
+        except Exception as _e:
+            msgs.append(f"[Explicação] indisponível: {type(_e).__name__}")
         # FICHA 226 DO COMPÊNDIO DELE — CONSENSO ILUSÓRIO.
         #
         #   "Muitos agentes derivados do mesmo código podem parecer
