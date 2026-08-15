@@ -36,6 +36,25 @@ from typing import Any, Dict, List, Optional
 
 from .dsl_hipoteses import eval_cond, pred_candidatos
 
+# A RODA DO CRAZY TIME NÃO TEM CASAS IGUAIS.
+# 54 casas, mas o "1" ocupa 21 e o CrazyTime uma só. Dividir por 8 símbolos,
+# como se cada um valesse o mesmo, é o mesmo erro de baseline que já me mordeu
+# duas vezes — no RESULTADO e na leitura do log dele. Aqui não morde de novo.
+FATIAS_CT = {"1": 21, "2": 13, "5": 7, "10": 4,
+             "CoinFlip": 4, "CashHunt": 2, "Pachinko": 2, "CrazyTime": 1}
+CASAS_CT = 54
+
+
+def chance_da_aposta(alvos, dominio) -> float:
+    """A chance de a aposta acertar em um giro, respeitando o tamanho de cada casa."""
+    alvos = list(alvos or [])
+    if not alvos:
+        return 0.0
+    if any(str(a) in FATIAS_CT for a in alvos):
+        casas = sum(FATIAS_CT.get(str(a), 1) for a in alvos)
+        return min(casas, CASAS_CT) / CASAS_CT
+    return min(len(alvos), max(len(dominio), 1)) / max(len(dominio), 1)
+
 # Quantos acertos no histórico bastam para a teoria valer o dia.
 # "Aquelas que acertam cerca de duas ou três vezes merecem ser usadas no dia."
 MIN_ACERTOS_DIA = 2
@@ -72,6 +91,7 @@ def medir(teoria: dict, historico: List[str], dominio: List[str],
     disparos = 0
     acertos = {d: 0 for d in distancias}
     soma_k = 0
+    soma_acaso = 0.0
     for i in range(MIN_HIST, len(cron) - maior):
         # a condição é avaliada com o histórico ATÉ ali, do mais novo primeiro
         janela = cron[:i + 1][::-1]
@@ -86,6 +106,7 @@ def medir(teoria: dict, historico: List[str], dominio: List[str],
             continue
         disparos += 1
         soma_k += len(alvos)
+        soma_acaso += chance_da_aposta(alvos, dominio)
         for d in distancias:
             if cron[i + d] in alvos:
                 acertos[d] += 1
@@ -95,8 +116,7 @@ def medir(teoria: dict, historico: List[str], dominio: List[str],
                 "motivo": "nunca disparou no histórico"}
 
     k_medio = soma_k / disparos
-    n_classes = max(len(dominio), 1)
-    acaso = k_medio / n_classes
+    acaso = soma_acaso / disparos
     por_d = {}
     for d in distancias:
         taxa = acertos[d] / disparos
@@ -163,4 +183,16 @@ def resumo(r: Dict[str, Any], quantas: int = 6) -> str:
                  f"{pd.get('razao', 0):.2f}x  peso {c.get('peso', 1):.2f}")
     if not r.get("aptas"):
         L.append("   nenhuma disparou o bastante no histórico ainda")
+    else:
+        # A razão acima é medida no MESMO histórico em que a teoria foi
+        # descoberta, e por isso é otimista. Medido no histórico dele,
+        # descobrindo na primeira metade e conferindo na segunda:
+        #     lightning  5,06x dentro  ->  1,20x fora
+        #     immersive  2,82x dentro  ->  0,67x fora
+        # Serve para decidir QUEM participa do dia, que é o uso que ele pediu.
+        # Não serve como promessa de acerto -- quem responde por isso é o
+        # placar do consenso, medido depois, no RESULTADO.bat.
+        L.append("   razão medida no mesmo histórico onde a teoria nasceu — "
+                 "otimista; serve para escolher quem participa, não como "
+                 "promessa de acerto")
     return "\n".join(L)
