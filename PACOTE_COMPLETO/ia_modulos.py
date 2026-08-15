@@ -83,14 +83,22 @@ TIERS = {27,13,36,11,30,8,23,10,5,24,16,33}
 ORPHELINS = {1,20,14,31,9,17,34,6}
 CT_SETORES = ["1","2","5","10","CoinFlip","CashHunt","Pachinko","CrazyBonus"]
 CT_CICLO = {"1":2.6,"2":4.2,"5":7.7,"10":13.5,"CoinFlip":13.5,"CashHunt":27,"Pachinko":27,"CrazyBonus":54}
-# A RODA DO CRAZY TIME NAO E UNIFORME, E ESQUECER ISSO TRAVOU A MESA NO "5".
+# AS 54 FATIAS DA RODA, E O QUE ELAS NAO AUTORIZAM.
 #
-# Sao 54 fatias muito desiguais. Comparar contra 1/8 = 12,5% faz o Pachinko
-# (2 fatias, 3,7%) parecer eternamente atrasado -- ele sai pouco porque tem
-# poucas fatias, nao porque esta devendo. Relatado por ele: "crazy time esta
-# travado no 5, nao funciona bem", e a medicao confirmou: em seis voltas as
-# sugestoes foram 5, 10, Pachinko, CashHunt -- os quatro MAIS RAROS -- e o "1"
-# (21 fatias, 38,9%) nao apareceu uma vez.
+# Sao 54 fatias muito desiguais -- o "1" ocupa 21, o CrazyBonus ocupa 1. Estes
+# numeros existem aqui para o placar poder calcular o acaso da aposta certa, e
+# para `gaps_ratio` dividir o atraso pelo ciclo proprio de cada simbolo.
+#
+# O QUE ELES NAO SERVEM PARA FAZER: escolher por cima da previsao. Eu usei esta
+# tabela para dar um empurrao aos simbolos frequentes, e ele desfez o
+# argumento na hora:
+#
+#     "se ele escolheu aqueles dois bonus e porque a previsao dele falava dos
+#      bonus, nao falava de outra coisa. Nao e que ele esta escolhendo errado"
+#
+# Ele tem razao, e era regua redundante ainda por cima: o gap ja vem
+# normalizado pelo ciclo, entao a raridade ja estava contabilizada uma vez.
+# A tabela mede; quem escolhe e a previsao.
 CT_FATIAS = {"1": 21, "2": 13, "5": 7, "10": 4,
              "CoinFlip": 4, "CashHunt": 2, "Pachinko": 2, "CrazyBonus": 1}
 CT_TOTAL_FATIAS = 54
@@ -265,17 +273,23 @@ class ModeloEstatistico:
 
     def rank_ct(self, feats, prior_atraso=False, w_isol=1.0):
         sc = defaultdict(float)
-        # O ATRASO PESAVA 7x MAIS QUE A FREQUENCIA -- e numa roda desigual isso
-        # e um empurrao permanente para os simbolos raros. O gap ja vem
-        # normalizado pelo ciclo de cada simbolo, mas com 1 fatia em 54 ele
-        # oscila muito e estoura facil; por isso entra com teto.
-        gap_w = 1.2 if prior_atraso else 1.0
+        # O ATRASO CONTINUA COM O PESO QUE SEMPRE TEVE.
+        #
+        # Eu tinha baixado de 2.0 para 1.0, posto um teto no gap e somado um
+        # bonus para quem tem mais fatias. Ele reclamou, e com razao: "se ele
+        # escolheu aqueles dois bonus e porque a previsao dele falava dos
+        # bonus". Aquilo era regua minha decidindo por fora que o simbolo
+        # frequente merece mais voz -- exatamente o que ele mandou parar de
+        # fazer desde o comeco.
+        #
+        # E era regua redundante ainda por cima: `gaps_ratio` ja divide o
+        # atraso pelo CICLO de cada simbolo (54 giros para o CrazyBonus, 2,6
+        # para o "1"). A normalizacao pela raridade ja esta feita ali. Somar
+        # a chance da fatia por cima era corrigir duas vezes a mesma coisa,
+        # e no sentido errado.
+        gap_w = 2.4 if prior_atraso else 2.0
         for s,g in (feats.get("gaps_ratio") or {}).items():
-            sc[s] += min(float(g), 3.0) * gap_w * max(1.0, w_isol)
-        # E a chance REAL de cada simbolo entra como piso: o "1" ocupa 21 das
-        # 54 fatias e nao pode ficar fora da conversa por nao estar atrasado.
-        for s, pr in CT_P.items():
-            sc[s] += pr * 4.0
+            sc[s] += float(g) * gap_w * max(1.0, w_isol)
         for s,c in (feats.get("freq") or {}).items():
             sc[s] += c * 0.3
         ranked = sorted(sc, key=lambda s: -sc[s])
@@ -289,9 +303,7 @@ class ModeloAnomalia:
         conf = min(1.0, len(a)/5.0) * (1.2 if boost else 1.0)
         return a, min(1.0, conf)
     def rank_ct(self, feats, boost=False):
-        # so conta como anomalia quem esta MUITO alem do proprio ciclo, e o
-        # CrazyBonus (1 fatia em 54) chega em 2,5 com frequencia por acaso
-        a = [s for s,g in (feats.get("gaps_ratio") or {}).items() if g>=3.5][:5]
+        a = [s for s,g in (feats.get("gaps_ratio") or {}).items() if g>=2.5][:5]
         conf = min(1.0, len(a)/3.0) * (1.2 if boost else 1.0)
         return a, min(1.0, conf)
 
@@ -305,20 +317,25 @@ class ModeloSetor:
         out = list(dict.fromkeys(pool[:8]+viz))[:10]
         return out, sq, 0.7 if pool else 0.2
     def rank_ct(self, feats):
-        """Antes esta fonte votava SEMPRE e SO nos quatro bonus.
+        """Antes esta funcao devolvia uma LISTA CONSTANTE.
 
-        Os quatro bonus juntos sao 9 das 54 fatias -- 16,7% da roda. Uma fonte
-        que aponta so eles, em todo giro, com peso 2.0, e um voto fixo nos mais
-        raros; era ela a principal responsavel pela mesa "travada no 5".
+            return sorted(["CoinFlip","CashHunt","Pachinko","CrazyBonus"], ...)
 
-        Agora ela ranqueia os OITO simbolos, combinando o atraso normalizado
-        com a chance real de cada fatia. Os bonus continuam podendo aparecer --
-        quando estiverem de fato atrasados, nao por serem bonus.
+        Os mesmos quatro nomes, em todo giro, em qualquer situacao. Isso nao e
+        previsao -- e uma constante com aparencia de opiniao, e era a principal
+        razao da mesa ficar "travada no 5".
+
+        A diferenca importa, e ele apontou isso: quando a previsao escolhe um
+        bonus, a escolha e dela e tem que ser respeitada. O que nao pode e a
+        fonte ser incapaz de dizer outra coisa.
+
+        Agora ela ordena os OITO simbolos pelo atraso de cada um -- e o atraso
+        ja vem dividido pelo ciclo proprio do simbolo, entao o CrazyBonus (54
+        giros de ciclo) e o "1" (2,6) sao comparados em pe de igualdade. Se os
+        quatro bonus estiverem na frente, eles saem na frente.
         """
         gr = feats.get("gaps_ratio") or {}
-        ordem = sorted(CT_SETORES,
-                       key=lambda s: -(min(float(gr.get(s, 0)), 3.0)
-                                       + CT_P.get(s, 0.125) * 4.0))
+        ordem = sorted(CT_SETORES, key=lambda s: -float(gr.get(s, 0)))
         return ordem, "RODA_CT", 0.6
 
 class BaselineFrequencia:

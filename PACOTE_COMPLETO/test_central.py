@@ -753,9 +753,21 @@ _ordem, _rot, _c = ModeloSetor().rank_ct(_feats)
 checa(len(_ordem) == 8, "a fonte da roda ranqueia os OITO simbolos", len(_ordem))
 checa("1" in _ordem and "2" in _ordem,
       "e o 1 e o 2 estao nela -- eram excluidos por construcao", _ordem)
-checa(_ordem[0] == "1",
-      "com todos igualmente atrasados, quem lidera e quem tem mais fatias",
-      _ordem[:3])
+# NAO se cobra QUEM lidera: isso e da previsao, e ele foi explicito --
+# "se ele escolheu aqueles dois bonus e porque a previsao dele falava dos
+# bonus". O que se cobra e que a fonte SEJA CAPAZ de dizer qualquer um dos
+# oito, em vez de devolver a mesma lista de quatro para sempre.
+_gr2 = {s: 1.0 for s in CT_SETORES}
+_gr2["Pachinko"] = 9.0
+_o2, _r2, _c2 = ModeloSetor().rank_ct({"gaps_ratio": _gr2, "freq": {}})
+checa(_o2[0] == "Pachinko",
+      "quando o atraso aponta um bonus, o bonus lidera -- a escolha e dela",
+      _o2[:3])
+_gr3 = {s: 1.0 for s in CT_SETORES}
+_gr3["1"] = 9.0
+_o3, _r3, _c3 = ModeloSetor().rank_ct({"gaps_ratio": _gr3, "freq": {}})
+checa(_o3[0] == "1",
+      "e quando aponta o 1, o 1 lidera -- o que ela nao podia antes", _o3[:3])
 
 # ANTI_12 disparava sempre: 1+2 sao 63% da roda, o gatilho era 12 em 35.
 _g = GeradorHipoteses()
