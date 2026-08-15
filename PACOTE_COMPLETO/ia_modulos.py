@@ -373,21 +373,49 @@ class Critico:
           b) >= `minimo` famílias distintas                     (teoria + padrão + LSTM)
         Os mais votados ficam no topo — a ordem é por peso total acumulado.
         """
+        # O NÚMERO É A CHAVE, E PRECISA SER SEMPRE A MESMA CHAVE.
+        #
+        # Umas fontes mandam o número como texto ('4') e outras como inteiro
+        # (4). Sem normalizar, o mesmo número vira DOIS candidatos e os votos
+        # dele são partidos ao meio. Visto num ciclo real do Mega Fire:
+        #
+        #     4 <- 0 teorias + 2 padrões (peso 3.400)
+        #     4 <- 1 teorias + 1 padrões (peso 2.769)
+        #
+        # Somados dariam 6,17 — o primeiro lugar. Partidos, o 4 aparecia duas
+        # vezes na sugestão, gastava duas das sete vagas, e mesmo assim ficava
+        # atrás de quem tinha menos apoio. Um voto perdido é voto contado para
+        # o lado errado.
         score=defaultdict(float); fontes=defaultdict(set); fontes_raw=defaultdict(set)
         for h in hips:
             w=float(h.get("peso",1))
             fam = self._familia(h.get("nome","?"))
             for i,n in enumerate(h.get("nums") or []):
-                score[n]+=w/(1+i*0.15)
-                fontes[n].add(fam)
-                fontes_raw[n].add(h.get("nome","?"))
+                chave = str(n).strip()
+                score[chave]+=w/(1+i*0.15)
+                fontes[chave].add(fam)
+                fontes_raw[chave].add(h.get("nome","?"))
         total=sum(score.values()) or 1.0
         probs={k:v/total for k,v in score.items()}
         votos_teoria={n:sum(1 for f in fs if self._eh_teoria(f)) for n,fs in fontes.items()}
-        aprovados=[
-            n for n,_ in sorted(score.items(), key=lambda x: -x[1])
-            if len(fontes[n])>=minimo or votos_teoria.get(n,0)>=self.MIN_VOTOS_TEORIA
-        ]
+        ordenados=[n for n,_ in sorted(score.items(), key=lambda x: -x[1])]
+        if CONSENSO_PURO:
+            # O CRUZAMENTO É QUEM ESCOLHE.
+            #
+            # Nada é barrado por não ter concordância mínima, mas também nada
+            # dispara sozinho: todas as teorias votam, os pesos somam, e ficam
+            # os mais votados. Um número apontado por quatro teorias sobe
+            # acima de um apontado por uma só, sem que ninguém precise ser
+            # excluído da votação para isso acontecer.
+            #
+            # Baixar o mínimo para 1 fazia cada teoria disparar por conta
+            # própria, que é o contrário do consenso — foi o que ele corrigiu.
+            aprovados = ordenados
+        else:
+            aprovados=[
+                n for n in ordenados
+                if len(fontes[n])>=minimo or votos_teoria.get(n,0)>=self.MIN_VOTOS_TEORIA
+            ]
         p0 = k_alvos / max(n_classes,1)
         sig={}
         for n in aprovados[:k_alvos]:
@@ -1862,20 +1890,28 @@ class PipelinePerceptivo:
             # INDEPENDENTES: pelo menos MIN_TEORIAS_SOZINHO teorias validadas
             # distintas apontando o mesmo número. Uma teoria sozinha não abre
             # gatilho.
-            so_teorias = [
-                a for a in aprovados
-                if int((sig.get(a) or {}).get("votos_teoria", 0)) >= self.MIN_TEORIAS_SOZINHO
-            ]
+            if CONSENSO_PURO:
+                # O cruzamento já ordenou por peso somado: os mais votados
+                # estão na frente. A entrada é o topo dessa lista — não uma
+                # teoria isolada que passou de um limiar.
+                so_teorias = list(aprovados)
+            else:
+                so_teorias = [
+                    a for a in aprovados
+                    if int((sig.get(a) or {}).get("votos_teoria", 0)) >= self.MIN_TEORIAS_SOZINHO
+                ]
             if so_teorias:
                 alvos = list(dict.fromkeys(so_teorias))[:self.k_alvos]
                 modo = "GATILHO_OK"
                 via_consenso = True
                 _det = ", ".join(
-                    f"{a}({int((sig.get(a) or {}).get('votos_teoria', 0))})" for a in alvos
+                    f"{a}({int((sig.get(a) or {}).get('votos_teoria', 0))}t"
+                    f"+{int((sig.get(a) or {}).get('votos_outros', 0))}p)"
+                    for a in alvos
                 )
                 msgs.append(
-                    f"[Gatilho] consenso sozinho — {len(alvos)} número(s) com "
-                    f"≥{self.MIN_TEORIAS_SOZINHO} teorias validadas concordando: {_det}"
+                    f"[Gatilho] consenso das IAs — {len(alvos)} número(s) mais "
+                    f"votados no cruzamento: {_det}"
                 )
                 if not is_real_lstm:
                     msgs.append(
