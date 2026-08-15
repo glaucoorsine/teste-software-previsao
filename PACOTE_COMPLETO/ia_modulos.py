@@ -1356,8 +1356,30 @@ FRACAO_APOIO = 0.5
 # aposta, não a pontaria. O placar continua mostrando os dois números lado a
 # lado, e é a razão contra o acaso que diz se houve ganho.
 ALVO_ACERTO_JANELA = 0.53
-COBERTURA_LARGA = False          # True -> roleta com 20 numeros (~54% por giro)
+
+# O PISO DE ACERTO DE NÚMERO, TAMBÉM EM 53% — ele reafirmou o pedido.
+#
+# Aqui não há margem de esperteza: acerto de número por giro é k/37, e 53%
+# exige 20 números. Foi o que ele decidiu depois de ver a conta, então está
+# LIGADO. A roleta passa a jogar com 20 números.
+#
+# O que isso é, dito sem rodeio: cobertura, não pontaria. O acerto por giro vai
+# a ~54% e o de janela a ~98%, e nenhum dos dois significa que o software
+# aprendeu algo — significa que a aposta ficou larga. Quem responde "estamos
+# ganhando?" continua sendo a razão contra o acaso da MESMA aposta, que o
+# placar mostra do lado, e que é 1,00x quando não há vantagem nenhuma.
+#
+# PARA VOLTAR À FAIXA DE 5 A 10: troque para False nesta linha. Nada mais
+# precisa mudar; o piso de janela continua valendo e a lista volta a ser curta.
+COBERTURA_LARGA = True
+ALVO_ACERTO_NUMERO = 0.53
 K_COBERTURA_LARGA = 20
+
+
+def k_para_alvo_numero(alvo: float, n_classes: int) -> int:
+    """Quantos números o acerto POR GIRO exige. Sem janela, sem conversa."""
+    import math
+    return max(1, min(n_classes, math.ceil(alvo * n_classes)))
 
 
 def k_para_alvo(janela: int, alvo: float, n_classes: int, teto: int) -> int:
@@ -1457,7 +1479,9 @@ class PipelinePerceptivo:
         # em COBERTURA_LARGA). So faz sentido na roleta -- no crazy time sao 8
         # simbolos e cobrir 20 nao existe.
         if COBERTURA_LARGA and not self.is_ct:
-            self.k_min = self.k_max = K_COBERTURA_LARGA
+            # o k que o piso de acerto POR GIRO exige (53% -> 20 de 37)
+            _k = k_para_alvo_numero(ALVO_ACERTO_NUMERO, self.n_classes)
+            self.k_min = self.k_max = max(K_COBERTURA_LARGA, _k)
         self.k_alvos = self.k_max
         self.prefs = {"peso_isol":1.0,"boost_anti":False,"prioritizar_atraso":False,"reduzir_12":False,"janela":None}
 

@@ -626,14 +626,33 @@ class PainelMesa(ctk.CTkFrame):
         # times são de 1 a 3 opções". Quantas aparecem preenchidas é decisão do
         # consenso a cada giro; o que muda aqui é só o teto do que cabe na
         # tela. As caixas sobrando ficam apagadas.
+        # QUANTAS CAIXAS: quem manda e o motor, nao um numero escrito aqui.
+        #
+        # A faixa mudou duas vezes (7 -> 5-10 -> 20 com o piso de 53%), e das
+        # duas vezes a tela ficou para tras porque tinha o teto proprio. Agora
+        # ela pergunta ao ia_modulos qual e o teto daquela mesa.
+        try:
+            from ia_modulos import (K_MAX_CT, K_MAX_ROLETA, COBERTURA_LARGA,
+                                    K_COBERTURA_LARGA)
+            if str(self.jogo).startswith("crazy_time"):
+                _n_caixas = K_MAX_CT
+            else:
+                _n_caixas = (K_COBERTURA_LARGA if COBERTURA_LARGA
+                             else K_MAX_ROLETA)
+        except Exception:
+            _n_caixas = 3 if str(self.jogo).startswith("crazy_time") else 10
         self.caixas = []
-        _n_caixas = 3 if str(self.jogo).startswith("crazy_time") else 10
-        _larg = 56 if _n_caixas <= 7 else 44
-        for _ in range(_n_caixas):
-            b = ctk.CTkLabel(linha, text="—", width=_larg, height=48,
+        _por_linha = 10
+        _larg = 56 if _n_caixas <= 7 else (44 if _n_caixas <= 10 else 40)
+        _fila = None
+        for _i in range(_n_caixas):
+            if _i % _por_linha == 0:
+                _fila = ctk.CTkFrame(linha, fg_color="transparent")
+                _fila.pack(anchor="w")
+            b = ctk.CTkLabel(_fila, text="—", width=_larg, height=44,
                              fg_color="#334155", corner_radius=8,
-                             font=("Arial", 18, "bold"))
-            b.pack(side="left", padx=2)
+                             font=("Arial", 16, "bold"))
+            b.pack(side="left", padx=2, pady=2)
             self.caixas.append(b)
         # A linha do fogo: quais dos escolhidos as sete IAs apontam para
         # multiplicador. Na Immersive ela nunca aparece -- a mesa não tem

@@ -122,8 +122,16 @@ class MesaFalsa(CENTRAL.PainelMesa):
                   "feed", "st", "academia", "publico", "fogo"):
             setattr(self, n, Boneco())
         # dez caixas na roleta, tres no crazy time -- a faixa que ele fixou
-        self.caixas = [Boneco() for _ in
-                       range(3 if str(jogo).startswith("crazy_time") else 10)]
+        # a tela pergunta ao motor quantas caixas -- o teste faz igual, senao
+        # ele testa um teto que o software nao usa mais
+        try:
+            from ia_modulos import (K_MAX_CT, K_MAX_ROLETA, COBERTURA_LARGA,
+                                    K_COBERTURA_LARGA)
+            _n = (K_MAX_CT if str(jogo).startswith("crazy_time")
+                  else (K_COBERTURA_LARGA if COBERTURA_LARGA else K_MAX_ROLETA))
+        except Exception:
+            _n = 3 if str(jogo).startswith("crazy_time") else 10
+        self.caixas = [Boneco() for _ in range(_n)]
         self.hist_col = [{"topo": Boneco(), "mult": Boneco(),
                           "num": Boneco(), "marca": Boneco()}
                          for _ in range(16)]
@@ -649,14 +657,40 @@ r3 = cortar_por_apoio(ordem, apertado, K_MIN_CT, K_MAX_CT)
 checa(1 <= len(r3) <= K_MAX_CT, "no crazy time a faixa e 1 a 3", len(r3))
 checa(cortar_por_apoio([], {}, 5, 10) == [], "sem votacao, lista vazia")
 
-print("\n[23] as caixas seguem a faixa da mesa")
-checa(len(m.caixas) == 10, "roleta tem 10 caixas", len(m.caixas))
+print("\n[23] as caixas seguem o teto que o MOTOR usa, nao um numero na tela")
+from ia_modulos import (K_MAX_CT, K_MAX_ROLETA, COBERTURA_LARGA,
+                        K_COBERTURA_LARGA, ALVO_ACERTO_NUMERO,
+                        ALVO_ACERTO_JANELA, k_para_alvo, k_para_alvo_numero)
+_esperado = K_COBERTURA_LARGA if COBERTURA_LARGA else K_MAX_ROLETA
+checa(len(m.caixas) == _esperado,
+      f"roleta tem {_esperado} caixas, igual ao teto do motor", len(m.caixas))
 mc = MesaFalsa("crazy_time")
-checa(len(mc.caixas) == 3, "crazy time tem 3", len(mc.caixas))
+checa(len(mc.caixas) == K_MAX_CT, "crazy time segue o teto dele", len(mc.caixas))
 m9 = MesaFalsa("mega_fire")
-m9._aplicar({"pad5": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "modo": "OPERAR",
-             "janela": 5}, [{"n": 0, "settled": "z1"}])
-checa(len(m9.escolhas) == 10, "dez numeros cabem inteiros", m9.escolhas)
+# a mesa carrega o estado salvo, e casos anteriores desta suite deixaram uma
+# janela aberta de mega_fire. Com janela aberta o _aplicar nao abre outra --
+# e certo que nao abra, mas aqui o que se testa e o tamanho da lista nova.
+m9.escolhas, m9.restantes = [], 0
+_lista = [str(x) for x in range(1, _esperado + 1)]
+m9._aplicar({"pad5": _lista, "modo": "OPERAR", "janela": 5},
+            [{"n": 0, "settled": "z1"}])
+checa(len(m9.escolhas) == _esperado,
+      "a lista cheia cabe inteira, sem cortar numero", len(m9.escolhas))
+
+print("\n[23b] os pisos de 53% que ele pediu")
+checa(1 - (1 - _esperado / 37) ** 5 >= 0.53,
+      f"com {_esperado} numeros a janela de 5 passa de 53%",
+      f"{1-(1-_esperado/37)**5:.1%}")
+if COBERTURA_LARGA:
+    checa(_esperado / 37 >= ALVO_ACERTO_NUMERO,
+          f"e o acerto por giro tambem: {_esperado}/37",
+          f"{_esperado/37:.1%}")
+    checa(k_para_alvo_numero(0.53, 37) == 20,
+          "a conta do piso de numero da 20, e nao ha como ser menos")
+checa(k_para_alvo(5, ALVO_ACERTO_JANELA, 37, 10) == 6,
+      "janela de 5 precisa de 6 numeros para o piso de janela")
+checa(k_para_alvo(3, ALVO_ACERTO_JANELA, 37, 10) == 9,
+      "janela de 3, por ser curta, precisa de 9")
 
 print("\n[24] o fogo do multiplicador -- e a immersive sem ele")
 mi = MesaFalsa("immersive")
