@@ -553,6 +553,7 @@ class PainelMesa(ctk.CTkFrame):
         self.seq_giro = 0
         self.ocupado = False
         self.lendo_academia = False
+        self.fontes_da_janela = {}
         self.vivo = True
         self.ultimo_estado = "iniciando"
         self.arquivo = PASTA / ESTADO[jogo]
@@ -781,6 +782,22 @@ class PainelMesa(ctk.CTkFrame):
                                      "settled": ts, "window_done": True}
             registrar(f"{self.jogo} JANELA {'OK' if fechou_bem else 'ERRO'} "
                       f"ok={self.ok} err={self.err}")
+            # A AUTÓPSIA: por que erramos, e por que acertamos.
+            #
+            # Pergunta dele: "as IAs têm que se perguntar por que está errando
+            # tanto, o que está acontecendo que elas não estão vendo". Tem
+            # resposta mecânica — o número que saiu estava, ou não, na lista de
+            # alguma fonte que votou.
+            try:
+                from academia_autonoma.autopsia import registrar as _autopsia
+                _l = _autopsia(
+                    self.jogo, self.ultimas_escolhas or [], n, fechou_bem,
+                    candidatos_por_fonte=getattr(self, "fontes_da_janela", {}),
+                    giros=int(self.ultima_janela or 0))
+                registrar(f"{self.jogo} AUTOPSIA {_l.get('tipo')} "
+                          f"saiu={n} tinha={_l.get('quem_tinha')}")
+            except Exception as e:
+                registrar(f"{self.jogo} autopsia: {e}")
             # Avisa no celular COMO terminou. Ele pediu: o notificador mandava
             # a entrada e nunca o desfecho, então quem está longe da tela
             # recebia meia informação e não formava percepção nenhuma sobre o
@@ -944,6 +961,10 @@ class PainelMesa(ctk.CTkFrame):
             self.ultima_janela = self.restantes
             self.ultimas_escolhas = list(self.escolhas)
             self.janela_hit = False
+            # guarda o que CADA fonte propôs nesta decisão: é isso que a
+            # autópsia usa depois para saber se o número que saiu foi
+            # ignorado na votação ou se ninguém tinha visto ele
+            self.fontes_da_janela = dict(sug.get("fontes_nums") or {})
             self._salvar()
             registrar(f"{self.jogo} NOVA_JANELA {self.escolhas} {modo}")
             try:
@@ -1002,6 +1023,13 @@ class PainelMesa(ctk.CTkFrame):
                 from academia_agentes import feed_tail
                 linhas = [linha_do_feed(e) for e in feed_tail(self.jogo, 60)]
                 texto = "\n".join(reversed(linhas)) or "(sem registro ainda)"
+                # a autópsia vem em cima: responde "por que erramos", que é a
+                # pergunta que interessa antes de qualquer detalhe de agente
+                try:
+                    from academia_autonoma.autopsia import resumo as _res_aut
+                    texto = _res_aut(self.jogo) + "\n" + "-" * 44 + "\n" + texto
+                except Exception:
+                    pass
             except Exception as e:
                 texto = f"{type(e).__name__}: {e}"
             finally:

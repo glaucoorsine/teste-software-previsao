@@ -2413,6 +2413,15 @@ class PipelinePerceptivo:
             "operavel": _modo_final == "OPERAR" and _status == "OPERAR",
             "alvos_auditoria": list(alvos) if alvos else [], "motivo_bloq": _motivos,
             "sombra": _modo_final == "SOMBRA",
+            # O que CADA fonte propôs, antes do corte das sete vagas.
+            #
+            # Sem isto a autópsia não tem como responder a pergunta dele —
+            # "por que erraram?" — porque não dá para saber se o número que
+            # saiu foi ignorado na votação ou se ninguém tinha visto ele.
+            # São diagnósticos opostos: um pede ajuste de peso, o outro pede
+            # teoria nova.
+            "fontes_nums": {str(h.get("nome", "?")): [str(x) for x in (h.get("nums") or [])]
+                            for h in (hips or [])},
             "contadores": {
                 "historico_bruto": n_hist if 'n_hist' in dir() else len(hist),
                 "janelas_avaliadas": rel_n if 'rel_n' in dir() else 0,
