@@ -119,9 +119,11 @@ class MesaFalsa(CENTRAL.PainelMesa):
         self.ultimo_estado = "teste"
         self.arquivo = CENTRAL.PASTA / CENTRAL.ESTADO[jogo]
         for n in ("faixa", "placar", "placar_num", "contadores", "hist",
-                  "feed", "st", "academia", "publico"):
+                  "feed", "st", "academia", "publico", "fogo"):
             setattr(self, n, Boneco())
-        self.caixas = [Boneco() for _ in range(7)]
+        # dez caixas na roleta, tres no crazy time -- a faixa que ele fixou
+        self.caixas = [Boneco() for _ in
+                       range(3 if str(jogo).startswith("crazy_time") else 10)]
         self.hist_col = [{"topo": Boneco(), "mult": Boneco(),
                           "num": Boneco(), "marca": Boneco()}
                          for _ in range(16)]
@@ -129,6 +131,7 @@ class MesaFalsa(CENTRAL.PainelMesa):
         self.erros_keys = set()
         self.lendo_academia = False
         self.fontes_da_janela = {}
+        self.marcados = []
         self.jogadores = None
         self.mesa_cheia = None
         self.ultimo_publico = 9e18      # nunca consulta no teste
@@ -629,6 +632,43 @@ checa(mc.hist_col[5]["topo"].cfg.get("text") == "",
       "coluna sobrando fica limpa")
 
 alvo.unlink(missing_ok=True)
+print("\n[22] a faixa de numeros que ele fixou: 5-10 na roleta, 1-3 no crazy")
+from ia_modulos import cortar_por_apoio, K_MIN_ROLETA, K_MAX_ROLETA, K_MIN_CT, K_MAX_CT
+ordem = [str(x) for x in range(1, 21)]
+# consenso ESPALHADO: muitos numeros com peso parecido -> lista larga
+espalhado = {n: 10.0 - i * 0.1 for i, n in enumerate(ordem)}
+r = cortar_por_apoio(ordem, espalhado, K_MIN_ROLETA, K_MAX_ROLETA)
+checa(len(r) == K_MAX_ROLETA, "consenso espalhado entrega o teto de 10", len(r))
+# consenso APERTADO: tres fortes e o resto fraco -> lista curta, mas nunca
+# abaixo do minimo que ele pediu
+apertado = {n: (10.0 if i < 3 else 0.5) for i, n in enumerate(ordem)}
+r2 = cortar_por_apoio(ordem, apertado, K_MIN_ROLETA, K_MAX_ROLETA)
+checa(len(r2) == K_MIN_ROLETA, "consenso apertado encolhe ate o piso de 5", len(r2))
+checa(r2[:3] == ordem[:3], "e os tres fortes ficam na frente", r2)
+r3 = cortar_por_apoio(ordem, apertado, K_MIN_CT, K_MAX_CT)
+checa(1 <= len(r3) <= K_MAX_CT, "no crazy time a faixa e 1 a 3", len(r3))
+checa(cortar_por_apoio([], {}, 5, 10) == [], "sem votacao, lista vazia")
+
+print("\n[23] as caixas seguem a faixa da mesa")
+checa(len(m.caixas) == 10, "roleta tem 10 caixas", len(m.caixas))
+mc = MesaFalsa("crazy_time")
+checa(len(mc.caixas) == 3, "crazy time tem 3", len(mc.caixas))
+m9 = MesaFalsa("mega_fire")
+m9._aplicar({"pad5": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "modo": "OPERAR",
+             "janela": 5}, [{"n": 0, "settled": "z1"}])
+checa(len(m9.escolhas) == 10, "dez numeros cabem inteiros", m9.escolhas)
+
+print("\n[24] o fogo do multiplicador -- e a immersive sem ele")
+mi = MesaFalsa("immersive")
+mi.marcados = ["4", "9"]
+checa(mi._texto_fogo() == "",
+      "immersive nao mostra linha de fogo nem se marcada", mi._texto_fogo())
+m9.marcados = ["9", "21"]
+checa("🔥" in m9._texto_fogo() and "9" in m9._texto_fogo(),
+      "mega fire mostra quais podem vir multiplicados", m9._texto_fogo())
+m9.marcados = []
+checa(m9._texto_fogo() == "", "sem marcados, nao inventa linha")
+
 print()
 if falhas:
     print("FALHAS:", falhas)

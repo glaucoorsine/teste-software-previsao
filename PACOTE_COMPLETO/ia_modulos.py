@@ -995,7 +995,9 @@ class MotorLSTM:
         self.jogo = jogo
         self.is_ct = is_ct
         self.n = 8 if is_ct else 37
-        self.k_alvos = 3 if is_ct else 7
+        # o topo do LSTM trabalha sempre com o teto da faixa dele; quem apara a
+        # lista para 5-10 (roleta) ou 1-3 (crazy time) e o corte por apoio
+        self.k_alvos = K_MAX_CT if is_ct else K_MAX_ROLETA
         self.device = DEVICE
         self.has = HAS_TORCH
         self.limiar = 0.08 if not is_ct else 0.12
@@ -1319,6 +1321,43 @@ CONSENSO_PURO = True
 # Teto da janela de apostas. Era 3, fixo no meio do código; ele pediu 5.
 JANELA_MAX = 5
 
+# QUANTOS NÚMEROS SAEM POR MESA — a faixa é dele.
+#
+#     "a partir de agora é de 5 a 10 números na roleta"
+#     "os dois crazy times são de 1 a 3 opções"
+#
+# Dentro da faixa quem decide é o apoio na votação: entra quem tem peso
+# comparável ao primeiro colocado (FRACAO_APOIO). Assim uma noite de consenso
+# forte sai com lista curta e uma de consenso espalhado sai mais larga, sem
+# ninguém arbitrar um número redondo por fora.
+K_MIN_ROLETA, K_MAX_ROLETA = 5, 10
+K_MIN_CT, K_MAX_CT = 1, 3
+FRACAO_APOIO = 0.5
+
+
+def cortar_por_apoio(ordenados, score, k_min, k_max):
+    """Quantos números a votação sustenta, dentro da faixa que ele fixou.
+
+    Nada é barrado: o corte só decide onde a lista termina. Abaixo de k_min
+    completa com os próximos mais votados — lista curta demais devolveria uma
+    faixa que ele não pediu.
+    """
+    ordenados = list(ordenados or [])
+    if not ordenados:
+        return []
+    topo = float((score or {}).get(ordenados[0], 0) or 0)
+    if topo <= 0:
+        return ordenados[:k_max]
+    fortes = [n for n in ordenados[:k_max]
+              if float((score or {}).get(n, 0) or 0) >= topo * FRACAO_APOIO]
+    if len(fortes) < k_min:
+        for n in ordenados[:k_max]:
+            if n not in fortes:
+                fortes.append(n)
+            if len(fortes) >= k_min:
+                break
+    return fortes[:k_max]
+
 # As famílias de finais que ele ensinou: 0,1,3,6 · 0,2,7,8 · 4,5,9.
 # O zero pertence a duas, e nos exemplos dele as duas valem — "veio 20 e logo
 # depois o 2" usa (0,2,7,8), "veio 1 e logo depois 21" usa (0,1,3,6). Por isso
@@ -1370,7 +1409,17 @@ class PipelinePerceptivo:
         self.meta = MetaSupervisora()
         self.ciclos = 0
         self.n_classes = 8 if self.is_ct else 37
-        self.k_alvos = 3 if self.is_ct else 7
+        # QUANTOS NÚMEROS SAEM — E QUEM DECIDE ISSO.
+        #
+        # Ele fixou a faixa: "de 5 a 10 números na roleta", "os dois crazy
+        # times são de 1 a 3 opções". Dentro da faixa quem decide é o apoio da
+        # votação, não um número redondo meu: entra quem tem peso comparável ao
+        # primeiro colocado. Consenso apertado sai enxuto, consenso largo sai
+        # largo, e o acaso da aposta é recalculado com o k que de fato saiu —
+        # senão aumentar a lista viraria "melhora" de mentira no placar.
+        self.k_min = K_MIN_CT if self.is_ct else K_MIN_ROLETA
+        self.k_max = K_MAX_CT if self.is_ct else K_MAX_ROLETA
+        self.k_alvos = self.k_max
         self.prefs = {"peso_isol":1.0,"boost_anti":False,"prioritizar_atraso":False,"reduzir_12":False,"janela":None}
 
     def processar(self, historico, ok, err, settled=None, mults=None, last_result=None, active_selection=None):
@@ -1944,11 +1993,12 @@ class PipelinePerceptivo:
                 if any(f not in ("LSTM","HEURISTICA") for f in fs):
                     inter.append(a)
         if inter:
-            alvos=list(dict.fromkeys(inter))[:self.k_alvos]
+            alvos=list(dict.fromkeys(inter))[:self.k_max]
             for a in aprovados:
                 if is_real_lstm and a in (alvos_l or []) and a not in alvos:
                     alvos.append(a)
-                if len(alvos)>=self.k_alvos: break
+                if len(alvos)>=self.k_max: break
+            alvos = cortar_por_apoio(alvos, score, self.k_min, self.k_max)
             modo="GATILHO_OK"
         else:
             # Caminho 2: o CONSENSO DISPARA SOZINHO.
@@ -1976,7 +2026,10 @@ class PipelinePerceptivo:
                     if int((sig.get(a) or {}).get("votos_teoria", 0)) >= self.MIN_TEORIAS_SOZINHO
                 ]
             if so_teorias:
-                alvos = list(dict.fromkeys(so_teorias))[:self.k_alvos]
+                # a faixa dele (5-10 na roleta, 1-3 no crazy time) com o corte
+                # decidido pelo apoio de cada número na votação
+                alvos = cortar_por_apoio(list(dict.fromkeys(so_teorias)),
+                                         score, self.k_min, self.k_max)
                 modo = "GATILHO_OK"
                 via_consenso = True
                 _det = ", ".join(

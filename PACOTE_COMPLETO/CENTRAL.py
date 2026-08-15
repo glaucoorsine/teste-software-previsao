@@ -86,6 +86,8 @@ VERDE = "#22c55e"
 VERMELHO = "#ef4444"
 AMARELO = "#eab308"
 ROXO = "#a78bfa"
+# o fogo do multiplicador: laranja, para não se confundir com o verde do sinal
+LARANJA = "#fb923c"
 AZUL = "#38bdf8"
 
 
@@ -557,6 +559,13 @@ class PainelMesa(ctk.CTkFrame):
         self.ocupado = False
         self.lendo_academia = False
         self.fontes_da_janela = {}
+        # quais dos escolhidos as sete IAs apontam para multiplicador
+        self.marcados = []
+        # as ultimas linhas cruas da captura, COM as tags de multiplicador.
+        # A fila que leva ao cerebro carrega so os numeros; quem quiser saber
+        # de lucky/fire/top slot precisa das linhas inteiras, e e daqui que
+        # elas saem.
+        self.ultimas_linhas = []
         # quantas pessoas estao na mesa. A percepcao dele -- "com mais gente
         # online a previsao fica mais facil" -- so vira medicao se este numero
         # for gravado junto de cada janela.
@@ -611,13 +620,29 @@ class PainelMesa(ctk.CTkFrame):
                      text_color=FRACO).pack(anchor="w", padx=12, pady=(10, 0))
         linha = ctk.CTkFrame(cx, fg_color="transparent")
         linha.pack(padx=12, pady=10)
+        # DEZ CAIXAS, NÃO SETE.
+        #
+        # Ele mudou a faixa: "de 5 a 10 números na roleta", "os dois crazy
+        # times são de 1 a 3 opções". Quantas aparecem preenchidas é decisão do
+        # consenso a cada giro; o que muda aqui é só o teto do que cabe na
+        # tela. As caixas sobrando ficam apagadas.
         self.caixas = []
-        for _ in range(7):
-            b = ctk.CTkLabel(linha, text="—", width=56, height=48,
+        _n_caixas = 3 if str(jogo).startswith("crazy_time") else 10
+        _larg = 56 if _n_caixas <= 7 else 44
+        for _ in range(_n_caixas):
+            b = ctk.CTkLabel(linha, text="—", width=_larg, height=48,
                              fg_color="#334155", corner_radius=8,
-                             font=("Arial", 19, "bold"))
-            b.pack(side="left", padx=3)
+                             font=("Arial", 18, "bold"))
+            b.pack(side="left", padx=2)
             self.caixas.append(b)
+        # A linha do fogo: quais dos escolhidos as sete IAs apontam para
+        # multiplicador. Na Immersive ela nunca aparece -- a mesa não tem
+        # multiplicador, e inventar um palpite ali seria responder pergunta
+        # que não existe.
+        self.fogo = ctk.CTkLabel(cx, text="", font=("Arial", 12),
+                                 text_color=LARANJA, anchor="w",
+                                 justify="left", wraplength=430)
+        self.fogo.pack(anchor="w", padx=12, pady=(0, 8))
 
         # Dois placares, e eles não medem a mesma coisa. O de cima conta
         # JANELAS (a janela acertou se o número saiu em algum giro dela); o de
@@ -962,6 +987,7 @@ class PainelMesa(ctk.CTkFrame):
         return "", FRACO
 
     def _aplicar(self, sug, rows):
+        self.ultimas_linhas = list(rows or [])
         modo = sug.get("modo") or ""
         pad = sug.get("pad5") or []
         # JANELA_ATIVA é o cérebro devolvendo a janela que JÁ estava aberta —
@@ -977,7 +1003,9 @@ class PainelMesa(ctk.CTkFrame):
             registrar(f"{self.jogo} ECO_IGNORADO {sug.get('pad5')} "
                       f"(janela já fechada — não é decisão nova)")
         if pad and not (self.escolhas and self.restantes > 0):
-            self.escolhas = list(pad)[:7]
+            # o teto por mesa e o que ele fixou: ate 10 na roleta, ate 3 no
+            # crazy time. Quantos vem preenchidos e decisao do consenso.
+            self.escolhas = list(pad)[:len(self.caixas)]
             self.restantes = int(sug.get("janela") or 3)
             self.ultima_janela = self.restantes
             self.ultimas_escolhas = list(self.escolhas)
@@ -986,6 +1014,13 @@ class PainelMesa(ctk.CTkFrame):
             # autópsia usa depois para saber se o número que saiu foi
             # ignorado na votação ou se ninguém tinha visto ele
             self.fontes_da_janela = dict(sug.get("fontes_nums") or {})
+            # QUAIS DELES PODEM VIR COM FOGO.
+            #
+            # Pergunta separada da escolha: as sete IAs de multiplicador leem o
+            # sorteio de lucky/fire de cada rodada -- que acontece saindo ou
+            # nao o numero -- e apontam, DENTRO da lista ja escolhida, quais
+            # tem chance de vir multiplicados. Nao mexe na aposta; marca.
+            self.marcados = self._marcar_fogo(rows)
             self._salvar()
             registrar(f"{self.jogo} NOVA_JANELA {self.escolhas} {modo}")
             try:
@@ -1000,6 +1035,7 @@ class PainelMesa(ctk.CTkFrame):
                 notificar_sinal(self.jogo, self.escolhas, modo=modo,
                                 janela=self.restantes, extra=extra,
                                 publico=self._publico_curto(),
+                                multiplicador=self._texto_fogo(),
                                 log_fn=registrar)
             except Exception as e:
                 registrar(f"{self.jogo} notificacao: {e}")
@@ -1010,6 +1046,10 @@ class PainelMesa(ctk.CTkFrame):
             v = self.escolhas[i] if i < len(self.escolhas) else None
             b.configure(text=str(v) if v is not None else "—",
                         fg_color=cor_do_numero(v) if v is not None else "#334155")
+        # O fogo vai numa linha escrita, e nao pintando a caixa: a cor do
+        # numero na roleta ja e informacao (vermelho/preto/verde) e trocar ela
+        # por laranja apagaria um dado para mostrar outro.
+        self.fogo.configure(text=self._texto_fogo())
         if self.escolhas:
             self.faixa.configure(text=f"SINAL — janela de {self.restantes} giros",
                                  text_color=VERDE)
@@ -1027,6 +1067,37 @@ class PainelMesa(ctk.CTkFrame):
         self.feed.delete("1.0", "end")
         self.feed.insert("1.0", "\n".join(sug.get("msgs") or []))
         self._academia()
+
+    def _marcar_fogo(self, rows) -> list:
+        """Quais dos escolhidos as sete IAs apontam para multiplicador.
+
+        Falha em silêncio: se as IAs não tiverem rodada suficiente, a lista
+        volta vazia e a tela simplesmente não mostra a linha. Mostrar palpite
+        sem base seria pior que não mostrar nada.
+        """
+        try:
+            from academia_autonoma.previsores_multiplicador import marcar
+            return marcar(self.jogo, self.escolhas, rows or [])
+        except Exception as e:
+            registrar(f"{self.jogo} fogo: {type(e).__name__}")
+            return []
+
+    def _texto_fogo(self) -> str:
+        """A linha do multiplicador — vazia na Immersive, que não tem."""
+        try:
+            from academia_autonoma.previsores_multiplicador import (
+                tem_multiplicador)
+            if not tem_multiplicador(self.jogo):
+                return ""
+        except Exception:
+            return ""
+        m = getattr(self, "marcados", None) or []
+        if not m:
+            return ""
+        quais = " ".join(str(x) for x in m)
+        if str(self.jogo).startswith("crazy_time"):
+            return f"🔥 maior chance de multiplicador: {quais}"
+        return f"🔥 chance de vir multiplicador: {quais}"
 
     def _publico_curto(self) -> str:
         """A linha de público que vai no aviso do celular.
@@ -1107,6 +1178,14 @@ class PainelMesa(ctk.CTkFrame):
                 try:
                     from academia_autonoma.base_auditoria import resumo as _res_aud
                     texto = _res_aud(self.jogo) + "\n" + "-" * 44 + "\n" + texto
+                except Exception:
+                    pass
+                # e o que as sete IAs de multiplicador estao vendo agora
+                try:
+                    from academia_autonoma.previsores_multiplicador import (
+                        resumo as _res_mult)
+                    texto = (_res_mult(self.jogo, self.ultimas_linhas or [])
+                             + "\n" + "-" * 44 + "\n" + texto)
                 except Exception:
                     pass
             except Exception as e:
@@ -1334,7 +1413,15 @@ class Laboratorio(ctk.CTkFrame):
                     catalogo = DB.list_hipoteses(jogo) or []
                 except Exception:
                     catalogo = []
-                novos = oferecer(jogo, achados, [], catalogo=catalogo)
+                # as sete IAs de multiplicador entram na mesma varredura:
+                # o que elas medem tambem e ideia para captar, nao so log
+                try:
+                    from academia_autonoma.previsores_multiplicador import medir
+                    med = medir(jogo, cap.get("rows") or [])
+                except Exception:
+                    med = None
+                novos = oferecer(jogo, achados, [], catalogo=catalogo,
+                                 medicao_multiplicador=med)
                 erro = None
             except Exception as e:
                 novos, erro = [], f"{type(e).__name__}: {e}"

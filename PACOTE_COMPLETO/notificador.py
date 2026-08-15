@@ -187,7 +187,7 @@ def notificar(titulo: str, corpo: str, log_fn=None) -> None:
 
 def notificar_sinal(jogo: str, numeros: List[Any], modo: str = "",
                     janela: int = 0, extra: str = "", publico: str = "",
-                    log_fn=None) -> None:
+                    multiplicador: str = "", log_fn=None) -> None:
     """O aviso que interessa: um sinal novo apareceu nesta mesa.
 
     `publico` é a linha que ele pediu — "deixe a informação no ntfy (pessoas
@@ -201,6 +201,10 @@ def notificar_sinal(jogo: str, numeros: List[Any], modo: str = "",
     corpo = nums
     if janela:
         corpo += f"\njanela: {janela} giros"
+    # o fogo vem logo depois dos números, antes de qualquer estatística: é a
+    # informação que ele quer ler primeiro. Vazio na Immersive, que não tem.
+    if multiplicador:
+        corpo += f"\n{multiplicador}"
     if publico:
         corpo += f"\n{publico}"
     if extra:

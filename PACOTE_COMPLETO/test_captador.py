@@ -69,6 +69,26 @@ d=C.caderno("o"); d[k]["quando"] -= 2*86400; C._gravar("o", d)
 n9=C.oferecer("o", rel, [], catalogo=[])
 checa(any(x["chave"]==k for x in n9), "passados dois dias, volta a perguntar")
 
+print("\n[7] as sete IAs de multiplicador tambem viram pergunta")
+med = {"jogo": "lightning", "tem": True, "suficiente": True, "n": 200, "k": 6,
+       "por_ia": {"QUENTE": {"n": 150, "taxa": 0.62, "acaso": 0.41, "razao": 1.51},
+                  "SETOR": {"n": 150, "taxa": 0.42, "acaso": 0.41, "razao": 1.02},
+                  "VAZIA": {"n": 0}}}
+novos = C.oferecer("mult_teste", medicao_multiplicador=med)
+titulos = [x["titulo"] for x in novos]
+checa(any("multiplicador" in x for x in titulos),
+      "a IA que ficou acima do acaso vira pergunta", titulos)
+checa(not any("SETOR" in (x.get("chave") or "") for x in novos),
+      "a que so empatou com o acaso nao vira", [x["chave"] for x in novos])
+checa(not any("VAZIA" in (x.get("chave") or "") for x in novos),
+      "e a que nao teve backtest tambem nao")
+checa(C.oferecer("mult_teste2", medicao_multiplicador={"suficiente": False}) == [],
+      "medicao insuficiente nao gera pergunta nenhuma")
+q = [x for x in novos if "multiplicador" in x["titulo"]][0]["pergunta"]
+print("       pergunta:", q)
+checa("MULTIPLICADOR" in q and "acaso" in q,
+      "e a pergunta diz do que se trata e contra o que foi medido", q)
+
 print()
 if falhas: print("FALHAS:", falhas); sys.exit(1)
 print("CAPTADOR_OK")

@@ -173,11 +173,46 @@ def _do_crivo(teorias: List[dict]) -> List[dict]:
     return saida
 
 
+def _do_multiplicador(medicao: Dict[str, Any], jogo: str) -> List[dict]:
+    """As sete IAs de multiplicador também trazem achado para a conversa.
+
+    "e a meta [é] entender e captar as ideias" — então o que as sete medem não
+    pode morrer num log. Quando uma delas fica acima do acaso da mesma lista,
+    com backtest suficiente, ela vira pergunta para ele como qualquer outro
+    achado: a ideia dela é curta e dá para confirmar de cabeça.
+    """
+    if not medicao or not medicao.get("suficiente"):
+        return []
+    from academia_autonoma.previsores_multiplicador import ias
+    descricao = {nome: desc for nome, _fn, desc in ias(jogo)}
+    saida = []
+    for nome, v in (medicao.get("por_ia") or {}).items():
+        razao = float(v.get("razao") or 0)
+        if razao < MIN_RAZAO or not v.get("n"):
+            continue
+        saida.append({
+            "chave": f"mult:{jogo}:{nome}",
+            "titulo": f"multiplicador — {descricao.get(nome, nome)}",
+            "razao": round(razao, 2),
+            "taxa": v.get("taxa"), "acaso": v.get("acaso"),
+            "p": None, "n": v.get("n"),
+            "pergunta": (f"Sobre quem vem COM MULTIPLICADOR: {descricao.get(nome, nome)}. "
+                         f"Em {v.get('n')} rodadas isso acertou "
+                         f"{v.get('taxa', 0):.0%} das vezes, contra "
+                         f"{v.get('acaso', 0):.0%} de acaso — {razao:.2f}x. "
+                         f"Bate com o que você vê na mesa?"),
+            "origem": "multiplicador",
+        })
+    return saida
+
+
 def oferecer(jogo: str, achados_relacoes: List[dict] = None,
              teorias_crivo: List[dict] = None, catalogo: List[dict] = None,
+             medicao_multiplicador: Dict[str, Any] = None,
              quantos: int = MAX_POR_VEZ) -> List[dict]:
     """O que vale perguntar a ele agora, já sem repetição."""
-    candidatos = _de_relacoes(achados_relacoes) + _do_crivo(teorias_crivo)
+    candidatos = (_de_relacoes(achados_relacoes) + _do_crivo(teorias_crivo)
+                  + _do_multiplicador(medicao_multiplicador, jogo))
     vistos = set()
     novos = []
     for c in sorted(candidatos, key=lambda x: -x["razao"]):

@@ -132,6 +132,24 @@ time.sleep(0.6)
 checa(recebido and "pessoas: 4200 — ruim" in recebido[0]["corpo"],
       "o sinal tambem leva o publico", recebido and recebido[0]["corpo"])
 
+print("\n[6c] o fogo vai no aviso, e a immersive nao recebe linha nenhuma")
+recebido.clear()
+notificador._ultimo.update({"quando": 0.0, "texto": ""})
+notificador.notificar_sinal("mega_fire", [4, 9, 17, 21, 30], janela=5,
+                            multiplicador="🔥 chance de vir multiplicador: 9 21")
+time.sleep(0.6)
+checa(recebido and "🔥" in recebido[0]["corpo"],
+      "o sinal leva quais podem vir multiplicados",
+      recebido and recebido[0]["corpo"])
+recebido.clear()
+notificador._ultimo.update({"quando": 0.0, "texto": ""})
+notificador.notificar_sinal("immersive", [4, 9, 17], janela=5,
+                            multiplicador="")
+time.sleep(0.6)
+checa(recebido and "🔥" not in recebido[0]["corpo"],
+      "e a immersive nao ganha linha de fogo -- a mesa nao tem",
+      recebido and recebido[0]["corpo"])
+
 recebido.clear()
 notificador.notificar_resultado("crazy_time", ["5"], False, saiu="1", giros=3)
 for _ in range(60):
