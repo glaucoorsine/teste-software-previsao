@@ -1075,10 +1075,12 @@ class Laboratorio(ctk.CTkFrame):
                            ordem=i)
             p.pack(fill="both", expand=True)
             self.paineis[jogo] = p
-        for extra in ("IAs", "Conversa", "Progresso", "Fontes", "Avisos"):
+        for extra in ("Captador", "IAs", "Conversa", "Progresso",
+                      "Fontes", "Avisos"):
             self.abas.add(extra)
 
         self._painel()
+        self._captador()
         self._ias()
         self._conversa()
         self._progresso()
@@ -1169,6 +1171,124 @@ class Laboratorio(ctk.CTkFrame):
             except Exception:
                 pass
         self.after(3000, self._tick)
+
+    # -------------------------------------------------------------- captador
+    def _captador(self):
+        """Onde a máquina pergunta e ele responde.
+
+        A varredura é cara, então nada roda sozinho aqui: ele aperta o botão
+        quando quiser. Cada achado tem três respostas, e a terceira existe
+        porque forçar sim/não sem amostra é pior que esperar.
+        """
+        t = self.abas.tab("Captador")
+        topo = ctk.CTkFrame(t, fg_color="transparent")
+        topo.pack(fill="x", padx=18, pady=(14, 6))
+        ctk.CTkLabel(topo, text="O que as IAs acharam e querem te perguntar",
+                     font=("Arial", 22, "bold"), text_color=TEXTO
+                     ).pack(side="left")
+        self.cap_jogo = ctk.StringVar(value=JOGOS[0][0])
+        ctk.CTkOptionMenu(topo, values=[j for j, _ in JOGOS],
+                          variable=self.cap_jogo, width=150).pack(side="left", padx=14)
+        self.cap_bt = ctk.CTkButton(topo, text="Procurar agora", width=170,
+                                    command=self._captar)
+        self.cap_bt.pack(side="left")
+        ctk.CTkLabel(t, text=("A varredura demora um pouco. O que você aceitar "
+                              "passa a votar; o que recusar não volta a ser "
+                              "perguntado."),
+                     font=("Arial", 12), text_color=FRACO
+                     ).pack(anchor="w", padx=18, pady=(0, 8))
+        self.cap_area = ctk.CTkScrollableFrame(t, fg_color=CARTAO)
+        self.cap_area.pack(fill="both", expand=True, padx=16, pady=(0, 16))
+        self._cap_msg("Aperte “Procurar agora” para a máquina varrer o "
+                      "histórico e trazer o que achou.")
+
+    def _cap_msg(self, texto):
+        for w in self.cap_area.winfo_children():
+            w.destroy()
+        ctk.CTkLabel(self.cap_area, text=texto, font=("Arial", 13),
+                     text_color=FRACO, justify="left", wraplength=820
+                     ).pack(anchor="w", padx=14, pady=14)
+
+    def _captar(self):
+        jogo = self.cap_jogo.get()
+        self.cap_bt.configure(state="disabled", text="procurando…")
+        self._cap_msg("varrendo o histórico… isso leva alguns minutos")
+
+        def tarefa():
+            try:
+                from academia_autonoma.captador import oferecer
+                from academia_autonoma.gerador_relacoes import varrer
+                from fluxo_captura import capturar
+                import academia_db as DB
+                cap = capturar(jogo, page_size=50, max_pages=8)
+                hist = [r.get("n") for r in (cap.get("rows") or [])]
+                achados = varrer(hist)
+                try:
+                    catalogo = DB.list_hipoteses(jogo) or []
+                except Exception:
+                    catalogo = []
+                novos = oferecer(jogo, achados, [], catalogo=catalogo)
+                erro = None
+            except Exception as e:
+                novos, erro = [], f"{type(e).__name__}: {e}"
+            self.after(0, lambda: self._cap_mostrar(jogo, novos, erro))
+
+        threading.Thread(target=tarefa, daemon=True).start()
+
+    def _cap_mostrar(self, jogo, novos, erro):
+        self.cap_bt.configure(state="normal", text="Procurar agora")
+        if erro:
+            self._cap_msg(f"não deu para varrer: {erro}")
+            return
+        if not novos:
+            self._cap_msg("Nada novo desta vez. Ou o histórico ainda é curto, "
+                          "ou tudo que apareceu já foi perguntado antes.")
+            return
+        for w in self.cap_area.winfo_children():
+            w.destroy()
+        for achado in novos:
+            self._cap_cartao(jogo, achado)
+
+    def _cap_cartao(self, jogo, achado):
+        cx = ctk.CTkFrame(self.cap_area, fg_color="#0b1220",
+                          border_width=1, border_color=BORDA, corner_radius=10)
+        cx.pack(fill="x", padx=10, pady=7)
+        ctk.CTkLabel(cx, text=achado["titulo"], font=("Arial", 15, "bold"),
+                     text_color=AZUL, justify="left", wraplength=800
+                     ).pack(anchor="w", padx=14, pady=(12, 2))
+        ctk.CTkLabel(cx, text=achado["pergunta"], font=("Arial", 12),
+                     text_color=TEXTO, justify="left", wraplength=800
+                     ).pack(anchor="w", padx=14, pady=(0, 6))
+        ctk.CTkLabel(cx, text=f"{achado['razao']:.2f}x o acaso · "
+                              f"{achado['n']} giros · vindo de {achado['origem']}",
+                     font=("Arial", 11), text_color=FRACO
+                     ).pack(anchor="w", padx=14)
+        linha = ctk.CTkFrame(cx, fg_color="transparent")
+        linha.pack(anchor="w", padx=14, pady=10)
+
+        def responder(resposta, rotulo):
+            from academia_autonoma.captador import responder as _resp
+            _resp(jogo, achado["chave"], resposta)
+            for w in linha.winfo_children():
+                w.destroy()
+            ctk.CTkLabel(linha, text=rotulo, font=("Arial", 13, "bold"),
+                         text_color=VERDE if resposta == "aceita" else FRACO
+                         ).pack(side="left")
+
+        ctk.CTkButton(linha, text="Já tinha reparado", width=170,
+                      fg_color=VERDE, hover_color="#16a34a",
+                      text_color="#052e16",
+                      command=lambda: responder("aceita", "aceita — passa a votar")
+                      ).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(linha, text="Não é nada", width=130, fg_color="#7f1d1d",
+                      hover_color="#991b1b",
+                      command=lambda: responder("recusada", "recusada — não volta")
+                      ).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(linha, text="Vou observar", width=140, fg_color="#1f2937",
+                      hover_color="#334155",
+                      command=lambda: responder("observando",
+                                                "guardada — volta com mais amostra")
+                      ).pack(side="left")
 
     # ------------------------------------------------------------------- IAs
     def _ias(self):
