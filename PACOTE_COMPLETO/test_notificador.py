@@ -41,6 +41,31 @@ def post(url, *a, **k):
     return _post(url.replace("https://ntfy.sh/", "http://127.0.0.1:8899/"), *a, **k)
 requests.post = post
 
+# A FILA, NO RITMO DE TESTE.
+#
+# O notificador agora espaca os envios (ver INTERVALO_ENVIO_S): foi assim que
+# as 1.058 falhas de 429 do log dele foram resolvidas. Num teste, esperar 6s
+# por mensagem nao prova nada -- entao o ritmo cai para 50ms e o que se cobra
+# passa a ser o CONTEUDO entregue, nao o instante da entrega.
+notificador.INTERVALO_ENVIO_S = 0.05
+notificador.ESPERA_MAX_S = 0.5
+notificador._espera_atual = 0.05
+
+def esperar_fila(limite=8.0):
+    """Espera a fila esvaziar. Devolve True se esvaziou."""
+    fim = time.time() + limite
+    while time.time() < fim:
+        if notificador.estado_fila()["na_fila"] == 0 and recebido:
+            time.sleep(0.15)      # deixa o ultimo envio terminar
+            return True
+        time.sleep(0.05)
+    return notificador.estado_fila()["na_fila"] == 0
+
+def tudo():
+    """Todo o texto que chegou no servidor, junto."""
+    return "\n".join((r.get("titulo") or "") + "\n" + (r.get("corpo") or "")
+                     for r in recebido)
+
 falhas = []
 def checa(c, nome, det=""):
     print(("  ok   " if c else "  FALHA ") + nome + ("" if c else f" {det}"))
@@ -61,9 +86,7 @@ recebido.clear()
 notificador._ultimo.update({"quando": 0.0, "texto": ""})
 notificador.notificar_sinal("lightning", [4, 5, 9, 14], modo="OPERAR",
                             janela=4, extra="acerto 31% vs acaso 19% (1.63x)")
-for _ in range(60):
-    if recebido: break
-    time.sleep(0.05)
+esperar_fila()
 checa(len(recebido) == 1, "sinal virou aviso", len(recebido))
 if recebido:
     txt = recebido[0]["corpo"] + " " + (recebido[0]["titulo"] or "")
@@ -80,7 +103,7 @@ if recebido:
 recebido.clear()
 notificador.notificar_sinal("lightning", [4, 5, 9, 14], modo="OPERAR", janela=4,
                            extra="acerto 31% vs acaso 19% (1.63x)")
-time.sleep(0.6)
+esperar_fila()
 checa(len(recebido) == 0, "nao repete o mesmo sinal", len(recebido))
 
 
@@ -90,9 +113,7 @@ recebido.clear()
 notificador._ultimo.update({"quando": 0.0, "texto": ""})
 notificador.notificar_resultado("lightning", [4, 5, 9], True, saiu=5, giros=3,
                                 placar="placar: 7 certas de 10 (70%)")
-for _ in range(60):
-    if recebido: break
-    time.sleep(0.05)
+esperar_fila()
 checa(len(recebido) == 1, "o acerto vira aviso", len(recebido))
 if recebido:
     r = recebido[0]
@@ -110,9 +131,7 @@ notificador.notificar_resultado(
     placar="JANELAS: 7 certas | 3 erradas (70%)",
     placar_num="NÚMEROS: 9 certos | 41 errados (18%)",
     publico="pessoas: 940 — bom")
-for _ in range(60):
-    if recebido: break
-    time.sleep(0.05)
+esperar_fila()
 checa(len(recebido) == 1, "o aviso sai")
 if recebido:
     corpo = recebido[0]["corpo"]
@@ -128,7 +147,7 @@ recebido.clear()
 notificador._ultimo.update({"quando": 0.0, "texto": ""})
 notificador.notificar_sinal("crazy_time", ["5", "10"], modo="OPERAR", janela=5,
                             publico="pessoas: 4200 — ruim")
-time.sleep(0.6)
+esperar_fila()
 checa(recebido and "pessoas: 4200 — ruim" in recebido[0]["corpo"],
       "o sinal tambem leva o publico", recebido and recebido[0]["corpo"])
 
@@ -137,7 +156,7 @@ recebido.clear()
 notificador._ultimo.update({"quando": 0.0, "texto": ""})
 notificador.notificar_sinal("mega_fire", [4, 9, 17, 21, 30], janela=5,
                             multiplicador="🔥 chance de vir multiplicador: 9 21")
-time.sleep(0.6)
+esperar_fila()
 checa(recebido and "🔥" in recebido[0]["corpo"],
       "o sinal leva quais podem vir multiplicados",
       recebido and recebido[0]["corpo"])
@@ -145,16 +164,14 @@ recebido.clear()
 notificador._ultimo.update({"quando": 0.0, "texto": ""})
 notificador.notificar_sinal("immersive", [4, 9, 17], janela=5,
                             multiplicador="")
-time.sleep(0.6)
+esperar_fila()
 checa(recebido and "🔥" not in recebido[0]["corpo"],
       "e a immersive nao ganha linha de fogo -- a mesa nao tem",
       recebido and recebido[0]["corpo"])
 
 recebido.clear()
 notificador.notificar_resultado("crazy_time", ["5"], False, saiu="1", giros=3)
-for _ in range(60):
-    if recebido: break
-    time.sleep(0.05)
+esperar_fila()
 checa(len(recebido) == 1, "o erro tambem avisa")
 if recebido:
     checa("errou" in (recebido[0]["titulo"] or ""), "e diz que errou",
@@ -164,9 +181,54 @@ if recebido:
 recebido.clear()
 for _ in range(3):
     notificador.notificar_resultado("lightning", [1], False, saiu="9", giros=3)
-time.sleep(0.6)
+esperar_fila()
 checa(len(recebido) == 3,
       "desfecho nunca e engolido pelo antirrepeticao — cada janela e um evento",
+      len(recebido))
+
+print("\n[7] o 429 NAO perde mensagem -- o defeito do log dele")
+# No log de 9h30 da v96: 1.058 falhas, todas 429, e cada uma era uma mensagem
+# jogada fora. Aqui o servidor recusa as tres primeiras e aceita depois; as
+# tres mensagens tem que chegar assim mesmo.
+recusar = {"quantas": 3}
+_post_ok = requests.post
+def post_429(url, *a, **k):
+    if recusar["quantas"] > 0:
+        recusar["quantas"] -= 1
+        class R:
+            status_code = 429
+            headers = {"Retry-After": "0"}
+            def raise_for_status(self): pass
+        return R()
+    return _post_ok(url, *a, **k)
+requests.post = post_429
+
+recebido.clear()
+notificador._ultimo.update({"quando": 0.0, "texto": ""})
+notificador._espera_atual = 0.05
+notificador._ritmo_avisado = False
+avisos_log = []
+notificador.notificar_resultado("mega_fire", [7], True, saiu=7, giros=2,
+                                log_fn=avisos_log.append)
+esperar_fila(limite=10.0)
+requests.post = post_429                      # segue com o falso
+checa(recebido, "depois de tres recusas, a mensagem chega", len(recebido))
+checa("saiu: 7" in tudo(), "e chega inteira, nao truncada", tudo()[:80])
+checa(any("ritmo" in x for x in avisos_log),
+      "e o log explica que e ritmo, nao erro de configuracao", avisos_log)
+requests.post = _post_ok
+
+print("\n[8] com a fila cheia, as mensagens saem juntas em vez de sumir")
+recebido.clear()
+notificador._espera_atual = 0.05
+for i in range(8):
+    notificador.notificar_resultado("lightning", [i], i % 2 == 0, saiu=i, giros=2)
+esperar_fila(limite=10.0)
+txt = tudo()
+chegaram = sum(1 for i in range(8) if f"saiu: {i}" in txt)
+print(f"       8 desfechos -> {len(recebido)} mensagens, {chegaram} desfechos dentro")
+checa(chegaram == 8, "os oito desfechos chegam, agrupados ou nao", chegaram)
+checa(len(recebido) <= 8, "e sem gastar mais requisicoes que mensagens",
       len(recebido))
 
 srv.shutdown()

@@ -34,6 +34,10 @@ from progresso_teste import Progresso, _mmss  # noqa: E402
 # suficiente do trabalho passou: reajustar pelos doze testes de um segundo
 # diria que o pesado também leva um segundo.
 TESTES = [
+    # PRIMEIRO de todos, e de proposito: nome indefinido derruba o programa
+    # inteiro e leva dois segundos para achar. Falhar aqui vale mais que
+    # falhar depois de vinte minutos de suite. Foi o que derrubou a v102.
+    ("test_lint.py", "LINT_OK", 120, 3),
     ("test_central.py", "CENTRAL_TESTES_OK", 300, 1),
     ("test_base_auditoria.py", "BASE_AUDITORIA_OK", 300, 1),
     ("test_multiplicador.py", "MULTIPLICADOR_OK", 900, 2),

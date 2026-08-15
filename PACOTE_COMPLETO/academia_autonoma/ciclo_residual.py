@@ -9,7 +9,7 @@ from .agentes_residuais import AGENTES_R
 from .critico_cientifico import revisar, aplicar_fdr_batch
 from .meta_supervisora import decidir, motivo
 from .ativador_familiaridades import ativar
-from .catalogo_persistente import merge, listar
+from .catalogo_persistente import merge, listar, registrar_prospectivo
 from .contrato_familiaridade import para_contrato
 from .opinioes_modelos import coletar_opinioes
 from .integrador_evidencias import convergencia

@@ -367,7 +367,7 @@ def _ciclo_body(dataset_id: str, historico, settled=None, mults=None) -> Dict[st
     # decide o número final é o consenso -- uma teoria fraca não manda em nada,
     # só acrescenta um voto. O peso de cada voto sai daqui.
     try:
-        if _n % CRIVO_A_CADA == 0 and len(hist) >= 200:
+        if stream_n % CRIVO_A_CADA == 0 and len(hist) >= 200:
             from .crivo_retrospectivo import peneirar as _peneirar, resumo as _res_crivo
             _vivas = [t for t in cat_atual_freio
                       if (t.get("estado") or "") not in ("descartada_pelo_tribunal",)]

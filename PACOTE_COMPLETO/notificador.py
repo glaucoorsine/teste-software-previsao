@@ -64,6 +64,108 @@ MODELO = {
 _ultimo: Dict[str, Any] = {"quando": 0.0, "texto": ""}
 _trava = threading.Lock()
 
+# ─────────────────────────────────────────────────────────── o ritmo do envio
+#
+# MEDIDO NO LOG DELE: 1.058 falhas de notificação em 9h30, todas 429 — "Too
+# Many Requests". O aviso no celular ficou morto a noite inteira e ele só
+# descobriu ao abrir a tela de configuração.
+#
+# A causa não é a configuração dele: é volume. Quatro mesas, 709 janelas, e
+# cada janela manda duas mensagens (a entrada e o desfecho). Dá mais de 2.500
+# mensagens em 9 horas, umas 4 por minuto. O ntfy.sh grátis não aceita esse
+# ritmo de ninguém, e a cada recusa a mensagem era simplesmente perdida.
+#
+# O conserto tem três partes, e as três são necessárias:
+#
+#   FILA          uma mensagem por vez, com intervalo mínimo entre elas. Quatro
+#                 mesas disparando junto viram quatro envios espaçados, não
+#                 quatro simultâneos.
+#   ESPERA        no 429, a mensagem NÃO é descartada: respeita o Retry-After
+#                 do servidor (ou dobra a espera sozinha) e tenta de novo.
+#   JUNTAR        se a fila acumulou, as mensagens saem agrupadas numa só. É a
+#                 diferença entre receber o que aconteceu e não receber nada.
+INTERVALO_ENVIO_S = 6.0        # ritmo base entre duas mensagens
+ESPERA_MAX_S = 300.0           # teto da espera depois de 429 seguidos
+FILA_MAX = 40                  # o que passar disso é resumido, não acumulado
+MARCA_RITMO = "__RITMO__"      # 429 disfarçado de erro comum atrapalhava a tela
+
+_fila: List[tuple] = []
+_fila_trava = threading.Lock()
+_carteiro: Optional[threading.Thread] = None
+_espera_atual = INTERVALO_ENVIO_S
+_ritmo_avisado = False
+
+
+def estado_fila() -> Dict[str, Any]:
+    """Quantas mensagens esperando e em que ritmo — para a tela mostrar."""
+    with _fila_trava:
+        return {"na_fila": len(_fila), "espera_s": round(_espera_atual, 1),
+                "limitado": _espera_atual > INTERVALO_ENVIO_S * 1.5}
+
+
+def _juntar(lote: List[tuple]) -> tuple:
+    """Várias mensagens viram uma. Melhor uma longa que nenhuma."""
+    if len(lote) == 1:
+        return lote[0]
+    titulo = f"{len(lote)} avisos"
+    corpo = "\n\n".join(f"[{t}]\n{c}" for t, c, _lg in lote)
+    return (titulo, corpo, lote[0][2])
+
+
+def _turno_do_carteiro() -> None:
+    """Tira da fila e entrega, no ritmo que o servidor aceitar."""
+    global _espera_atual, _ritmo_avisado
+    while True:
+        with _fila_trava:
+            if not _fila:
+                break
+            # se a fila acumulou, sai tudo junto numa mensagem só
+            lote = [_fila.pop(0)] if len(_fila) <= 2 else [
+                _fila.pop(0) for _ in range(min(len(_fila), 6))]
+        titulo, corpo, log_fn = _juntar(lote)
+        erro = _enviar(titulo, corpo)
+        if erro and erro.startswith(MARCA_RITMO):
+            # 429: o servidor pediu calma. A mensagem VOLTA para a fila.
+            pedido = 0.0
+            try:
+                pedido = float(erro[len(MARCA_RITMO):] or 0)
+            except ValueError:
+                pedido = 0.0
+            _espera_atual = min(ESPERA_MAX_S,
+                                max(pedido, _espera_atual * 2, INTERVALO_ENVIO_S))
+            with _fila_trava:
+                _fila.insert(0, (titulo, corpo, log_fn))
+                if len(_fila) > FILA_MAX:
+                    del _fila[FILA_MAX:]
+            if not _ritmo_avisado and log_fn:
+                _ritmo_avisado = True
+                try:
+                    log_fn(f"ntfy limitando o ritmo — os avisos passam a sair "
+                           f"a cada {_espera_atual:.0f}s, nenhum é perdido")
+                except Exception:
+                    pass
+        else:
+            if erro and log_fn:
+                try:
+                    log_fn(f"notificacao falhou: {erro}")
+                except Exception:
+                    pass
+            # deu certo: volta devagar ao ritmo normal
+            _espera_atual = max(INTERVALO_ENVIO_S, _espera_atual * 0.7)
+        time.sleep(_espera_atual)
+
+
+def _enfileirar(titulo: str, corpo: str, log_fn=None) -> None:
+    global _carteiro
+    with _fila_trava:
+        _fila.append((titulo, corpo, log_fn))
+        if len(_fila) > FILA_MAX:
+            del _fila[:len(_fila) - FILA_MAX]
+        vivo = _carteiro is not None and _carteiro.is_alive()
+    if not vivo:
+        _carteiro = threading.Thread(target=_turno_do_carteiro, daemon=True)
+        _carteiro.start()
+
 
 def _cfg() -> dict:
     if not CFG.is_file():
@@ -111,6 +213,12 @@ def _ascii(txt: str) -> str:
 
 
 def _enviar(titulo: str, corpo: str) -> Optional[str]:
+    """Uma tentativa de envio. Devolve None se foi, ou o motivo se não foi.
+
+    O 429 vem separado dos outros erros porque ele NÃO é defeito de
+    configuração: é o servidor grátis do ntfy dizendo "devagar". Tratar os dois
+    igual fazia a tela acusar erro vermelho quando o certo era esperar.
+    """
     try:
         import requests
     except Exception:
@@ -125,6 +233,13 @@ def _enviar(titulo: str, corpo: str) -> Optional[str]:
                 headers={"Title": _ascii(titulo),
                          "Priority": "high", "Tags": "game_die"},
                 timeout=TIMEOUT_S)
+            if r.status_code == 429:
+                espera = 0
+                try:
+                    espera = int(r.headers.get("Retry-After") or 0)
+                except (TypeError, ValueError):
+                    espera = 0
+                return f"{MARCA_RITMO}{espera}"
             r.raise_for_status()
             return None
         if canal == "telegram":
@@ -174,15 +289,10 @@ def notificar(titulo: str, corpo: str, log_fn=None) -> None:
         _ultimo["quando"] = agora
         _ultimo["texto"] = corpo
 
-    def _tarefa():
-        err = _enviar(titulo, corpo)
-        if err and log_fn:
-            try:
-                log_fn(f"notificacao falhou: {err}")
-            except Exception:
-                pass
-
-    threading.Thread(target=_tarefa, daemon=True).start()
+    # Vai para a fila, nao direto para a rede: quatro mesas disparando ao
+    # mesmo tempo eram quatro requisicoes simultaneas, e o ntfy respondia 429
+    # nas tres ultimas. Ver o comentario grande em INTERVALO_ENVIO_S.
+    _enfileirar(titulo, corpo, log_fn)
 
 
 def notificar_sinal(jogo: str, numeros: List[Any], modo: str = "",
@@ -250,17 +360,13 @@ def notificar_resultado(jogo: str, numeros: List[Any], acertou: bool,
     if placar_num:
         corpo += f"\n{placar_num}"
 
-    def _tarefa():
-        err = _enviar(titulo, corpo)
-        if err and log_fn:
-            try:
-                log_fn(f"notificacao resultado falhou: {err}")
-            except Exception:
-                pass
-
     if not ativo():
         return
-    threading.Thread(target=_tarefa, daemon=True).start()
+    # O desfecho tambem entra na fila. Ele NAO passa pelo antirrepeticao (cada
+    # janela e um evento unico e nao pode ser engolido por parecer com a
+    # anterior), mas passa pelo ritmo -- foi somando entrada + desfecho de
+    # quatro mesas que o volume chegou a 2.500 mensagens em 9 horas.
+    _enfileirar(titulo, corpo, log_fn)
 
 
 def testar() -> str:

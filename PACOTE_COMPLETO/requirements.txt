@@ -9,3 +9,6 @@ Pillow
 # (o PyTorch publica com atraso). Sem ele a previsão sai pelo consenso das
 # teorias validadas. Instale à parte:  pip install torch
 # torch
+# le os arquivos procurando nome indefinido -- o erro que
+# derruba o programa sem nenhum teste perceber (ver test_lint.py)
+pyflakes

@@ -627,7 +627,7 @@ class PainelMesa(ctk.CTkFrame):
         # consenso a cada giro; o que muda aqui é só o teto do que cabe na
         # tela. As caixas sobrando ficam apagadas.
         self.caixas = []
-        _n_caixas = 3 if str(jogo).startswith("crazy_time") else 10
+        _n_caixas = 3 if str(self.jogo).startswith("crazy_time") else 10
         _larg = 56 if _n_caixas <= 7 else 44
         for _ in range(_n_caixas):
             b = ctk.CTkLabel(linha, text="—", width=_larg, height=48,
