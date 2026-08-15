@@ -84,7 +84,30 @@ _trava = threading.Lock()
 #                 do servidor (ou dobra a espera sozinha) e tenta de novo.
 #   JUNTAR        se a fila acumulou, as mensagens saem agrupadas numa só. É a
 #                 diferença entre receber o que aconteceu e não receber nada.
-INTERVALO_ENVIO_S = 6.0        # ritmo base entre duas mensagens
+# CADA CANAL AGUENTA UM RITMO, E ELES NAO SAO PARECIDOS.
+#
+# O ntfy gratis recusa acima de ~1 a cada poucos segundos. O CallMeBot
+# (WhatsApp) e MUITO mais apertado: cerca de uma mensagem por minuto, e quem
+# passa disso simplesmente para de receber. Usar o mesmo intervalo para os dois
+# repetiria no WhatsApp o apagao de 1.058 mensagens perdidas que o log dele
+# mostrou no ntfy -- so que pior, porque o CallMeBot nem devolve 429: ele
+# ignora em silencio.
+#
+# Por isso o ritmo vem do canal, e o agrupamento carrega o resto: no WhatsApp
+# uma mensagem por minuto com varios desfechos dentro vale mais que dez
+# mensagens que nao chegam.
+RITMO_POR_CANAL = {
+    "ntfy": 6.0,
+    "telegram": 3.0,       # bots do Telegram aceitam ~30/s; 3s sobra
+    "whatsapp": 62.0,      # CallMeBot: ~1 por minuto, com folga de 2s
+    "nenhum": 6.0,
+}
+INTERVALO_ENVIO_S = 6.0        # ritmo base, trocado pelo do canal em uso
+
+
+def _ritmo_do_canal() -> float:
+    canal = (_cfg().get("canal") or "nenhum").lower()
+    return RITMO_POR_CANAL.get(canal, INTERVALO_ENVIO_S)
 ESPERA_MAX_S = 300.0           # teto da espera depois de 429 seguidos
 FILA_MAX = 40                  # o que passar disso é resumido, não acumulado
 MARCA_RITMO = "__RITMO__"      # 429 disfarçado de erro comum atrapalhava a tela
@@ -115,13 +138,18 @@ def _juntar(lote: List[tuple]) -> tuple:
 def _turno_do_carteiro() -> None:
     """Tira da fila e entrega, no ritmo que o servidor aceitar."""
     global _espera_atual, _ritmo_avisado
+    base = _ritmo_do_canal()
+    _espera_atual = max(_espera_atual, base)
     while True:
         with _fila_trava:
             if not _fila:
                 break
             # se a fila acumulou, sai tudo junto numa mensagem só
+            # canal lento junta mais por mensagem: se so cabe uma por
+            # minuto, ela tem que levar tudo o que aconteceu no minuto
+            _max_lote = 12 if base >= 30 else 6
             lote = [_fila.pop(0)] if len(_fila) <= 2 else [
-                _fila.pop(0) for _ in range(min(len(_fila), 6))]
+                _fila.pop(0) for _ in range(min(len(_fila), _max_lote))]
         titulo, corpo, log_fn = _juntar(lote)
         erro = _enviar(titulo, corpo)
         if erro and erro.startswith(MARCA_RITMO):
@@ -132,7 +160,7 @@ def _turno_do_carteiro() -> None:
             except ValueError:
                 pedido = 0.0
             _espera_atual = min(ESPERA_MAX_S,
-                                max(pedido, _espera_atual * 2, INTERVALO_ENVIO_S))
+                                max(pedido, _espera_atual * 2, base))
             with _fila_trava:
                 _fila.insert(0, (titulo, corpo, log_fn))
                 if len(_fila) > FILA_MAX:
@@ -151,7 +179,7 @@ def _turno_do_carteiro() -> None:
                 except Exception:
                     pass
             # deu certo: volta devagar ao ritmo normal
-            _espera_atual = max(INTERVALO_ENVIO_S, _espera_atual * 0.7)
+            _espera_atual = max(base, _espera_atual * 0.7)
         time.sleep(_espera_atual)
 
 

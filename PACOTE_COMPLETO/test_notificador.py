@@ -50,6 +50,11 @@ requests.post = post
 notificador.INTERVALO_ENVIO_S = 0.05
 notificador.ESPERA_MAX_S = 0.5
 notificador._espera_atual = 0.05
+# o ritmo agora vem do CANAL (ver RITMO_POR_CANAL): acelerar so a constante
+# antiga deixaria o teste esperando 6s por mensagem. A proporcao entre os
+# canais e preservada -- o whatsapp continua sendo o mais lento.
+_ritmos_reais = dict(notificador.RITMO_POR_CANAL)
+notificador.RITMO_POR_CANAL = {k: 0.05 for k in _ritmos_reais}
 
 def esperar_fila(limite=8.0):
     """Espera a fila esvaziar. Devolve True se esvaziou."""
@@ -230,6 +235,24 @@ print(f"       8 desfechos -> {len(recebido)} mensagens, {chegaram} desfechos de
 checa(chegaram == 8, "os oito desfechos chegam, agrupados ou nao", chegaram)
 checa(len(recebido) <= 8, "e sem gastar mais requisicoes que mensagens",
       len(recebido))
+
+print("\n[9] cada canal no seu ritmo -- WhatsApp e dez vezes mais lento")
+checa(_ritmos_reais["whatsapp"] > 60,
+      "whatsapp espera mais de um minuto entre mensagens",
+      _ritmos_reais["whatsapp"])
+checa(_ritmos_reais["whatsapp"] > _ritmos_reais["ntfy"] * 5,
+      "e e MUITO mais lento que o ntfy -- e a razao de existir esta tabela")
+import json as _json
+_antes = notificador.CFG.read_text(encoding="utf-8")
+notificador.RITMO_POR_CANAL = _ritmos_reais
+notificador.CFG.write_text(_json.dumps(
+    {"canal": "whatsapp", "telefone": "5531999998888", "apikey": "x"}))
+checa(notificador._ritmo_do_canal() > 60,
+      "com o canal em whatsapp, o ritmo passa a ser o dele",
+      notificador._ritmo_do_canal())
+notificador.CFG.write_text(_antes)
+checa(abs(notificador._ritmo_do_canal() - 6.0) < 0.1,
+      "e volta ao do ntfy quando o canal volta", notificador._ritmo_do_canal())
 
 srv.shutdown()
 print()
