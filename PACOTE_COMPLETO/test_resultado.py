@@ -35,14 +35,17 @@ def escrever(linhas) -> Path:
 
 
 print("\n[1] a chance é a da aposta, não 1/37 fixo")
-checa(abs(R.chance_janela(1, 1, 37) - 1/37) < 1e-9, "1 número, 1 giro")
-checa(abs(R.chance_janela(7, 1, 37) - 7/37) < 1e-9, "7 números, 1 giro")
-c3 = R.chance_janela(2, 3, 37)
+def cj(k, giros, jogo="lightning"):
+    return R.chance_janela(R.chance_por_giro(jogo, [str(i) for i in range(k)], k),
+                           giros)
+checa(abs(cj(1, 1) - 1/37) < 1e-9, "1 número, 1 giro")
+checa(abs(cj(7, 1) - 7/37) < 1e-9, "7 números, 1 giro")
+c3 = cj(2, 3)
 checa(abs(c3 - (1 - (35/37)**3)) < 1e-9, "2 números em 3 giros", c3)
 checa(0.15 < c3 < 0.16, "que dá ~15% — errar 85% ali é o esperado", f"{c3:.3f}")
-checa(R.chance_janela(0, 3, 37) == 0.0, "aposta vazia não tem chance")
-checa(R.chance_janela(3, 0, 37) == 0.0, "sem giro, sem chance")
-checa(abs(R.chance_janela(1, 1, 54) - 1/54) < 1e-9,
+checa(R.chance_janela(0.0, 3) == 0.0, "aposta vazia não tem chance")
+checa(R.chance_janela(3/37, 0) == 0.0, "sem giro, sem chance")
+checa(abs(R.chance_por_giro("crazy_time", ["CrazyTime"], 1) - 1/54) < 1e-9,
       "Crazy Time usa 54 casas, não 37")
 
 print("\n[2] reconstrói as janelas do log")
@@ -153,6 +156,35 @@ d6 = R.ler(sujo)
 checa(isinstance(d6["lightning"]["janelas"], list), "linha estragada é ignorada")
 saida6 = "\n".join(R.relatar("lightning", d6["lightning"]))
 checa("nenhuma janela fechada" in saida6, "aposta vazia não vira estatística")
+
+
+
+print("\n[7] no Crazy Time cada símbolo vale um número de casas")
+checa(abs(R.chance_por_giro("crazy_time", ["1"], 1) - 21/54) < 1e-9,
+      "o 1 ocupa 21 das 54 casas — 38,9%, não 1,9%",
+      R.chance_por_giro("crazy_time", ["1"], 1))
+checa(abs(R.chance_por_giro("crazy_time", ["5"], 1) - 7/54) < 1e-9,
+      "o 5 vale 13,0%", R.chance_por_giro("crazy_time", ["5"], 1))
+checa(abs(R.chance_por_giro("crazy_time", ["CrazyTime"], 1) - 1/54) < 1e-9,
+      "o CrazyTime é o único que vale 1/54")
+checa(abs(R.chance_por_giro("crazy_time", ["5", "10"], 1) - 11/54) < 1e-9,
+      "dois símbolos somam as casas dos dois",
+      R.chance_por_giro("crazy_time", ["5", "10"], 1))
+checa(abs(R.chance_por_giro("lightning", ["4", "5"], 2) - 2/37) < 1e-9,
+      "na roleta continua sendo k/37")
+checa(R.chance_por_giro("crazy_time", [], 2) > 0,
+      "sem alvos registrados não quebra a conta")
+
+# o caso do log dele: apostou ['5'] e a janela tinha 3 giros
+p1 = R.chance_por_giro("crazy_time", ["5"], 1)
+jan = R.chance_janela(p1, 3)
+checa(0.33 < jan < 0.35, "apostar o 5 por 3 giros acerta ~34% por sorte pura",
+      f"{jan:.3f}")
+antigo = 1 - (1 - 1/54) ** 3
+checa(jan > 6 * antigo,
+      "a conta antiga (1/54) subestimava o acaso em mais de 6x — "
+      "era isso que virava '5,32x acima do acaso'",
+      f"certo {jan:.3f} vs antigo {antigo:.3f}")
 
 print()
 if falhas:

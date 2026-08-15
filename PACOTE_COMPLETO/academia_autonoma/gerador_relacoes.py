@@ -143,7 +143,25 @@ def _matriz(rel: Callable[[int, int], bool]):
     return [[bool(rel(a, b)) for b in DOMINIO] for a in DOMINIO]
 
 
-def _taxa(seq: List[int], M, janela: int) -> float:
+def _taxa(seq: List[int], M, lag: int) -> float:
+    """A relação vale entre o giro e o que vem EXATAMENTE `lag` depois.
+
+    Não é "em algum dos próximos lag giros". Ele avisou: "percebe que não
+    necessariamente tem que vir em seguida? Às vezes vem 2 ou 3 números
+    depois". Uma coisa é a relação valer com o giro seguinte, outra é valer
+    com o terceiro — e são efeitos diferentes, que precisam ser medidos
+    separados.
+    """
+    ok = t = 0
+    for i in range(len(seq) - lag):
+        t += 1
+        if M[seq[i]][seq[i + lag]]:
+            ok += 1
+    return ok / t if t else 0.0
+
+
+def _taxa_janela(seq: List[int], M, janela: int) -> float:
+    """Acumulada: valeu com ALGUM dos próximos `janela` giros."""
     ok = t = 0
     for i in range(len(seq) - janela):
         linha = M[seq[i]]
@@ -155,13 +173,16 @@ def _taxa(seq: List[int], M, janela: int) -> float:
     return ok / t if t else 0.0
 
 
-def _acaso_analitico(cont: Counter, M, janela: int) -> float:
-    """A chance da relação valer numa sequência embaralhada, calculada exata.
+def _densidade(cont: Counter, M) -> float:
+    """A chance da relação valer entre dois giros quaisquer, calculada exata.
 
-    Para um par de posições quaisquer da sequência embaralhada, a chance de a
-    relação valer é a densidade dela sobre a composição do histórico. Não
-    precisa embaralhar mil vezes para saber isso — e é o que torna possível
-    varrer centenas de relações em segundos.
+    Numa sequência embaralhada todas as posições são intercambiáveis, então
+    esta densidade vale igual para QUALQUER distância — o que também é a
+    resposta a por que medir por distância é mais limpo: o acaso não muda de
+    uma distância para outra, só o resultado real muda.
+
+    Não precisa embaralhar mil vezes para saber isso, e é o que permite varrer
+    centenas de relações em segundos.
     """
     N = sum(cont.values())
     if N < 2:
@@ -172,11 +193,10 @@ def _acaso_analitico(cont: Counter, M, janela: int) -> float:
         for b, cb in cont.items():
             if linha[b]:
                 p += ca * (cb - 1 if a == b else cb)
-    p /= N * (N - 1)
-    return 1.0 - (1.0 - p) ** janela
+    return p / (N * (N - 1))
 
 
-def varrer(historico: List, janelas=(1, 3), semente: int = 20260815,
+def varrer(historico: List, lags=(1, 2, 3, 4, 5), semente: int = 20260815,
            n_fino: int = EMBARALHAMENTOS_FINO) -> List[dict]:
     seq = []
     for x in (historico or []):
@@ -200,16 +220,16 @@ def varrer(historico: List, janelas=(1, 3), semente: int = 20260815,
         densidade = sum(sum(1 for v in linha if v) for linha in M) / (37 * 37)
         if densidade < 0.005 or densidade > 0.95:
             continue                     # relação quase nunca ou quase sempre
-        for janela in janelas:
-            real = _taxa(seq, M, janela)
-            acaso = _acaso_analitico(cont, M, janela)
-            if acaso <= 0 or acaso >= 1:
-                continue
-            n = len(seq) - janela
+        acaso = _densidade(cont, M)       # o mesmo para toda distância
+        if acaso <= 0 or acaso >= 1:
+            continue
+        for lag in lags:
+            real = _taxa(seq, M, lag)
+            n = len(seq) - lag
             desvio = (acaso * (1 - acaso) / n) ** 0.5
             z = (real - acaso) / desvio if desvio else 0.0
             achados.append({
-                "chave": chave, "descricao": texto, "janela": janela,
+                "chave": chave, "descricao": texto, "lag": lag,
                 "taxa": round(real, 4), "acaso": round(acaso, 4),
                 "razao": round(real / acaso, 3), "z": round(z, 2),
                 "n": n, "p": None, "M": M, "fn": fn,
@@ -223,7 +243,7 @@ def varrer(historico: List, janelas=(1, 3), semente: int = 20260815,
         batidas = 0
         for _ in range(n_fino):
             rng.shuffle(copia)
-            if _taxa(copia, a["M"], a["janela"]) >= a["taxa"]:
+            if _taxa(copia, a["M"], a["lag"]) >= a["taxa"]:
                 batidas += 1
         a["p"] = (batidas + 1) / (n_fino + 1)
 
@@ -253,7 +273,7 @@ def resumo(achados: List[dict], corte: float = 0.05) -> str:
         p = a["p"]
         marca = "  <<<" if a.get("p_ajustado", 1) < corte else ""
         ptxt = f"p={p:.4f}" if p is not None else f"z={a['z']:+.1f}"
-        L.append(f"   {a['descricao']:<34} janela {a['janela']}  "
+        L.append(f"   {a['descricao']:<34} +{a['lag']} giro{'s' if a['lag']>1 else ' '}  "
                  f"{a['taxa']:.1%} vs {a['acaso']:.1%}  {a['razao']:.2f}x  "
                  f"{ptxt}{marca}")
     if sobrev:

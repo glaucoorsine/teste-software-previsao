@@ -37,7 +37,18 @@ RAIZ = Path(__file__).resolve().parent
 LOG = RAIZ / "Logs" / "central_log.txt"
 JOGOS = ("lightning", "mega_fire", "immersive", "crazy_time")
 N_CLASSES = {"lightning": 37, "mega_fire": 37, "immersive": 37,
-             "crazy_time": 54}   # roda do Crazy Time tem 54 casas
+             "crazy_time": 54}
+
+# A RODA DO CRAZY TIME NÃO TEM CASAS IGUAIS.
+#
+# São 54 casas, mas o "1" ocupa 21 delas e o CrazyTime uma só. Tratar todo
+# símbolo como 1/54 — que era o que eu fazia — infla a razão em até 7 vezes.
+#
+# Na primeira leitura do log dele deu "5,32x acima do acaso" no Crazy Time.
+# Só que o software apostou `['5']` em 36 das 56 janelas, e o 5 vale 13,0% por
+# giro, não 1,9%. O 5,32x era erro meu de baseline, não vantagem dele.
+FATIAS_CT = {"1": 21, "2": 13, "5": 7, "10": 4,
+             "CoinFlip": 4, "CashHunt": 2, "Pachinko": 2, "CrazyTime": 1}
 
 LINHA = re.compile(
     r"^\S+ \S+ \| (\w+) (NOVA_JANELA|HIT|MISS|JANELA) ?(.*)$")
@@ -57,8 +68,10 @@ def ler(caminho: Path) -> dict:
         if d is None:
             continue
         if tipo == "NOVA_JANELA":
-            alvos = re.findall(r"[\w']+", resto.split("]")[0])
-            d["aberta"] = {"k": len(alvos), "acertos": 0, "giros": 0}
+            alvos = re.findall(r"'([^']+)'", resto.split("]")[0]) or \
+                re.findall(r"\b\w+\b", resto.split("]")[0])
+            d["aberta"] = {"k": len(alvos), "alvos": list(alvos),
+                           "acertos": 0, "giros": 0}
         elif tipo in ("HIT", "MISS"):
             if d["aberta"] is None:
                 # janela aberta antes deste log começar: conta o giro num
@@ -75,11 +88,27 @@ def ler(caminho: Path) -> dict:
     return dados
 
 
-def chance_janela(k: int, giros: int, n_classes: int) -> float:
-    """Chance de acertar ao menos uma vez apostando k números por `giros`."""
-    if not k or not giros:
+def chance_por_giro(jogo: str, alvos, k: int) -> float:
+    """A chance de a aposta acertar em UM giro.
+
+    Na roleta toda casa vale igual, então é k/37. No Crazy Time não: cada
+    símbolo ocupa um número diferente de casas, e é preciso somar as casas
+    dos símbolos apostados.
+    """
+    n = N_CLASSES[jogo]
+    if jogo != "crazy_time":
+        return min(k, n) / n
+    casas = sum(FATIAS_CT.get(str(a), 1) for a in (alvos or []))
+    if not casas:
+        casas = k
+    return min(casas, n) / n
+
+
+def chance_janela(p_giro: float, giros: int) -> float:
+    """Chance de acertar ao menos uma vez em `giros`, dada a chance por giro."""
+    if p_giro <= 0 or not giros:
         return 0.0
-    return 1.0 - (1.0 - min(k, n_classes) / n_classes) ** giros
+    return 1.0 - (1.0 - p_giro) ** giros
 
 
 def barra(x: float, largura: int = 22) -> str:
@@ -98,7 +127,8 @@ def relatar(jogo: str, d: dict) -> list:
 
     n = len(fechadas)
     ok = sum(1 for j in fechadas if j.get("fechou_bem"))
-    esperado = sum(chance_janela(j["k"], j["giros"], N_CLASSES[jogo])
+    esperado = sum(chance_janela(chance_por_giro(jogo, j.get("alvos"), j["k"]),
+                                 j["giros"])
                    for j in fechadas)
     taxa = ok / n
     acaso = esperado / n
@@ -107,7 +137,8 @@ def relatar(jogo: str, d: dict) -> list:
     giros = sum(j["giros"] for j in fechadas)
     acertos_num = sum(j["acertos"] for j in fechadas)
     k_medio = sum(j["k"] for j in fechadas) / n
-    acaso_num = k_medio / N_CLASSES[jogo]
+    acaso_num = sum(chance_por_giro(jogo, j.get("alvos"), j["k"])
+                    for j in fechadas) / n
     taxa_num = acertos_num / giros if giros else 0.0
 
     L.append(f"     janelas   {ok:>4} certas de {n:<4}  {taxa:6.1%}  "
