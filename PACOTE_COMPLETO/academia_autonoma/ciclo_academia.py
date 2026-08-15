@@ -42,6 +42,8 @@ CACADORES_A_CADA = 15
 # responde sobre a FORMA do histórico, não sobre o último giro — não muda de
 # um giro para o outro.
 RELACOES_A_CADA = 60
+# O crivo relê o histórico inteiro por teoria: caro, e a resposta muda devagar.
+CRIVO_A_CADA = 30
 _ultimo_cacar = {}
 _passo_agg = {}
 
@@ -323,11 +325,21 @@ def _ciclo_body(dataset_id: str, historico, settled=None, mults=None) -> Dict[st
             f"| {t.get('motivo_critica')}"
         )
 
-    # --- PODA ------------------------------------------------------------
-    # Teoria com amostra suficiente e desempenho claramente abaixo do acaso não
-    # é "ainda em teste": já respondeu. Arquivar libera vaga na fila do freio e
-    # tira ela das varreduras de contrato/sombra dos próximos ciclos.
-    podadas = 0
+    # --- DESCANSO (era PODA) ---------------------------------------------
+    #
+    # Decisão dele, 15/08: "da forma que você colocou ela retira teorias que
+    # muitas vezes aparentam não funcionar devido ao momento, e logo poda elas.
+    # Concordo com uma régua, mas não naqueles moldes extremos."
+    #
+    # Ele está certo. Uma teoria que vai mal agora pode ir bem daqui a uma
+    # hora — a mesa muda de mão, de ritmo, de crupiê. Arquivar era jogar fora
+    # o que só estava dormindo, e teoria arquivada não voltava nunca: ela saía
+    # das varreduras de contrato e de sombra dos ciclos seguintes.
+    #
+    # Agora ela DESCANSA em vez de morrer. Sai da fila enquanto está ruim, mas
+    # continua no catálogo, continua sendo reavaliada, e volta sozinha quando
+    # o desempenho recente melhora. Nada é apagado.
+    descansando = acordadas = 0
     for t in uniq:
         if (t.get("estado") or "").startswith("validada"):
             continue
@@ -335,15 +347,49 @@ def _ciclo_body(dataset_id: str, historico, settled=None, mults=None) -> Dict[st
         n = int(s.get("n") or 0)
         taxa = s.get("taxa")
         base = s.get("baseline")
+        estado = t.get("estado") or ""
         if n >= PODA_MIN_N and taxa is not None and base and taxa < base * PODA_FATOR:
-            t["estado"] = "arquivada"
-            t["motivo_meta"] = f"podada: {taxa:.0%} em {n} ativações vs acaso {base:.0%}"
-            t["prospectivo"] = t.get("prospectivo") or {}
-            t["prospectivo"]["pendente"] = None
+            if estado != "descansando":
+                t["estado"] = "descansando"
+                t["motivo_meta"] = (f"descansando: {taxa:.0%} em {n} ativações "
+                                    f"vs acaso {base:.0%} — volta se melhorar")
+                merge(t)
+                descansando += 1
+        elif estado == "descansando" and taxa is not None and base and taxa >= base:
+            # voltou a acompanhar o acaso: acorda e disputa vaga de novo
+            t["estado"] = "em_teste"
+            t["motivo_meta"] = f"acordou: {taxa:.0%} vs acaso {base:.0%}"
             merge(t)
-            podadas += 1
-    if podadas:
-        msgs.append(f"[Poda] {podadas} teorias arquivadas (n≥{PODA_MIN_N} e abaixo do acaso)")
+            acordadas += 1
+    # --- CRIVO RETROSPECTIVO ----------------------------------------------
+    # Regra dele: toda teoria passa pelo crivo do histórico, e quem acerta umas
+    # duas ou três vezes vale o dia. A barra é baixa de propósito, porque quem
+    # decide o número final é o consenso -- uma teoria fraca não manda em nada,
+    # só acrescenta um voto. O peso de cada voto sai daqui.
+    try:
+        if _n % CRIVO_A_CADA == 0 and len(hist) >= 200:
+            from .crivo_retrospectivo import peneirar as _peneirar, resumo as _res_crivo
+            _vivas = [t for t in cat_atual_freio
+                      if (t.get("estado") or "") not in ("descartada_pelo_tribunal",)]
+            _cr = _peneirar(_vivas, hist, sorted(dom))
+            for _l in _res_crivo(_cr).split("\n"):
+                msgs.append(_l)
+            for _t in (_cr.get("aptas") or []):
+                _t["apta_hoje"] = True
+                _t["peso_crivo"] = (_t.get("crivo") or {}).get("peso", 1.0)
+                merge(_t)
+            for _t in (_cr.get("fora") or []):
+                if _t.get("apta_hoje"):
+                    _t["apta_hoje"] = False
+                    merge(_t)
+    except Exception as e:
+        msgs.append(f"[Crivo] erro: {type(e).__name__}: {e}")
+
+    if descansando:
+        msgs.append(f"[Descanso] {descansando} teorias postas para descansar "
+                    f"(continuam no catálogo e voltam se melhorarem)")
+    if acordadas:
+        msgs.append(f"[Descanso] {acordadas} teorias ACORDARAM e voltaram à fila")
 
     # --- CAÇADORES DE OCORRÊNCIA E DE ANOMALIA ---------------------------
     # Eles não propõem teoria na DSL: varrem atributos do resultado (finais,
