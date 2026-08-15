@@ -191,6 +191,17 @@ def oferecer(jogo: str, achados_relacoes: List[dict] = None,
             continue
         if _ja_no_catalogo(ch, c["titulo"], catalogo):
             continue
+        # O QUE AS AUDITORIAS DELE JÁ SABEM SOBRE ISSO.
+        #
+        # Ele mandou cinco estudos retrospectivos, um por mesa, com até 56
+        # famílias de hipótese já medidas. Um achado que cai numa família já
+        # auditada não é descartado — mas ele chega acompanhado do que já se
+        # sabe, para a pergunta ser feita de olhos abertos.
+        try:
+            from academia_autonoma.base_auditoria import veredito
+            c["auditoria"] = veredito(jogo, c["titulo"])
+        except Exception:
+            c["auditoria"] = None
         novos.append(c)
         if len(novos) >= quantos:
             break
@@ -215,4 +226,12 @@ def resumo(novos: List[dict], jogo: str) -> str:
          f"({ja} já respondidas antes)"]
     for c in novos:
         L.append(f"   {c['titulo'][:52]:<52} {c['razao']:.2f}x  n={c['n']}")
+        a = c.get("auditoria") or {}
+        if a.get("controle_negativo"):
+            L.append("      ⚠ CONTROLE NEGATIVO: esta família tem que dar nada. "
+                     "Achado aqui é defeito do caçador, não da mesa "
+                     f"({a.get('familia')} {a.get('nome')})")
+        elif a.get("conhecida"):
+            L.append(f"      auditoria {a['familia']} {a['nome']} "
+                     f"[{a['estado'].lower()}]: {a['conduta']}")
     return "\n".join(L)

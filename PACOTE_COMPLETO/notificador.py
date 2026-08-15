@@ -186,14 +186,23 @@ def notificar(titulo: str, corpo: str, log_fn=None) -> None:
 
 
 def notificar_sinal(jogo: str, numeros: List[Any], modo: str = "",
-                    janela: int = 0, extra: str = "", log_fn=None) -> None:
-    """O aviso que interessa: um sinal novo apareceu nesta mesa."""
+                    janela: int = 0, extra: str = "", publico: str = "",
+                    log_fn=None) -> None:
+    """O aviso que interessa: um sinal novo apareceu nesta mesa.
+
+    `publico` é a linha que ele pediu — "deixe a informação no ntfy (pessoas
+    ruim, médio, bom)". Vai junto do sinal de propósito: quem está longe da
+    tela recebe a entrada e, na mesma mensagem, o quanto a mesa está cheia,
+    que é a percepção dele sobre quando a previsão fica mais fácil.
+    """
     if not numeros:
         return
     nums = " ".join(str(n) for n in numeros)
     corpo = nums
     if janela:
         corpo += f"\njanela: {janela} giros"
+    if publico:
+        corpo += f"\n{publico}"
     if extra:
         corpo += f"\n{extra}"
     notificar(f"{jogo.upper()} — sinal", corpo, log_fn=log_fn)
@@ -201,6 +210,7 @@ def notificar_sinal(jogo: str, numeros: List[Any], modo: str = "",
 
 def notificar_resultado(jogo: str, numeros: List[Any], acertou: bool,
                         saiu: Any = None, giros: int = 0, placar: str = "",
+                        placar_num: str = "", publico: str = "",
                         log_fn=None) -> None:
     """Como terminou a janela que foi avisada.
 
@@ -215,6 +225,11 @@ def notificar_resultado(jogo: str, numeros: List[Any], acertou: bool,
     O antirrepetição de `notificar` não vale aqui: o resultado é um evento
     único e não pode ser engolido por parecer com o aviso anterior. Por isso
     o envio é direto.
+
+    Os DOIS placares vão rotulados — "o placar tem que mandar acerto e erro de
+    número, acerto e erro de janela". Eles medem coisas diferentes: uma janela
+    de 4 giros pode fechar como acerto tendo 1 acerto e 3 erros de número. Sem
+    o rótulo dá para confundir um com o outro.
     """
     nums = " ".join(str(n) for n in (numeros or []))
     marca = "ACERTOU" if acertou else "errou"
@@ -224,8 +239,12 @@ def notificar_resultado(jogo: str, numeros: List[Any], acertou: bool,
         corpo += f"\nsaiu: {saiu}"
     if giros:
         corpo += f"\nfechou em {giros} giro(s)"
+    if publico:
+        corpo += f"\n{publico}"
     if placar:
         corpo += f"\n{placar}"
+    if placar_num:
+        corpo += f"\n{placar_num}"
 
     def _tarefa():
         err = _enviar(titulo, corpo)

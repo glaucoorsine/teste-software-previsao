@@ -820,11 +820,16 @@ class PainelMesa(ctk.CTkFrame):
             try:
                 from notificador import notificar_resultado
                 _tot = self.ok + self.err
+                _tn = self.ok_num + self.err_num
                 notificar_resultado(
                     self.jogo, self.ultimas_escolhas or [], fechou_bem,
                     saiu=n, giros=int(self.ultima_janela or 0),
-                    placar=(f"placar: {self.ok} certas de {_tot} "
+                    placar=(f"JANELAS: {self.ok} certas | {self.err} erradas "
                             f"({self.ok / _tot:.0%})" if _tot else ""),
+                    placar_num=(f"NÚMEROS: {self.ok_num} certos | "
+                                f"{self.err_num} errados "
+                                f"({self.ok_num / _tn:.0%})" if _tn else ""),
+                    publico=self._publico_curto(),
                     log_fn=registrar)
             except Exception as e:
                 registrar(f"{self.jogo} aviso de resultado: {e}")
@@ -994,6 +999,7 @@ class PainelMesa(ctk.CTkFrame):
                         extra += f" vs acaso {ac:.0%} ({tx/ac:.2f}x)"
                 notificar_sinal(self.jogo, self.escolhas, modo=modo,
                                 janela=self.restantes, extra=extra,
+                                publico=self._publico_curto(),
                                 log_fn=registrar)
             except Exception as e:
                 registrar(f"{self.jogo} notificacao: {e}")
@@ -1021,6 +1027,18 @@ class PainelMesa(ctk.CTkFrame):
         self.feed.delete("1.0", "end")
         self.feed.insert("1.0", "\n".join(sug.get("msgs") or []))
         self._academia()
+
+    def _publico_curto(self) -> str:
+        """A linha de público que vai no aviso do celular.
+
+        Devolve vazio quando não houve leitura — melhor o aviso não ter a
+        linha do que ter uma linha dizendo que não sabe.
+        """
+        try:
+            from publico_mesa import texto_curto
+            return texto_curto(self.jogo, self.jogadores)
+        except Exception:
+            return ""
 
     def _ver_publico(self):
         """Quantas pessoas estão na mesa agora.
@@ -1082,6 +1100,13 @@ class PainelMesa(ctk.CTkFrame):
                 try:
                     from academia_autonoma.autopsia import resumo as _res_aut
                     texto = _res_aut(self.jogo) + "\n" + "-" * 44 + "\n" + texto
+                except Exception:
+                    pass
+                # e as auditorias dele em cima de tudo: é o que já se sabe
+                # desta mesa antes de qualquer caçada de hoje
+                try:
+                    from academia_autonoma.base_auditoria import resumo as _res_aud
+                    texto = _res_aud(self.jogo) + "\n" + "-" * 44 + "\n" + texto
                 except Exception:
                     pass
             except Exception as e:

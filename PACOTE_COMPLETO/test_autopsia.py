@@ -103,7 +103,52 @@ t5 = A.resumo("t5")
 checa("captador" in t5,
       "com cegueira dominante, manda buscar teoria nova", t5)
 
-print("\n[5] sem laudo nenhum nao quebra")
+print("\n[5] o conserto: o laudo vira peso na proxima votacao")
+# BOA vota em 20 janelas e tem o numero certo em 14; RUIM vota nas mesmas 20
+# e acerta 2. As duas continuam na mesa -- muda o volume da voz.
+for i in range(20):
+    saiu = 7 if i < 14 else 99
+    A.registrar("t6", ["7"], saiu, saiu == 7,
+                candidatos_por_fonte={"BOA": ["7"], "RUIM": ["3"]})
+for i in range(20):
+    saiu = 3 if i < 2 else 88
+    A.registrar("t6", ["3"], saiu, saiu == 3,
+                candidatos_por_fonte={"BOA": ["1"], "RUIM": ["3"]})
+c = A.correcao("t6")
+print("       correcao:", c)
+checa(c.get("BOA", 0) > 1.0, "quem vem acertando passa a votar mais alto", c)
+checa(c.get("RUIM", 9) < 1.0, "quem vem errando vota mais baixo", c)
+checa(min(c.values()) >= A.PISO, "e ninguem e zerado -- piso respeitado", c)
+checa(max(c.values()) <= A.TETO, "nem vira dono da votacao -- teto", c)
+
+print("\n[6] o conserto nao mexe em quem tem pouca janela")
+for _ in range(5):
+    A.registrar("t7", ["1"], 30, False, candidatos_por_fonte={"NOVATA": ["9"]})
+checa(A.correcao("t7") == {},
+      "cinco janelas nao autorizam corrigir peso nenhum", A.correcao("t7"))
+
+print("\n[7] fonte que nunca pegou nada nao gera ajuste inventado")
+for _ in range(20):
+    A.registrar("t8", ["1"], 30, False, candidatos_por_fonte={"X": ["9"]})
+checa(A.correcao("t8") == {},
+      "sem nenhum acerto na mesa, o motor roda com os pesos originais")
+
+print("\n[8] o conserto aparece escrito")
+tx = A.texto_correcao("t6")
+print("       " + tx)
+checa("BOA" in tx and "RUIM" in tx, "diz quem subiu e quem desceu", tx)
+checa("conserto" in A.resumo("t6"), "e entra no resumo da tela")
+
+print("\n[9] laudo antigo, sem a lista de fontes, nao envenena a conta")
+import json as _json
+p = A._arquivo("t9")
+p.parent.mkdir(parents=True, exist_ok=True)
+p.write_text(_json.dumps({"quando": 0, "saiu": "5", "acertou": False,
+                          "tipo": "cegueira", "quem_tinha": []}) + "\n",
+             encoding="utf-8")
+checa(A.correcao("t9") == {}, "laudo sem denominador e ignorado, nao chutado")
+
+print("\n[10] sem laudo nenhum nao quebra")
 checa(A.diagnostico("vazio") == {"n": 0}, "mesa sem janela devolve vazio")
 checa("nenhuma janela dissecada" in A.resumo("vazio"), "e o resumo avisa")
 

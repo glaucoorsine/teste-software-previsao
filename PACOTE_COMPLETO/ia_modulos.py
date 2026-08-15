@@ -1890,6 +1890,31 @@ class PipelinePerceptivo:
             except Exception as _e:
                 msgs.append(f"[Regra do operador] erro: {type(_e).__name__}: {_e}")
 
+        # O CONSERTO, ANTES DE VOTAR.
+        #
+        # Pergunta dele: "após as IAs se perguntarem o porquê dos erros, elas
+        # consertam e voltam a emitir sinais?". É aqui que a resposta é sim: a
+        # autópsia das janelas fechadas devolve um multiplicador por fonte, ele
+        # entra no peso do voto, e o ciclo segue emitindo normalmente.
+        #
+        # Ninguém é excluído: o multiplicador tem piso, então a teoria que vem
+        # errando continua na mesa, só falando mais baixo até voltar a acertar.
+        try:
+            from academia_autonoma.autopsia import correcao as _corrigir
+            _aj = _corrigir(self.jogo)
+            if _aj:
+                _mexeu = []
+                for _h in hips:
+                    _m = _aj.get(_h.get("nome"))
+                    if _m:
+                        _h["peso"] = float(_h.get("peso", 1)) * float(_m)
+                        _mexeu.append(f"{_h.get('nome')}×{_m}")
+                if _mexeu:
+                    msgs.append("[Autópsia→conserto] peso ajustado pelo que "
+                                "cada fonte vem acertando: " + ", ".join(_mexeu[:6]))
+        except Exception as _e:
+            msgs.append(f"[Autópsia→conserto] indisponível: {type(_e).__name__}")
+
         aprovados, probs, fontes, score, sig, p0 = self.crit.consenso(hips, self.n_classes, self.k_alvos, minimo=2)
         msgs.append(f"[Hipóteses] {[h['nome'] for h in hips]}")
         msgs.append(f"[Crítico] multi-fonte={aprovados[:8]} p0={p0:.3f}")

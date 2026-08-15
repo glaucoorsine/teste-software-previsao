@@ -30,6 +30,31 @@ E o acerto também é dissecado: QUAL fonte tinha o número que saiu. Sem isso n
 dá para saber quem está puxando o resultado, e a tendência é dar crédito para
 quem fala mais alto, não para quem acerta.
 
+E DEPOIS DE PERGUNTAR, ELA CONSERTA
+-----------------------------------
+    "após as IAs se perguntarem o porquê dos erros, elas consertam e voltam
+     a emitir sinais?"
+
+Agora sim. Diagnóstico que não vira correção é desabafo. `correcao()` transforma
+os laudos em um número por fonte: quantas vezes aquela fonte tinha o número que
+saiu, dividido pelo quanto uma fonte média desta mesa acerta. Quem vem
+acertando passa a votar mais alto; quem vem errando, mais baixo — e o motor
+segue emitindo sinal no ciclo seguinte, com os pesos já ajustados.
+
+Três limites, de propósito:
+
+    PISO 0.7     ninguém é zerado nem excluído. Ele foi explícito: "não
+                 critique e nem barre" — teoria que parece morta hoje pode ser
+                 só o momento. Baixar o peso é diferente de podar.
+    TETO 1.6     nem a fonte mais certeira vira dona da votação sozinha; o
+                 consenso continua sendo cruzamento.
+    12 JANELAS   abaixo disso o peso não se mexe. Corrigir com 3 janelas é
+                 corrigir ruído, e o conserto fica pior que o defeito.
+
+O que a correção NÃO resolve é a cegueira: se ninguém tinha o número, não há
+peso que salve — ali falta teoria, e o caminho é o captador. Por isso os dois
+tipos continuam separados.
+
 ONDE FICA
 ---------
 Logs/autopsia_<mesa>.jsonl, uma linha por janela fechada. É acumulativo de
@@ -46,6 +71,11 @@ from typing import Any, Dict, List
 RAIZ = Path(__file__).resolve().parent.parent
 PASTA = RAIZ / "Logs"
 MIN_PARA_CONCLUIR = 15
+
+# --- limites do conserto automático (ver o cabeçalho) ---
+MIN_JANELAS_FONTE = 12     # abaixo disso o peso não se mexe
+PISO = 0.7                 # ninguém é zerado: baixar peso ≠ podar
+TETO = 1.6                 # ninguém vira dono da votação sozinho
 
 
 def _arquivo(jogo: str) -> Path:
@@ -79,6 +109,10 @@ def registrar(jogo: str, escolhidos: List, saiu: Any, acertou: bool,
         "quando": time.time(), "saiu": alvo, "acertou": bool(acertou),
         "escolhidos": escolhidos_s, "giros": int(giros or 0),
         "tipo": tipo, "quem_tinha": quem_tinha, "n_fontes": len(fontes),
+        # QUEM VOTOU, não só quem acertou. Sem o denominador, "essa fonte
+        # tinha o número 4 vezes" não quer dizer nada -- 4 em 5 janelas é
+        # ótimo e 4 em 200 é ruído. É esta lista que permite corrigir peso.
+        "fontes": sorted(fontes.keys()),
         # quantas pessoas estavam na mesa quando esta janela correu.
         # Sem guardar isto, a percepcao dele -- "com mais gente online a
         # previsao fica mais facil" -- nao teria como ser medida depois.
@@ -162,6 +196,64 @@ def diagnostico(jogo: str, ultimos: int = 400) -> Dict[str, Any]:
     }
 
 
+def correcao(jogo: str, ultimos: int = 400) -> Dict[str, float]:
+    """O conserto: quanto o peso de cada fonte deve mudar na próxima votação.
+
+    A conta é uma só, e é justa porque compara igual com igual:
+
+        taxa da fonte   = janelas em que ela tinha o número que saiu
+                          ÷ janelas em que ela votou
+        taxa da mesa    = a mesma coisa, somando todas as fontes
+        correção        = taxa da fonte ÷ taxa da mesa
+
+    Uma fonte que só vota quando tem certeza e uma que vota em tudo aparecem
+    lado a lado nessa divisão — o denominador é o voto dela, não o total de
+    janelas. Devolve `{}` enquanto não houver laudo suficiente, e nesse caso o
+    motor roda com os pesos originais, sem nenhuma mexida.
+    """
+    laudos = [x for x in ler(jogo, ultimos) if x.get("fontes")]
+    if not laudos:
+        return {}
+    votos: Counter = Counter()
+    certeiros: Counter = Counter()
+    for x in laudos:
+        tinha = set(x.get("quem_tinha") or [])
+        for f in (x.get("fontes") or []):
+            votos[f] += 1
+            if f in tinha:
+                certeiros[f] += 1
+    total_v = sum(votos.values())
+    base = (sum(certeiros.values()) / total_v) if total_v else 0.0
+    if base <= 0:
+        # nenhuma fonte pegou nada ainda: não há o que corrigir, e inventar
+        # um ajuste aqui seria mexer no motor por conta de nada
+        return {}
+    ajuste: Dict[str, float] = {}
+    for f, v in votos.items():
+        if v < MIN_JANELAS_FONTE:
+            continue
+        m = (certeiros[f] / v) / base
+        m = min(TETO, max(PISO, m))
+        if abs(m - 1.0) >= 0.05:      # mudança irrelevante não vira ruído
+            ajuste[f] = round(m, 3)
+    return ajuste
+
+
+def texto_correcao(jogo: str, ultimos: int = 400) -> str:
+    """A frase que aparece na tela quando o conserto entra em vigor."""
+    a = correcao(jogo, ultimos)
+    if not a:
+        return ""
+    sobe = sorted([x for x in a.items() if x[1] > 1], key=lambda x: -x[1])[:3]
+    desce = sorted([x for x in a.items() if x[1] < 1], key=lambda x: x[1])[:3]
+    partes = []
+    if sobe:
+        partes.append("sobe " + ", ".join(f"{n}×{m}" for n, m in sobe))
+    if desce:
+        partes.append("desce " + ", ".join(f"{n}×{m}" for n, m in desce))
+    return "[Autópsia→conserto] " + " · ".join(partes)
+
+
 def resumo(jogo: str, ultimos: int = 400) -> str:
     d = diagnostico(jogo, ultimos)
     if not d.get("n"):
@@ -188,6 +280,9 @@ def resumo(jogo: str, ultimos: int = 400) -> str:
             if nome in pf:
                 L.append(f"      {rot[nome]:<26} {pf[nome]['taxa']:>5.0%} "
                          f"em {pf[nome]['n']} janelas")
+    tc = texto_correcao(jogo, ultimos)
+    if tc:
+        L.append("   " + tc + "  (já valendo no próximo sinal)")
     if d["n"] < MIN_PARA_CONCLUIR:
         L.append(f"   ⚠ só {d['n']} janelas — ainda é cedo para concluir")
     elif d.get("p_votacao", 0) > 0.4:

@@ -64,6 +64,19 @@ for _ in range(60):
 lim = P.limiares("teste_p")
 checa("sem variação" in lim["origem"], "volta para a ancora", lim["origem"])
 
+print("\n[7] a linha curta que vai no celular: ruim / medio / bom")
+checa(P.texto_curto("lightning", 120) == "pessoas: 120 — ruim",
+      "mesa vazia vira 'ruim'", P.texto_curto("lightning", 120))
+checa(P.texto_curto("lightning", 500) == "pessoas: 500 — médio",
+      "mesa media vira 'medio'", P.texto_curto("lightning", 500))
+checa(P.texto_curto("lightning", 900) == "pessoas: 900 — bom",
+      "mesa cheia vira 'bom'", P.texto_curto("lightning", 900))
+checa(P.texto_curto("crazy_time", 900) == "pessoas: 900 — ruim",
+      "e 900 no crazy time e ruim: a escala nao e a mesma",
+      P.texto_curto("crazy_time", 900))
+checa(P.texto_curto("lightning", None) == "",
+      "sem leitura nao manda linha nenhuma -- melhor calar")
+
 print()
 if falhas:
     print("FALHAS:", falhas); sys.exit(1)

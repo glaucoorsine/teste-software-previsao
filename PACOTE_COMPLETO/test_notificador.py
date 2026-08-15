@@ -102,6 +102,36 @@ if recebido:
     checa("4 5 9" in r["corpo"], "lembra qual era a aposta")
     checa("70%" in r["corpo"], "manda o placar junto")
 
+print("\n[6b] os DOIS placares rotulados, e o publico da mesa")
+recebido.clear()
+notificador._ultimo.update({"quando": 0.0, "texto": ""})
+notificador.notificar_resultado(
+    "mega_fire", [4, 5, 9], False, saiu=13, giros=5,
+    placar="JANELAS: 7 certas | 3 erradas (70%)",
+    placar_num="NÚMEROS: 9 certos | 41 errados (18%)",
+    publico="pessoas: 940 — bom")
+for _ in range(60):
+    if recebido: break
+    time.sleep(0.05)
+checa(len(recebido) == 1, "o aviso sai")
+if recebido:
+    corpo = recebido[0]["corpo"]
+    print("      corpo :", corpo.replace("\n", " | "))
+    checa("JANELAS:" in corpo and "NÚMEROS:" in corpo,
+          "os dois placares vao rotulados -- da pra confundir sem rotulo", corpo)
+    checa("7 certas" in corpo and "9 certos" in corpo,
+          "e cada um com o seu numero, nao o do outro", corpo)
+    checa("pessoas: 940 — bom" in corpo,
+          "e o publico da mesa vai junto", corpo)
+
+recebido.clear()
+notificador._ultimo.update({"quando": 0.0, "texto": ""})
+notificador.notificar_sinal("crazy_time", ["5", "10"], modo="OPERAR", janela=5,
+                            publico="pessoas: 4200 — ruim")
+time.sleep(0.6)
+checa(recebido and "pessoas: 4200 — ruim" in recebido[0]["corpo"],
+      "o sinal tambem leva o publico", recebido and recebido[0]["corpo"])
+
 recebido.clear()
 notificador.notificar_resultado("crazy_time", ["5"], False, saiu="1", giros=3)
 for _ in range(60):

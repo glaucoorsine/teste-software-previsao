@@ -64,6 +64,10 @@ LEITURA = {
     "media": ("mesa média", "talvez jogar"),
     "cheia": ("mesa cheia", "bom para jogar"),
 }
+# Como ele pediu para aparecer no celular: "pessoas ruim, médio, bom".
+# Aviso no celular é lido de relance, e "mesa vazia — não vale jogar" ocupa
+# uma linha inteira para dizer o que uma palavra dele já dizia.
+CURTO = {"vazia": "ruim", "media": "médio", "cheia": "bom"}
 
 
 def _ler() -> Dict[str, Any]:
@@ -136,6 +140,14 @@ def texto(jogo: str, jogadores: Optional[int]) -> str:
         return c["rotulo"]
     return (f"{c['jogadores']} pessoas · {c['rotulo']} — {c['conselho']}  "
             f"(médio ≥{c['medio']} · cheia ≥{c['alto']}, {c['origem']})")
+
+
+def texto_curto(jogo: str, jogadores: Optional[int]) -> str:
+    """Uma linha para o aviso do celular. Vazio quando não há leitura."""
+    c = classificar(jogo, jogadores)
+    if not c.get("faixa"):
+        return ""
+    return f"pessoas: {c['jogadores']} — {CURTO[c['faixa']]}"
 
 
 def resumo(jogos: List[str] = None) -> str:
