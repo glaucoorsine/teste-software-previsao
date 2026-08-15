@@ -1316,6 +1316,9 @@ class MetaSupervisora:
 # RESULTADO.bat antes e depois para comparar as duas com o mesmo critério.
 CONSENSO_PURO = True
 
+# Teto da janela de apostas. Era 3, fixo no meio do código; ele pediu 5.
+JANELA_MAX = 5
+
 # As famílias de finais que ele ensinou: 0,1,3,6 · 0,2,7,8 · 4,5,9.
 # O zero pertence a duas, e nos exemplos dele as duas valem — "veio 20 e logo
 # depois o 2" usa (0,2,7,8), "veio 1 e logo depois 21" usa (0,1,3,6). Por isso
@@ -2200,10 +2203,28 @@ class PipelinePerceptivo:
         msgs.append(f"[Baseline] top{self.k_alvos}={base_alvos} | ganho={ganho} taxa_m={taxa_m} taxa_b={taxa_b}")
 
 
-        janela=max(2, min(3, janela_base + cmd["janela_mod"]))  # 5 — teto 3
+        # JANELA ATÉ 5, e não travada em 3.
+        #
+        # Ele diagnosticou sozinho: "pega ela pra aplicar uma vez, não veio o
+        # número, já era. Ou pra uma janela pequena de três — se tivesse
+        # colocado de cinco, estava inserido, acertado, e não teria descartado."
+        #
+        # Estava travada em 3 por um `min(3, ...)` no código: nem se o cérebro
+        # quisesse 5 ele conseguia. Medido no histórico dele, sobre 7.949
+        # ativações no lightning e 11.233 no immersive, a janela maior melhora
+        # a razão contra o acaso:
+        #
+        #     lightning   janela 3: 0,57x    janela 5: 0,63x
+        #     immersive   janela 3: 0,37x    janela 5: 0,41x
+        #
+        # A melhora é modesta e não resolve o problema de fundo, mas é real e a
+        # decisão é dele. O teto agora é 5, e a preferência do operador manda.
+        janela = max(2, min(JANELA_MAX, janela_base + cmd["janela_mod"]))
         if self.prefs.get("janela") is not None:
-            try: janela = max(2, min(3, int(self.prefs["janela"])))
-            except Exception: pass
+            try:
+                janela = max(2, min(JANELA_MAX, int(self.prefs["janela"])))
+            except Exception:
+                pass
 
         dist_sel = {str(a): float(dist_l.get(a, probs.get(a, 0))) for a in alvos}
         sel_ui = list(active_selection or [])

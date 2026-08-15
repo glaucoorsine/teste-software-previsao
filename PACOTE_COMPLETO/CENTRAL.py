@@ -781,6 +781,21 @@ class PainelMesa(ctk.CTkFrame):
                                      "settled": ts, "window_done": True}
             registrar(f"{self.jogo} JANELA {'OK' if fechou_bem else 'ERRO'} "
                       f"ok={self.ok} err={self.err}")
+            # Avisa no celular COMO terminou. Ele pediu: o notificador mandava
+            # a entrada e nunca o desfecho, então quem está longe da tela
+            # recebia meia informação e não formava percepção nenhuma sobre o
+            # que estava funcionando.
+            try:
+                from notificador import notificar_resultado
+                _tot = self.ok + self.err
+                notificar_resultado(
+                    self.jogo, self.ultimas_escolhas or [], fechou_bem,
+                    saiu=n, giros=int(self.ultima_janela or 0),
+                    placar=(f"placar: {self.ok} certas de {_tot} "
+                            f"({self.ok / _tot:.0%})" if _tot else ""),
+                    log_fn=registrar)
+            except Exception as e:
+                registrar(f"{self.jogo} aviso de resultado: {e}")
             self.escolhas = []
             self.janela_hit = False
         else:

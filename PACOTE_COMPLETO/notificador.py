@@ -199,6 +199,47 @@ def notificar_sinal(jogo: str, numeros: List[Any], modo: str = "",
     notificar(f"{jogo.upper()} — sinal", corpo, log_fn=log_fn)
 
 
+def notificar_resultado(jogo: str, numeros: List[Any], acertou: bool,
+                        saiu: Any = None, giros: int = 0, placar: str = "",
+                        log_fn=None) -> None:
+    """Como terminou a janela que foi avisada.
+
+    Pedido dele: "ele normalmente está mandando janelas, mas ele não fala se
+    acertou, se errou. Quando ele manda os sinais, por exemplo manda uma
+    janela de três giros, ele poderia dizer no final se acertou ou errou."
+
+    Sem isso o aviso é meia informação: chega a entrada e nunca chega o
+    desfecho, então quem está longe da tela não sabe se aquilo deu certo —
+    e não consegue formar percepção nenhuma sobre o que está funcionando.
+
+    O antirrepetição de `notificar` não vale aqui: o resultado é um evento
+    único e não pode ser engolido por parecer com o aviso anterior. Por isso
+    o envio é direto.
+    """
+    nums = " ".join(str(n) for n in (numeros or []))
+    marca = "ACERTOU" if acertou else "errou"
+    titulo = f"{jogo.upper()} - {marca}"
+    corpo = f"aposta: {nums}" if nums else "janela encerrada"
+    if saiu is not None:
+        corpo += f"\nsaiu: {saiu}"
+    if giros:
+        corpo += f"\nfechou em {giros} giro(s)"
+    if placar:
+        corpo += f"\n{placar}"
+
+    def _tarefa():
+        err = _enviar(titulo, corpo)
+        if err and log_fn:
+            try:
+                log_fn(f"notificacao resultado falhou: {err}")
+            except Exception:
+                pass
+
+    if not ativo():
+        return
+    threading.Thread(target=_tarefa, daemon=True).start()
+
+
 def testar() -> str:
     """Manda um aviso de teste. Devolve mensagem legível do que aconteceu."""
     c = _cfg()

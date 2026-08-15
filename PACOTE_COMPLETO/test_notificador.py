@@ -83,8 +83,47 @@ notificador.notificar_sinal("lightning", [4, 5, 9, 14], modo="OPERAR", janela=4,
 time.sleep(0.6)
 checa(len(recebido) == 0, "nao repete o mesmo sinal", len(recebido))
 
+
+
+print("\n[6] o desfecho da janela tambem avisa")
+recebido.clear()
+notificador._ultimo.update({"quando": 0.0, "texto": ""})
+notificador.notificar_resultado("lightning", [4, 5, 9], True, saiu=5, giros=3,
+                                placar="placar: 7 certas de 10 (70%)")
+for _ in range(60):
+    if recebido: break
+    time.sleep(0.05)
+checa(len(recebido) == 1, "o acerto vira aviso", len(recebido))
+if recebido:
+    r = recebido[0]
+    print("      titulo:", r["titulo"]); print("      corpo :", r["corpo"])
+    checa("ACERTOU" in (r["titulo"] or ""), "diz que acertou", r["titulo"])
+    checa("saiu: 5" in r["corpo"], "diz qual numero saiu")
+    checa("4 5 9" in r["corpo"], "lembra qual era a aposta")
+    checa("70%" in r["corpo"], "manda o placar junto")
+
+recebido.clear()
+notificador.notificar_resultado("crazy_time", ["5"], False, saiu="1", giros=3)
+for _ in range(60):
+    if recebido: break
+    time.sleep(0.05)
+checa(len(recebido) == 1, "o erro tambem avisa")
+if recebido:
+    checa("errou" in (recebido[0]["titulo"] or ""), "e diz que errou",
+          recebido[0]["titulo"])
+
+# o antirrepeticao nao pode engolir um desfecho
+recebido.clear()
+for _ in range(3):
+    notificador.notificar_resultado("lightning", [1], False, saiu="9", giros=3)
+time.sleep(0.6)
+checa(len(recebido) == 3,
+      "desfecho nunca e engolido pelo antirrepeticao — cada janela e um evento",
+      len(recebido))
+
 srv.shutdown()
 print()
 if falhas:
-    print("FALHAS:", falhas); sys.exit(1)
+    print("FALHAS:", falhas)
+    sys.exit(1)
 print("NTFY_OK")
