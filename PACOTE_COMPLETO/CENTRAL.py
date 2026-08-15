@@ -1180,6 +1180,14 @@ class PainelMesa(ctk.CTkFrame):
                     texto = _res_aud(self.jogo) + "\n" + "-" * 44 + "\n" + texto
                 except Exception:
                     pass
+                # o que os compendios dele dizem desta mesa
+                try:
+                    from academia_autonoma.biblioteca_teorias import (
+                        resumo as _res_bib)
+                    texto = (_res_bib(self.jogo) + "\n" + "-" * 44 + "\n"
+                             + texto)
+                except Exception:
+                    pass
                 # e o que as sete IAs de multiplicador estao vendo agora
                 try:
                     from academia_autonoma.previsores_multiplicador import (

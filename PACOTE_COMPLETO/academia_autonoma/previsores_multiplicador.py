@@ -326,6 +326,51 @@ IAS_CRAZY = (
 )
 
 
+# DUAS PERGUNTAS, NÃO UMA — e a resposta muda de mesa para mesa.
+#
+# O estudo de 416 fichas dele mede cada mesa por duas lentes separadas, e o
+# resultado vem invertido entre elas:
+#
+#     mesa            SE vem destaque       o TAMANHO
+#     Lighting             +8,2%              -59,2%
+#     Mega Fire            -3,4%              -16,5%
+#     Crazy Time          -15,4%               +8,7%
+#     Crazy Time A         -9,9%              +30,1%
+#
+# "Detectar ocorrência e estimar intensidade são tarefas independentes" — é a
+# frase do estudo, e os números provam: no Lighting a magnitude perde 59%
+# enquanto a ocorrência ganha 8%.
+#
+# As sete IAs misturavam as duas. INTENSIDADE (que soma multiplicadores, ou
+# seja, mede TAMANHO) votava lado a lado com QUENTE (que conta aparições, ou
+# seja, mede OCORRÊNCIA). Somar um sinal com um anti-sinal é o jeito mais
+# discreto de zerar os dois.
+#
+# Agora cada IA declara que pergunta responde, e o voto pesa mais na lente que
+# aquela mesa mostrou ter ganho. Nada é excluído: a lente fraca continua
+# votando, mais baixo.
+LENTE = {
+    "QUENTE": "ocorrencia", "ATRASO": "ocorrencia", "VIZINHOS": "ocorrencia",
+    "FAMILIA": "ocorrencia", "REPETE": "ocorrencia", "SETOR": "ocorrencia",
+    "INTENSIDADE": "magnitude",
+    "PAGOU": "ocorrencia", "PUXA": "ocorrencia", "RITMO": "magnitude",
+}
+PESO_LENTE_BOA = 1.0
+PESO_LENTE_FRACA = 0.6
+
+
+def peso_da_lente(jogo: str, nome_ia: str) -> float:
+    """Quanto o voto desta IA vale nesta mesa, pela lente que ela responde."""
+    try:
+        from academia_autonoma.biblioteca_teorias import lente_util
+        melhor = (lente_util(jogo) or {}).get("melhor")
+    except Exception:
+        melhor = None
+    if not melhor:
+        return PESO_LENTE_BOA          # sem estudo para esta mesa: todas iguais
+    return PESO_LENTE_BOA if LENTE.get(nome_ia) == melhor else PESO_LENTE_FRACA
+
+
 def ias(jogo: str):
     return IAS_CRAZY if str(jogo) in CRAZY else IAS_ROLETA
 
@@ -363,8 +408,10 @@ def prever(jogo: str, historico: List[dict],
         palpite = _topo(peso, k)
         por_ia[nome] = palpite
         # voto com decaimento por posição: o 1º da lista de cada IA pesa mais
+        # nesta mesa, ocorrencia e magnitude nao valem igual (ver LENTE)
+        wl = peso_da_lente(jogo, nome)
         for i, n in enumerate(palpite):
-            votos[str(n)] += 1.0 / (1 + i * 0.3)
+            votos[str(n)] += wl / (1 + i * 0.3)
     consenso = [n for n, _ in sorted(votos.items(), key=lambda x: -x[1])][:k]
     quantas = {n: sum(1 for p in por_ia.values() if str(n) in [str(x) for x in p])
                for n in consenso}
@@ -405,6 +452,7 @@ def pontuar(jogo: str, escolhidos: List[Any],
         # normaliza dentro da IA: senão INTENSIDADE (que soma multiplicadores)
         # esmagaria QUENTE (que conta ocorrências) só pela escala do número
         maior = max(peso.values()) or 1.0
+        wl = peso_da_lente(jogo, nome)
         for n in alvo:
             v = 0.0
             for chave, w in peso.items():
@@ -412,7 +460,7 @@ def pontuar(jogo: str, escolhidos: List[Any],
                     v = float(w)
                     break
             if v > 0:
-                votos[n] += v / maior
+                votos[n] += (v / maior) * wl
                 quantas[n] += 1
     if not votos:
         return []

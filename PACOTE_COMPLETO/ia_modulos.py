@@ -1334,6 +1334,40 @@ K_MIN_ROLETA, K_MAX_ROLETA = 5, 10
 K_MIN_CT, K_MAX_CT = 1, 3
 FRACAO_APOIO = 0.5
 
+# ─────────────────────────────────────────── o piso de acerto que ele pediu
+#
+#     "deixe o mínimo de acerto de numeros e janelas em 53%"
+#
+# As duas metades desse pedido têm respostas diferentes, e a conta é curta:
+#
+#   JANELA  o número sair em ALGUM giro da janela. Chance = 1-(1-k/37)^j.
+#           Com janela de 5, seis números já dão 58,7%. Cabe folgado na faixa
+#           de 5 a 10 que ele fixou, então o software passa a garantir isso
+#           sozinho: escolhe o menor k que alcança o piso.
+#
+#   NÚMERO  o número sair NAQUELE giro. Chance = k/37, e não tem jeito de
+#           contornar: 53% exige 20 números dos 37. Com os 10 do teto dele o
+#           máximo possível é 27%, e chegar a 53% pediria vantagem de 1,96x
+#           sobre o acaso — a melhor já medida no log real foi 1,09x.
+#
+# Por isso o piso de janela é automático e o de número é uma ESCOLHA dele,
+# desligada por padrão. Ligar COBERTURA_LARGA sobe a roleta para 20 números e
+# entrega os 53% de acerto por giro — sabendo que o que muda é o tamanho da
+# aposta, não a pontaria. O placar continua mostrando os dois números lado a
+# lado, e é a razão contra o acaso que diz se houve ganho.
+ALVO_ACERTO_JANELA = 0.53
+COBERTURA_LARGA = False          # True -> roleta com 20 numeros (~54% por giro)
+K_COBERTURA_LARGA = 20
+
+
+def k_para_alvo(janela: int, alvo: float, n_classes: int, teto: int) -> int:
+    """O menor k cuja janela alcança o alvo. Nunca passa do teto."""
+    j = max(1, int(janela or 1))
+    for k in range(1, teto + 1):
+        if 1.0 - (1.0 - k / max(1, n_classes)) ** j >= alvo:
+            return k
+    return teto
+
 
 def cortar_por_apoio(ordenados, score, k_min, k_max):
     """Quantos números a votação sustenta, dentro da faixa que ele fixou.
@@ -1419,6 +1453,11 @@ class PipelinePerceptivo:
         # senão aumentar a lista viraria "melhora" de mentira no placar.
         self.k_min = K_MIN_CT if self.is_ct else K_MIN_ROLETA
         self.k_max = K_MAX_CT if self.is_ct else K_MAX_ROLETA
+        # cobertura larga: escolha dele, desligada por padrao (ver o comentario
+        # em COBERTURA_LARGA). So faz sentido na roleta -- no crazy time sao 8
+        # simbolos e cobrir 20 nao existe.
+        if COBERTURA_LARGA and not self.is_ct:
+            self.k_min = self.k_max = K_COBERTURA_LARGA
         self.k_alvos = self.k_max
         self.prefs = {"peso_isol":1.0,"boost_anti":False,"prioritizar_atraso":False,"reduzir_12":False,"janela":None}
 
@@ -1978,6 +2017,31 @@ class PipelinePerceptivo:
                     + f" (peso {_s.get('peso_total',0)})"
                 )
             msgs.append("[Consenso/votos] " + " | ".join(_linhas))
+        # FICHA 226 DO COMPÊNDIO DELE — CONSENSO ILUSÓRIO.
+        #
+        #   "Muitos agentes derivados do mesmo código podem parecer
+        #    independentes. Muitas respostas iguais podem ser cópias da mesma
+        #    evidência, portanto unanimidade aparente não multiplica informação."
+        #
+        # Dizer "21 ← 4 teorias" sugere quatro confirmações independentes. Se as
+        # quatro leem a mesma evidência, é UMA confirmação repetida quatro vezes,
+        # e a confiança que ele lê na tela está inflada por construção. O número
+        # efetivo mede isso pela sobreposição real entre as listas.
+        try:
+            from academia_autonoma.biblioteca_teorias import (
+                n_efetivo as _n_ef, texto_n_efetivo as _txt_ef)
+            _votos_fonte = {h.get("nome", "?"): (h.get("nums") or [])
+                            for h in hips if h.get("nums")}
+            _pesos_fonte = {h.get("nome", "?"): float(h.get("peso", 1))
+                            for h in hips}
+            _ef = _n_ef(_votos_fonte, _pesos_fonte)
+            if _ef.get("nominal"):
+                msgs.append("[Consenso/independência] " + _txt_ef(_ef))
+                if _ef.get("pares"):
+                    msgs.append("   quase a mesma voz: " + ", ".join(
+                        f"{a}~{b} ({r:.0%})" for a, b, r in _ef["pares"]))
+        except Exception as _e:
+            msgs.append(f"[Consenso/independência] indisponível: {type(_e).__name__}")
         top_p = sorted(probs.items(), key=lambda x: -x[1])[:8]
         msgs.append("[Probs] " + ", ".join(f"{k}:{v:.3f}" for k,v in top_p))
         msgs.append(f"[Baseline] top{self.k_alvos}={base_alvos}")
@@ -2350,6 +2414,29 @@ class PipelinePerceptivo:
                 janela = max(2, min(JANELA_MAX, int(self.prefs["janela"])))
             except Exception:
                 pass
+
+        # O PISO DE 53% DE ACERTO DE JANELA — o pedido dele.
+        #
+        # So aqui, porque so agora a janela e conhecida: o k necessario depende
+        # dela (janela 5 pede 6 numeros; janela 3 pede 9). Tentar isto antes de
+        # `janela` existir foi um NameError que o test_lint pegou -- o mesmo
+        # tipo de erro que derrubou a v102.
+        #
+        # Completa com os proximos mais votados, na ordem do consenso: quem
+        # entra para fechar o piso entra por apoio, nao por sorteio.
+        if (alvos and not self.is_ct and not COBERTURA_LARGA
+                and locals().get("aprovados")):
+            _kalvo = k_para_alvo(janela, ALVO_ACERTO_JANELA,
+                                 self.n_classes, self.k_max)
+            if len(alvos) < _kalvo:
+                for _a in aprovados:
+                    if _a not in alvos:
+                        alvos.append(_a)
+                    if len(alvos) >= _kalvo:
+                        break
+                msgs.append(f"[Piso 53%] janela de {janela} giros pede "
+                            f"{_kalvo} numeros — lista completada com os "
+                            f"proximos mais votados")
 
         dist_sel = {str(a): float(dist_l.get(a, probs.get(a, 0))) for a in alvos}
         sel_ui = list(active_selection or [])

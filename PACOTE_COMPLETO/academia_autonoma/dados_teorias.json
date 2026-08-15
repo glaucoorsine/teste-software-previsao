@@ -1,0 +1,1282 @@
+[
+{
+"n": 1,
+"conceito": "Uniformidade marginal",
+"eixo": "series",
+"tese": "Cada classe possui a mesma probabilidade sob um modelo nulo simples. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Considere X_t em {0,…,K−1} e N_j=Σ_t 1(X_t=j). Sob H0, (N_0,…,N_{K−1}) segue Multinomial(n;1/K,…,1/K), com estimador p̂_j=N_j/n. O estimando de afastamento pode ser D=Σ_j(p̂_j−1/K)²/(1/K), acompanhado por resíduos padronizados por classe. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avaliadores ",
+"mecanismo": "A camada observacional produz contagens; a camada amostral introduz flutuação multinomial; e uma camada estrutural, se existir, altera o vetor p. Uniformidade marginal trata apenas da composição total e não da ordem dos eventos, de modo que dependência temporal pode coexistir com marginais uniformes. A decomposição distingue associação matemática, processo de coleta e interpret",
+"diagnostico": "• Calcular o qui-quadrado de Pearson com resíduos por classe e verificar se as frequências esperadas são suficientemente grandes. Quando houver células esparsas, substituir a aproximação assintótica por Monte Carlo multinomial sob probabilidades iguais. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Comp",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 6,
+"conceito": "Sobredispersão",
+"eixo": "series",
+"tese": "A variabilidade entre blocos pode exceder aquela prevista por uma distribuição simples. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para uma classe ou grupo, defina Y_b como a contagem em blocos de tamanho m e φ=Var(Y_b)/[m p(1−p)]. Sob independência binomial, φ≈1; φ>1 quantifica sobredispersão, enquanto uma formulação beta-binomial ou Dirichlet-multinomial estima correlação intrabloco ρ. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduz",
+"mecanismo": "Sobredispersão emerge quando blocos possuem probabilidades latentes distintas, quando eventos se agrupam ou quando uma variável não observada modula a taxa. A variância total se decompõe em variância condicional mais variância entre regimes, mostrando por que mistura heterogênea excede o modelo independente. A decomposição distingue associação matemática, processo de coleta e i",
+"diagnostico": "• Estimar φ em vários tamanhos de bloco definidos antes da análise, com intervalos por bootstrap de blocos. Uma curva consistentemente acima de um é mais informativa que um único tamanho escolhido após observar a sequência. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Ajustar modelos binomial e beta-bi",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 11,
+"conceito": "Subdispersão",
+"eixo": "series",
+"tese": "Um mecanismo regulador pode produzir variação menor que a referência independente. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Com Y_b definido como contagem em blocos fixos, use φ=Var(Y_b)/[m p(1−p)] e interprete φ<1 como subdispersão. Modelos como Conway–Maxwell-binomial ou binomial generalizada introduzem um parâmetro ν de regularização, cujo estimando relevante mede quão comprimida é a distribuição em torno da média. A especificação deve declarar suporte, unidade de análise e convenção de índice, p",
+"mecanismo": "Subdispersão pode resultar de restrições, reposição incompleta, alternância negativa ou mecanismos que compensam desvios locais. Na decomposição temporal, uma dependência negativa reduz a covariância acumulada e, portanto, a variância das somas em bloco abaixo da referência independente. A decomposição distingue associação matemática, processo de coleta e interpretação causal, ",
+"diagnostico": "• Comparar a variância empírica das contagens com envelopes simulados condicionados à composição total. A análise deve cobrir tamanhos de bloco predeterminados e corrigir a dependência entre escalas. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Medir a frequência de blocos extremamente cheios ou vazios",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 16,
+"conceito": "Autocorrelação curta",
+"eixo": "series",
+"tese": "Eventos próximos podem carregar dependência linear residual. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Represente cada classe por indicadores I_{t,j}=1(X_t=j) e estime ρ_j(h)=Cov(I_{t,j},I_{t−h,j})/Var(I_{t,j}) para atrasos h pequenos. Um estimando global pode ser Q_H, estatística portmanteau que agrega autocorrelações até H com pesos de variância adequados. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzív",
+"mecanismo": "Persistência produz covariância positiva entre eventos próximos, enquanto alternância sistemática produz covariância negativa. A codificação por indicadores evita impor distância numérica artificial entre categorias e permite separar dependência de uma classe específica de um efeito global. A decomposição distingue associação matemática, processo de coleta e interpretação causa",
+"diagnostico": "• Traçar autocorrelações por atraso com envelopes de permutação que preservem a composição marginal. Intervalos simultâneos são necessários porque vários atrasos e classes são examinados ao mesmo tempo. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Aplicar uma versão categórica do teste portmanteau ou t",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 21,
+"conceito": "Dependência não linear",
+"eixo": "series",
+"tese": "Relações podem existir sem correlação linear. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "A medida central é I_h=Σ_{a,b} p_h(a,b) log₂[p_h(a,b)/(p(a)p(b))], informação mútua entre X_t e X_{t−h}. Pode-se estimar também informação condicional I(X_t;X_{t−h}|Z_t), com correção de viés por permutação ou estimadores bayesianos para tabelas esparsas. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível",
+"mecanismo": "Dependências não monotônicas e relações de muitos-para-muitos alteram a distribuição conjunta sem necessariamente produzir correlação. A informação mútua captura qualquer desvio da fatoração, mas mistura estrutura genuína com viés positivo causado por muitas células e amostra finita. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evit",
+"diagnostico": "• Comparar I_h observada à distribuição obtida por permutações da ordem, usando o mesmo estimador em todas as réplicas. O centro da distribuição permutada quantifica o viés de dimensionalidade. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Inspecionar contribuições locais p(a,b)log[p(a,b)/(p(a)p(b))] e ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 26,
+"conceito": "Mudança de regime",
+"eixo": "series",
+"tese": "A distribuição pode variar entre períodos distintos. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Modele X_t com parâmetro θ_1 para t≤τ e θ_2 para t>τ; o estimando é τ̂=argmax_τ[ℓ(θ̂_1;X_{1:τ})+ℓ(θ̂_2;X_{τ+1:n})−pen(τ)]. A evidência pode ser resumida por ganho de log-verossimilhança penalizado ou probabilidade posterior de ponto de mudança. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avalia",
+"mecanismo": "Uma alteração persistente em composição, dispersão ou dependência cria segmentos internamente mais homogêneos que a série completa. O mecanismo estatístico não identifica a causa externa; apenas localiza incompatibilidade entre um único parâmetro estável e uma representação segmentada. A decomposição distingue associação matemática, processo de coleta e interpretação causal, ev",
+"diagnostico": "• Calcular estatísticas CUSUM ou razão de verossimilhanças com penalização para a busca de τ. O valor de referência deve incorporar o fato de que muitos pontos candidatos foram examinados. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Comparar frequências e intervalos de confiança antes e depois do pont",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 31,
+"conceito": "Memória longa",
+"eixo": "series",
+"tese": "Dependências fracas podem acumular-se por muitos atrasos. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Uma formulação usa γ(h)≈c h^{2H−2} para grandes h, com H>1/2 indicando persistência de longo alcance; outra usa integração fracionária (1−B)^d X_t=ε_t, em que d=H−1/2. O estimando é H ou d, acompanhado de incerteza e análise de sensibilidade à codificação categórica. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça ",
+"mecanismo": "Memória longa implica que dependências fracas decaem por lei de potência, de modo que agregações em escalas crescentes conservam correlação. Isso é diferente de poucos atrasos fortes, tendência, periodicidade ou mistura de regimes, embora todos possam imitar um H elevado em amostras curtas. A decomposição distingue associação matemática, processo de coleta e interpretação causa",
+"diagnostico": "• Estimar H por métodos distintos, como DFA e Whittle local, e procurar concordância em uma faixa de escalas declarada. Um ajuste visual em log–log não é suficiente. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Comparar a função de autocorrelação com decaimentos exponencial e potencial usando critérios",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 36,
+"conceito": "Reversão à média",
+"eixo": "series",
+"tese": "Extremos locais podem ser seguidos por valores menos extremos sem causa especial. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Defina um escore Y_t e um evento extremo A_t={Y_t>q} ou {Y_t<q'}, com limiares fixos. O estimando pode ser Δ=E[Y_{t+h}−μ|A_t] ou o coeficiente β em E[Y_{t+h}−μ|Y_t−μ]=β(Y_t−μ), onde |β|<1 expressa retorno estatístico. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avaliadores independentes.",
+"mecanismo": "Selecionar observações extremas combina componente persistente e ruído transitório; na medição seguinte, o ruído não tende a repetir o mesmo sinal. O retorno ao centro pode ocorrer sem força corretiva, sendo consequência do condicionamento e da correlação imperfeita. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis d",
+"diagnostico": "• Comparar trajetórias após extremos com trajetórias iniciadas em quantis equivalentes de séries substitutas. Os limiares e o horizonte devem ser fixados antes da extração. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Estimar β com correção para erro de medição e apresentar dispersão condicional comple",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 41,
+"conceito": "Agrupamento de raridades",
+"eixo": "series",
+"tese": "Eventos raros podem aparentar concentração temporal. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Se R_t=1 indica um evento raro definido previamente com taxa p, uma estatística de varredura é S_w=max_s Σ_{t=s}^{s+w−1}R_t. Estimandos complementares incluem o menor intervalo contendo k raridades e a dispersão das lacunas G_i entre ocorrências. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por aval",
+"mecanismo": "Mesmo sob independência, o máximo escolhido entre muitas janelas tende a parecer concentrado. Agrupamento estrutural existe apenas quando S_w ou a distribuição de G_i excede a referência que já incorpora a busca sobre posições e janelas. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis diferentes sejam fundidos na me",
+"diagnostico": "• Simular sequências Bernoulli ou permutar os rótulos de raridade e recalcular o máximo sobre exatamente as mesmas janelas. Isso corrige o viés de procurar o trecho mais chamativo. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Analisar lacunas por função de sobrevivência e coeficiente de variação, com t",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 46,
+"conceito": "Processo de renovação",
+"eixo": "series",
+"tese": "Intervalos entre eventos podem seguir uma distribuição própria. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Se T_i são tempos de ocorrência e G_i=T_i−T_{i−1} as lacunas, um processo de renovação assume G_i iid com distribuição F. O estimando central pode ser a função de risco discreta h(k)=P(G=k|G≥k), além da média de renovação μ_G e do parâmetro de dispersão das lacunas. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça r",
+"mecanismo": "A estrutura está nos intervalos, não nos rótulos absolutos. Risco constante corresponde a lacunas geométricas; risco crescente sugere regularização, e risco decrescente sugere heterogeneidade ou agrupamento, sem que essas formas por si identifiquem causa. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis diferentes se",
+"diagnostico": "• Construir Kaplan–Meier discreto para lacunas, incluindo censura nas extremidades, e comparar h(k) a uma constante. Intervalos devem refletir o pequeno número de ocorrências. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Ajustar modelos geométrico, Weibull discreto ou mistura e comparar critérios penal",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 51,
+"conceito": "Periodicidade",
+"eixo": "series",
+"tese": "Um componente cíclico pode modular frequências. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para indicadores I_{t,j}, o periodograma é P_j(ω)=n^{-1}|Σ_t(I_{t,j}−p̂_j)e^{-iωt}|². O estimando é a frequência ω* de um pico persistente, sua potência ajustada pela busca e, quando aplicável, a coerência de fase entre segmentos. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avaliadores independ",
+"mecanismo": "Um componente periódico redistribui probabilidade de forma cíclica e produz energia espectral concentrada em uma frequência e seus harmônicos. Ruído finito também produz picos; por isso, estabilidade de frequência e fase é mais exigente que a maior ordenada do periodograma. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que n",
+"diagnostico": "• Calcular periodogramas de indicadores ou grupos predefinidos e comparar o pico máximo a substitutos com mesma composição. A referência deve corrigir a busca em todas as frequências. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Dividir a série em segmentos e estimar coerência de fase e frequência. Um ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 56,
+"conceito": "Sazonalidade oculta",
+"eixo": "series",
+"tese": "Condições externas recorrentes podem criar ciclos aparentes. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Modele P(X_t=j|Z_t)=softmax(α_j+β_j^T Z_t), onde Z_t contém fase, calendário ou condição externa registrada. O estimando é β_j ou a amplitude harmônica A_j=√(β_{j,sin}²+β_{j,cos}²), avaliada fora do conjunto usado para escolher a covariável. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avaliador",
+"mecanismo": "Uma variável externa recorrente pode modular a distribuição sem que a própria sequência contenha um relógio evidente. Ao omitir Z_t, a mistura de fases aparece como clusters, ciclos imperfeitos ou mudança de regime. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis diferentes sejam fundidos na mesma explicação.",
+"diagnostico": "• Associar cada evento a timestamps e covariáveis externas obtidas independentemente, depois comparar modelos com e sem Z. A granularidade temporal deve ser definida antes. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Verificar repetição do mesmo efeito em ciclos completos e medir estabilidade de fase.",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 61,
+"conceito": "Efeito de borda",
+"eixo": "series",
+"tese": "Início e fim do recorte podem distorcer estimativas. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Se θ̂_{1:n} é a estimativa no recorte completo, defina B_k=θ̂_{1:n}−θ̂_{k+1:n−k} para medir sensibilidade ao corte de k observações em cada extremidade. Para lacunas, use verossimilhança censurada, tratando tempos incompletos à esquerda e à direita. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por a",
+"mecanismo": "Janelas finitas truncam sequências, lacunas e ciclos, fazendo extremos parecerem especiais e removendo contexto. Operações de suavização e análise espectral também atribuem pesos assimétricos perto das bordas, produzindo artefatos que não existem no interior. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis diferente",
+"diagnostico": "• Recalcular estatísticas com uma grade predefinida de aparas k e apresentar a trajetória B_k. Mudanças abruptas revelam dependência excessiva das extremidades. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Usar métodos de censura para intervalos e padding controlado para espectro, comparando alternativ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 66,
+"conceito": "Viés de sobrevivência",
+"eixo": "series",
+"tese": "Apenas padrões lembrados ou mantidos podem entrar no relatório. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Se S_i=1 indica que uma observação ou hipótese entrou no arquivo, a quantidade observada é P(Y|S=1), não P(Y). O estimando de correção pode usar pesos 1/π_i, com π_i=P(S_i=1|X_i), ou limites de sensibilidade quando π_i não é conhecido. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avaliadores ind",
+"mecanismo": "Itens memoráveis, bem-sucedidos ou visualmente fortes têm maior chance de ser preservados e relatados. Condicionar em S cria uma amostra enriquecida, elevando associações e taxas aparentes mesmo que a população completa não tenha o mesmo perfil. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis diferentes sejam fundid",
+"diagnostico": "• Construir um fluxograma de inclusão com números de itens considerados, descartados e ausentes. Taxas de retenção por tipo revelam seleção diferencial. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Comparar registros automáticos completos com subconjuntos escolhidos manualmente, quando ambos existem. D",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 71,
+"conceito": "Múltiplas comparações",
+"eixo": "series",
+"tese": "Muitas buscas produzem vencedores por acaso. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para m hipóteses H_1,…,H_m, o erro familiar é FWER=P(V≥1), enquanto FDR=E[V/max(R,1)]. Estimandos ajustados incluem p_Bonf=min(mp,1), q-valores de Benjamini–Hochberg e a distribuição do máximo T_max=max_k T_k sob a nulidade conjunta. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avaliadores indep",
+"mecanismo": "Cada busca oferece oportunidade de um extremo casual; selecionar apenas o menor p ou a narrativa mais forte condiciona em um vencedor. O máximo observado cresce com m e com a flexibilidade das análises, mesmo quando todas as hipóteses nulas são verdadeiras. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis diferentes ",
+"diagnostico": "• Registrar o universo de testes, inclusive variações de janela, grupo e atraso, e calcular p ajustado ou q-valor. Contar apenas resultados relatados subestima m. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Usar permutação de todo o pipeline e guardar o melhor escore de cada réplica. Esse máximo nulo ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 76,
+"conceito": "Instabilidade amostral",
+"eixo": "series",
+"tese": "Estimativas raras mudam muito com poucas observações. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para um estimando θ̂=T(X_1,…,X_n), avalie sua distribuição por bootstrap e sua influência IF_i≈(n−1)(θ̂−θ̂_{(−i)}). Quantidades centrais são o erro-padrão, a amplitude do intervalo e a fração da estimativa atribuível aos pontos mais influentes. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avalia",
+"mecanismo": "Amostras finitas representam apenas uma realização, e estatísticas baseadas em eventos raros ou células esparsas mudam quando poucos pontos são removidos. Não linearidades, seleção de máximos e parâmetros próximos à fronteira amplificam essa sensibilidade. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis diferentes s",
+"diagnostico": "• Executar bootstrap adequado à dependência, comparando reamostragem iid e por blocos. Intervalos muito diferentes indicam que a estrutura temporal importa. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Produzir análise leave-one-out e leave-k-out para localizar observações influentes. A conclusão deve ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 81,
+"conceito": "Calibração probabilística",
+"eixo": "series",
+"tese": "Probabilidades declaradas devem corresponder a frequências observadas. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para declarações q_i e desfechos Y_i, calibração ideal satisfaz E[Y_i|q_i=q]=q. Estimandos incluem intercepto α e inclinação β em modelo de recalibração, Brier BS=n^{-1}Σ(q_i−Y_i)² e erro de calibração integrado com correção para viés de bins. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avaliad",
+"mecanismo": "Um sistema calibrado associa níveis declarados a frequências empíricas correspondentes, independentemente de sua capacidade de ordenar casos. Excesso de confiança comprime ocorrências reais em torno de probabilidades menores que as anunciadas; subconfiança produz o padrão inverso. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitand",
+"diagnostico": "• Construir curva de confiabilidade com suavização e intervalos, evitando bins escolhidos por aparência. Relatar quantidade de casos em cada região de probabilidade. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Decompor Brier em incerteza, resolução e confiabilidade e comparar com uma referência consta",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 86,
+"conceito": "Discriminação sem calibração",
+"eixo": "series",
+"tese": "Um modelo pode ordenar casos sem produzir probabilidades corretas. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Se S_i é um escore e Y_i binário, AUC=P(S^+>S^−)+0,5P(S^+=S^−) mede ordenação. Calibração é estimada separadamente por α e β ou escores próprios; o alvo é o par (AUC,α,β), não uma única medida de desempenho. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avaliadores independentes.",
+"mecanismo": "Transformações monotônicas de S preservam a ordem e, portanto, a AUC, mas alteram probabilidades e confiança. Um sistema pode separar classes razoavelmente e ainda atribuir níveis numéricos incorretos, ou ser calibrado sem discriminar além da taxa base. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis diferentes seja",
+"diagnostico": "• Relatar simultaneamente ROC, curva precisão-revocação, Brier e gráfico de confiabilidade. Métricas respondem perguntas diferentes e devem compartilhar a mesma amostra de avaliação. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Aplicar recalibração monotônica em conjunto separado e verificar se AUC per",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 91,
+"conceito": "Modelo hierárquico",
+"eixo": "series",
+"tese": "Amostras relacionadas podem compartilhar informação sem serem fundidas. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para séries ou grupos g, use p_g~Dirichlet(α) e X_g~Multinomial(n_g,p_g), ou logitos θ_g~N(μ,τ²). Os estimandos são μ, τ e os p_g posteriores parcialmente agrupados, cuja contração depende de n_g e da variabilidade entre grupos. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avaliadores independen",
+"mecanismo": "O modelo compartilha informação entre unidades relacionadas sem forçá-las a igualdade. Grupos pequenos são atraídos para a média comum, enquanto grupos com muitos dados conservam maior especificidade; τ quantifica heterogeneidade residual. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis diferentes sejam fundidos na ",
+"diagnostico": "• Comparar posterior por grupo, grau de contração e distribuição de τ. Grupos que dominam μ ou permanecem extremos merecem análise de influência. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Realizar checagens preditivas posteriores apenas sobre estatísticas históricas agregadas, como dispersão e frequ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 96,
+"conceito": "Validação prequential",
+"eixo": "series",
+"tese": "Uma teoria é pontuada antes de cada novo ponto arquivado. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "No passo t, um modelo treinado apenas em D_{1:t−1} emite distribuição q_t e recebe perda L_t=−log q_t(X_t) ou Brier categórico. O estimando é a perda média n^{-1}Σ_t L_t e o arrependimento R_n=Σ_t[L_t(modelo)−L_t(referência)]. A especificação deve declarar suporte, unidade de análise e convenção de índice, para que o parâmetro permaneça reproduzível por avaliadores independente",
+"mecanismo": "A avaliação intercalada com atualização respeita causalidade temporal e impede que o próprio ponto avaliado influencie seu escore. O desempenho acumulado mostra adaptação, instabilidade e custo de aprendizagem sem reutilizar a mesma observação como treino e teste. A decomposição distingue associação matemática, processo de coleta e interpretação causal, evitando que níveis dife",
+"diagnostico": "• Traçar perda acumulada e diferença contra referências simples com intervalos por blocos. Mudanças locais devem ser descritas sem redefinir o início após observar a curva. O cálculo deve usar especificação congelada, referência nula adequada e intervalo de incerteza, com todos os resultados arquivados para auditoria independente. • Auditar a linhagem de cada q_t, incluindo dados usados, parâmetros e versão do código",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 101,
+"conceito": "Entropia de Shannon",
+"eixo": "informacao",
+"tese": "Diversidade marginal pode ser quantificada sem assumir mecanismo causal. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de entropia de shannon usa H(X)=−Σₓp(x)log₂p(x), com p estimada por contagens suavizadas e intervalo posterior Dirichlet. O estimando principal é calculado com entropia e normalização, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma ",
+"mecanismo": "A premissa afirma que diversidade marginal pode ser quantificada sem assumir mecanismo causal. O primeiro nível contém observações e erros; o segundo organiza entropia e normalização; o terceiro resume a estrutura atribuída a entropia de shannon. O mecanismo específico é: probabilidades mais concentradas reduzem incerteza média. A passagem entre níveis precisa conservar rastrea",
+"diagnostico": "• Diagnóstico estrutural: estimar entropia e normalização por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de entropia de shannon. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de entropia de shannon. • Diagnóstico comparativo: confrontar a",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 106,
+"conceito": "Entropia condicional",
+"eixo": "informacao",
+"tese": "O passado só é informativo se reduzir incerteza sobre o presente. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de entropia condicional usa H(Xₜ|Cₜ)=−Σc,x p(c,x)log₂p(x|c), usando apenas contextos Cₜ anteriores a t. O estimando principal é calculado com diferença de entropias e validação, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma essênci",
+"mecanismo": "A premissa afirma que o passado só é informativo se reduzir incerteza sobre o presente. O primeiro nível contém observações e erros; o segundo organiza diferença de entropias e validação; o terceiro resume a estrutura atribuída a entropia condicional. O mecanismo específico é: compara-se entropia marginal com entropia condicionada. A passagem entre níveis precisa conservar rast",
+"diagnostico": "• Diagnóstico estrutural: estimar diferença de entropias e validação por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de entropia condicional. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de entropia condicional. • Diagnóstico comparativo:",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 111,
+"conceito": "Informação mútua",
+"eixo": "informacao",
+"tese": "Dependência geral pode ser expressa como informação compartilhada. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de informação mútua usa I(X;Y)=Σx,y p(x,y)log₂[p(x,y)/(p(x)p(y))], corrigida para viés de tabela esparsa. O estimando principal é calculado com informação em bits e permutação, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma essência",
+"mecanismo": "A premissa afirma que dependência geral pode ser expressa como informação compartilhada. O primeiro nível contém observações e erros; o segundo organiza informação em bits e permutação; o terceiro resume a estrutura atribuída a informação mútua. O mecanismo específico é: a medida agrega desvios entre distribuição conjunta e produto das marginais. A passagem entre níveis precisa",
+"diagnostico": "• Diagnóstico estrutural: estimar informação em bits e permutação por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de informação mútua. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de informação mútua. • Diagnóstico comparativo: confrontar",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 116,
+"conceito": "Taxa de entropia",
+"eixo": "informacao",
+"tese": "Processos com memória podem produzir menos novidade por passo. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de taxa de entropia usa hμ=limₙ H(X₁:ₙ)/n=limₙH(Xₙ|X₁:ₙ₋₁), aproximada por incrementos de entropia de blocos. O estimando principal é calculado com entropia por comprimento de bloco, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma es",
+"mecanismo": "A premissa afirma que processos com memória podem produzir menos novidade por passo. O primeiro nível contém observações e erros; o segundo organiza entropia por comprimento de bloco; o terceiro resume a estrutura atribuída a taxa de entropia. O mecanismo específico é: a entropia de blocos cresce abaixo do ritmo independente. A passagem entre níveis precisa conservar rastreabil",
+"diagnostico": "• Diagnóstico estrutural: estimar entropia por comprimento de bloco por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de taxa de entropia. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de taxa de entropia. • Diagnóstico comparativo: confront",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 121,
+"conceito": "Complexidade de compressão",
+"eixo": "informacao",
+"tese": "Regularidades repetidas permitem descrição mais curta. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de complexidade de compressão usa ρ_C(x)=L_C(x)/L_bruto(x), descontando cabeçalhos, dicionários e custo da codificação canônica. O estimando principal é calculado com razão de compressão fora da amostra, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa ",
+"mecanismo": "A premissa afirma que regularidades repetidas permitem descrição mais curta. O primeiro nível contém observações e erros; o segundo organiza razão de compressão fora da amostra; o terceiro resume a estrutura atribuída a complexidade de compressão. O mecanismo específico é: algoritmos de compressão funcionam como aproximadores de estrutura redundante. A passagem entre níveis pre",
+"diagnostico": "• Diagnóstico estrutural: estimar razão de compressão fora da amostra por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de complexidade de compressão. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de complexidade de compressão. • Diagnóstico",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 126,
+"conceito": "Complexidade algorítmica",
+"eixo": "informacao",
+"tese": "Sequências simples possuem programas descritivos curtos. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de complexidade algorítmica usa K_U(x)=min{|p|:U(p)=x}, tratada somente por limites superiores computáveis e invariância aproximada. O estimando principal é calculado com comprimento descritivo e penalização, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma c",
+"mecanismo": "A premissa afirma que sequências simples possuem programas descritivos curtos. O primeiro nível contém observações e erros; o segundo organiza comprimento descritivo e penalização; o terceiro resume a estrutura atribuída a complexidade algorítmica. O mecanismo específico é: a teoria diferencia padrão gerador de narrativa longa feita depois do dado. A passagem entre níveis preci",
+"diagnostico": "• Diagnóstico estrutural: estimar comprimento descritivo e penalização por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de complexidade algorítmica. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de complexidade algorítmica. • Diagnóstico co",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 131,
+"conceito": "Princípio MDL",
+"eixo": "informacao",
+"tese": "O melhor modelo equilibra ajuste e tamanho da descrição. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de princípio mdl usa MDL(M,D)=L(M)+L(D|M), incluindo parâmetros, seleção de família, exceções e resíduos. O estimando principal é calculado com comprimento total modelo+dado, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma essência d",
+"mecanismo": "A premissa afirma que o melhor modelo equilibra ajuste e tamanho da descrição. O primeiro nível contém observações e erros; o segundo organiza comprimento total modelo+dado; o terceiro resume a estrutura atribuída a princípio mdl. O mecanismo específico é: regras complexas pagam custo pelos parâmetros e exceções. A passagem entre níveis precisa conservar rastreabilidade e não p",
+"diagnostico": "• Diagnóstico estrutural: estimar comprimento total modelo+dado por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de princípio mdl. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de princípio mdl. • Diagnóstico comparativo: confrontar a assin",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 136,
+"conceito": "Causalidade temporal",
+"eixo": "informacao",
+"tese": "Uma causa candidata deve preceder o efeito e adicionar informação. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de causalidade temporal usa ΔS=S[P(Yₜ|Y<ₜ)]−S[P(Yₜ|Y<ₜ,X<ₜ)], avaliado por log-score temporal fora do ajuste. O estimando principal é calculado com ganho incremental e direção, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma essência",
+"mecanismo": "A premissa afirma que uma causa candidata deve preceder o efeito e adicionar informação. O primeiro nível contém observações e erros; o segundo organiza ganho incremental e direção; o terceiro resume a estrutura atribuída a causalidade temporal. O mecanismo específico é: modelos condicionais comparam previsão com e sem a variável anterior. A passagem entre níveis precisa conser",
+"diagnostico": "• Diagnóstico estrutural: estimar ganho incremental e direção por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de causalidade temporal. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de causalidade temporal. • Diagnóstico comparativo: confro",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 141,
+"conceito": "Confundimento",
+"eixo": "informacao",
+"tese": "Uma terceira variável pode produzir associação sem vínculo direto. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de confundimento usa no DAG X←Z→Y, o funcional ΣzP(Y|X,z)P(z) é identificável sob backdoor, positividade e consistência. O estimando principal é calculado com grafo causal e ajuste, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma ess",
+"mecanismo": "A premissa afirma que uma terceira variável pode produzir associação sem vínculo direto. O primeiro nível contém observações e erros; o segundo organiza grafo causal e ajuste; o terceiro resume a estrutura atribuída a confundimento. O mecanismo específico é: estratificação ou intervenção remove caminhos alternativos. A passagem entre níveis precisa conservar rastreabilidade e n",
+"diagnostico": "• Diagnóstico estrutural: estimar grafo causal e ajuste por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de confundimento. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de confundimento. • Diagnóstico comparativo: confrontar a assinatura co",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 146,
+"conceito": "Colisor",
+"eixo": "informacao",
+"tese": "Condicionar numa consequência comum pode criar associação artificial. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de colisor usa no DAG X→C←Y, P(X,Y|C) pode não fatorizar mesmo quando P(X,Y)=P(X)P(Y). O estimando principal é calculado com mecanismo de seleção e DAG, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma essência do sistema. A estimação",
+"mecanismo": "A premissa afirma que condicionar numa consequência comum pode criar associação artificial. O primeiro nível contém observações e erros; o segundo organiza mecanismo de seleção e DAG; o terceiro resume a estrutura atribuída a colisor. O mecanismo específico é: a seleção abre um caminho estatístico que não existia na população. A passagem entre níveis precisa conservar rastreabi",
+"diagnostico": "• Diagnóstico estrutural: estimar mecanismo de seleção e DAG por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de colisor. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de colisor. • Diagnóstico comparativo: confrontar a assinatura com amost",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 151,
+"conceito": "Mediação",
+"eixo": "informacao",
+"tese": "Um efeito pode atuar por variável intermediária. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de mediação usa o efeito total é decomposto em componentes direto e indireto por Y(x,m) e M(x), sob ignorabilidade sequencial. O estimando principal é calculado com mediador, temporalidade e intervenção, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa ",
+"mecanismo": "A premissa afirma que um efeito pode atuar por variável intermediária. O primeiro nível contém observações e erros; o segundo organiza mediador, temporalidade e intervenção; o terceiro resume a estrutura atribuída a mediação. O mecanismo específico é: decomposição distingue caminho direto e indireto. A passagem entre níveis precisa conservar rastreabilidade e não pode introduzi",
+"diagnostico": "• Diagnóstico estrutural: estimar mediador, temporalidade e intervenção por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de mediação. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de mediação. • Diagnóstico comparativo: confrontar a assinat",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 156,
+"conceito": "Invariância causal",
+"eixo": "informacao",
+"tese": "Relações causais tendem a permanecer entre ambientes adequados. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de invariância causal usa procura-se P tal que P(Y|P,S=s)=P(Y|P) nos ambientes admissíveis s, com resíduos igualmente distribuídos. O estimando principal é calculado com estabilidade entre ambientes, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa auto",
+"mecanismo": "A premissa afirma que relações causais tendem a permanecer entre ambientes adequados. O primeiro nível contém observações e erros; o segundo organiza estabilidade entre ambientes; o terceiro resume a estrutura atribuída a invariância causal. O mecanismo específico é: parâmetros estáveis sob mudança de contexto apoiam causalidade. A passagem entre níveis precisa conservar rastre",
+"diagnostico": "• Diagnóstico estrutural: estimar estabilidade entre ambientes por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de invariância causal. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de invariância causal. • Diagnóstico comparativo: confronta",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 161,
+"conceito": "Emergência",
+"eixo": "informacao",
+"tese": "Propriedades coletivas podem não existir no nível de um evento. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de emergência usa para M=g(X), avalia-se I(M;Y)−βI(M;X) e estabilidade do macroestado sob perturbações microscópicas. O estimando principal é calculado com escala e parâmetro coletivo, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma ",
+"mecanismo": "A premissa afirma que propriedades coletivas podem não existir no nível de um evento. O primeiro nível contém observações e erros; o segundo organiza escala e parâmetro coletivo; o terceiro resume a estrutura atribuída a emergência. O mecanismo específico é: agregação em escala revela variáveis macroscópicas estáveis. A passagem entre níveis precisa conservar rastreabilidade e ",
+"diagnostico": "• Diagnóstico estrutural: estimar escala e parâmetro coletivo por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de emergência. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de emergência. • Diagnóstico comparativo: confrontar a assinatura co",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 166,
+"conceito": "Criticalidade",
+"eixo": "informacao",
+"tese": "Sistemas próximos a transições exibem flutuações amplas e correlações longas. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de criticalidade usa ξ∝|r−r_c|^{−ν}, χ∝|r−r_c|^{−γ} e colapso de tamanho finito são estimados conjuntamente. O estimando principal é calculado com expoentes, correlação e escala, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma essênc",
+"mecanismo": "A premissa afirma que sistemas próximos a transições exibem flutuações amplas e correlações longas. O primeiro nível contém observações e erros; o segundo organiza expoentes, correlação e escala; o terceiro resume a estrutura atribuída a criticalidade. O mecanismo específico é: leis de escala e desaceleração crítica precisariam coexistir. A passagem entre níveis precisa conserv",
+"diagnostico": "• Diagnóstico estrutural: estimar expoentes, correlação e escala por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de criticalidade. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de criticalidade. • Diagnóstico comparativo: confrontar a assi",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 171,
+"conceito": "Auto-organização",
+"eixo": "informacao",
+"tese": "Interações locais podem gerar ordem global sem controlador central. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de auto-organização usa xᵢ(t+1)=F[xᵢ(t),Nᵢ(t),ηᵢ] liga regras locais a um parâmetro de ordem macroscópico. O estimando principal é calculado com regra local e padrão global, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma essência do",
+"mecanismo": "A premissa afirma que interações locais podem gerar ordem global sem controlador central. O primeiro nível contém observações e erros; o segundo organiza regra local e padrão global; o terceiro resume a estrutura atribuída a auto-organização. O mecanismo específico é: regras locais devem reproduzir padrões macroscópicos sob simulação e teste. A passagem entre níveis precisa con",
+"diagnostico": "• Diagnóstico estrutural: estimar regra local e padrão global por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de auto-organização. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de auto-organização. • Diagnóstico comparativo: confrontar a a",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 176,
+"conceito": "Recorrência dinâmica",
+"eixo": "informacao",
+"tese": "Estados podem retornar a regiões semelhantes do espaço de fase. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de recorrência dinâmica usa Rᵢⱼ=1[||sᵢ−sⱼ||≤ε], com sᵢ formado por incorporação de atraso de dimensão m e atraso τ. O estimando principal é calculado com recorrência e dimensão de incorporação, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática",
+"mecanismo": "A premissa afirma que estados podem retornar a regiões semelhantes do espaço de fase. O primeiro nível contém observações e erros; o segundo organiza recorrência e dimensão de incorporação; o terceiro resume a estrutura atribuída a recorrência dinâmica. O mecanismo específico é: matrizes de recorrência medem proximidade de trajetórias reconstruídas. A passagem entre níveis prec",
+"diagnostico": "• Diagnóstico estrutural: estimar recorrência e dimensão de incorporação por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de recorrência dinâmica. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de recorrência dinâmica. • Diagnóstico comparat",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 181,
+"conceito": "Atrator estranho",
+"eixo": "informacao",
+"tese": "Caos pode ocupar geometria fracionária no espaço de estados. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de atrator estranho usa exige simultaneamente λmax>0, dimensão de correlação D₂ não inteira e saturação de invariantes com m. O estimando principal é calculado com geometria, dimensão e Lyapunov, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automáti",
+"mecanismo": "A premissa afirma que caos pode ocupar geometria fracionária no espaço de estados. O primeiro nível contém observações e erros; o segundo organiza geometria, dimensão e Lyapunov; o terceiro resume a estrutura atribuída a atrator estranho. O mecanismo específico é: dimensão e expoentes positivos precisam ser estimados com dados densos. A passagem entre níveis precisa conservar r",
+"diagnostico": "• Diagnóstico estrutural: estimar geometria, dimensão e Lyapunov por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de atrator estranho. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de atrator estranho. • Diagnóstico comparativo: confrontar ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 186,
+"conceito": "Observabilidade",
+"eixo": "informacao",
+"tese": "Nem todo estado interno pode ser inferido pelas saídas disponíveis. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de observabilidade usa para xₜ₊₁=Axₜ e yₜ=Cxₜ, \u0000=[C;CA;…;CAⁿ⁻¹] deve ter posto n e bom condicionamento. O estimando principal é calculado com estado, sensor e identificabilidade, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem uma essênc",
+"mecanismo": "A premissa afirma que nem todo estado interno pode ser inferido pelas saídas disponíveis. O primeiro nível contém observações e erros; o segundo organiza estado, sensor e identificabilidade; o terceiro resume a estrutura atribuída a observabilidade. O mecanismo específico é: a matriz de observabilidade ou equivalente indica quais estados ficam indistinguíveis. A passagem entre ",
+"diagnostico": "• Diagnóstico estrutural: estimar estado, sensor e identificabilidade por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de observabilidade. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de observabilidade. • Diagnóstico comparativo: confront",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 191,
+"conceito": "Identificabilidade",
+"eixo": "informacao",
+"tese": "Modelos diferentes podem produzir a mesma distribuição observada. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de identificabilidade usa Pθ(D)=Pθ′(D)⇒θ=θ′ define identificação global; perfis e informação de Fisher avaliam a forma prática. O estimando principal é calculado com equivalência de modelos e dados auxiliares, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma ",
+"mecanismo": "A premissa afirma que modelos diferentes podem produzir a mesma distribuição observada. O primeiro nível contém observações e erros; o segundo organiza equivalência de modelos e dados auxiliares; o terceiro resume a estrutura atribuída a identificabilidade. O mecanismo específico é: experimentos adicionais são necessários para quebrar equivalências. A passagem entre níveis prec",
+"diagnostico": "• Diagnóstico estrutural: estimar equivalência de modelos e dados auxiliares por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de identificabilidade. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de identificabilidade. • Diagnóstico comparat",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 196,
+"conceito": "Erro de medição",
+"eixo": "informacao",
+"tese": "Ruído e arredondamento podem criar ou apagar dependências. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "O modelo formal de erro de medição usa W=X+ε ou P(W|X) separa estado latente de ruído, arredondamento e classificação imperfeita. O estimando principal é calculado com repetibilidade e precisão do sensor, incluindo regularização, intervalo de incerteza e custo de seleção. A quantidade representa uma propriedade do modelo observacional especificado, não uma causa automática nem ",
+"mecanismo": "A premissa afirma que ruído e arredondamento podem criar ou apagar dependências. O primeiro nível contém observações e erros; o segundo organiza repetibilidade e precisão do sensor; o terceiro resume a estrutura atribuída a erro de medição. O mecanismo específico é: modelos de erro separam variável latente de observação imperfeita. A passagem entre níveis precisa conservar rast",
+"diagnostico": "• Diagnóstico estrutural: estimar repetibilidade e precisão do sensor por blocos cronológicos e decompor quais observações, categorias ou parâmetros contribuem para a estatística de erro de medição. • Diagnóstico de estabilidade: repetir a estimação com parametrizações justificadas, reamostragens temporais e exclusão de pontos influentes, preservando a definição de erro de medição. • Diagnóstico comparativo: confront",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 201,
+"conceito": "Sobreajuste supervisionado",
+"eixo": "ia",
+"tese": "Um modelo flexível pode memorizar a amostra. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Com (D_{tr},D_{val},D_{te}), define-se (hat R_D(f)=|D|^{-1}sum_iL(f(x_i),y_i)) e o estimando (Delta_{gen}=hat R_{te}(f)-hat R_{tr}(f)), condicionado à complexidade efetiva (C(f)), ao orçamento de busca e à semente. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas renomeie uma impressão visual sem poder di",
+"mecanismo": "A representação codifica particularidades da amostra, a otimização continua reduzindo perda interna e a seleção retém a variante mais favorável. A camada externa revela quais regularidades permanecem quando identidades, ruídos locais e decisões de desenvolvimento deixam de estar disponíveis. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automat",
+"diagnostico": "• Construir curvas de aprendizagem por tamanho amostral, com múltiplas reamostragens, e comparar risco de treino, validação e teste juntamente com a dispersão. • Executar aleatorização de rótulos para medir capacidade de memorização e verificar se o algoritmo ajusta relações sem conteúdo estável. • Relacionar risco externo à complexidade efetiva e localizar situações em que melhora interna passa a acompanhar degradaç",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 206,
+"conceito": "Vazamento temporal",
+"eixo": "ia",
+"tese": "Informação posterior pode entrar inadvertidamente nas variáveis. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para o instante (t), define-se a informação legítima (mathcal F_t=sigma(Z_1,ldots,Z_t)) e exige-se que (X_t) seja mensurável em (mathcal F_t). O estimando (Delta_{leak}=R(f_{causal})-R(f_{pipeline})) compara reconstrução causal e pipeline observado. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas renomei",
+"mecanismo": "A origem determina quando cada campo existe, a transformação examina janelas, normalizações e agregações, e a divisão preserva ordem e entidades. O vazamento ocorre quando alguma camada transporta (Y_t) ou estados posteriores para uma representação atribuída ao passado. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem",
+"diagnostico": "• Auditar a linhagem de cada coluna, registrando criação, disponibilidade e dependências, e marcar qualquer genealogia que atravesse o corte temporal. • Reajustar transformações dentro de cada janela expansiva e medir a diferença em relação ao pré-processamento global aplicado ao conjunto inteiro. • Deslocar rótulos e atributos por defasagens impossíveis; desempenho persistente nessas posições indica sincronização in",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 211,
+"conceito": "Deslocamento de distribuição",
+"eixo": "ia",
+"tese": "O processo de teste pode diferir do treino. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Sejam (P_{tr}(X,Y)) e (P_{ev}(X,Y)). O estimando (Delta_R=R_{P_{ev}}(f)-R_{P_{tr}}(f)) é decomposto em mudança de (P(X)), de (P(Y)) e de (P(Ymid X)), usando divergências, estratos e suporte comum. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas renomeie uma impressão visual sem poder discriminante.",
+"mecanismo": "A camada observacional mede mudanças nos atributos, a camada de prevalência examina rótulos e a camada conceitual testa alterações condicionais. A camada de suporte identifica regiões exclusivas da avaliação, onde ponderação não recupera informação e a extrapolação deixa de ser identificável. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automa",
+"diagnostico": "• Treinar classificador adversarial de origem com validação cruzada e inspecionar atributos que distinguem treino e avaliação acima do acaso. • Calcular risco por período, grupo e região de suporte para separar degradação global de falhas localizadas em subpopulações. • Aplicar ponderação por razão de densidades, relatando pesos extremos, tamanho efetivo e convergência do risco corrigido. O resultado é documentado co",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 216,
+"conceito": "Aprendizagem de representação",
+"eixo": "ia",
+"tese": "Variáveis latentes podem resumir relações complexas. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Define-se (Z=f_ heta(X)) e avaliam-se (I(Z;Y)), informação relevante; (I(Z;N)), informação sobre fatores nuisance; e complexidade (C(Z)). O estimando é a utilidade incremental de (Z) em tarefas separadas, controlando dimensionalidade, capacidade da sonda e identidade. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a not",
+"mecanismo": "A camada sensorial transforma entradas, a geométrica organiza vizinhanças, a semântica concentra fatores transferíveis e a decisória usa parte dessa estrutura. Uma representação útil retém relações relevantes, reduz atalhos e permanece estável sob transformações justificadas sem colapsar. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automatica",
+"diagnostico": "• Treinar sondas lineares e não lineares com capacidade controlada, comparando camadas aprendidas com representações aleatórias de mesma dimensão. • Aplicar transformações que preservem conteúdo e medir consistência latente, separando invariância desejada de perda indiscriminada de informação. • Avaliar transferência em tarefas e entidades separadas, removendo pistas superficiais que permitiriam memorizar identidade ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 221,
+"conceito": "Ensemble de agentes",
+"eixo": "ia",
+"tese": "Modelos diversos podem reduzir erros não correlacionados. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para agentes (m=1,ldots,M), definem-se erros (e_m=Y-f_m(X)), pesos (w_m) e agregado (f_E=sum_mw_mf_m). O estimando (Delta_E=R(f_E)-sum_mw_mR(f_m)) é analisado junto à matriz (Sigma_e=mathrm{Cov}(e)). A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas renomeie uma impressão visual sem poder discriminante.",
+"mecanismo": "A geração cria diferenças por dados, arquitetura ou objetivo; a camada de erro determina complementaridade; e a agregação converte saídas em decisão conjunta. O ganho decorre da redução de componentes não correlacionados, não da mera multiplicação de instâncias ou nomes. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais ne",
+"diagnostico": "• Estimar correlação de erros global e por subgrupo, verificando se o ganho aparece onde membros competentes divergem informativamente. • Comparar média, votação e combinação calibrada com um membro equivalente em custo, usando exatamente a mesma avaliação externa. • Remover cada agente e medir contribuição marginal, estabilidade e redundância por reamostragem de casos e sementes. O resultado é documentado com magnit",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 226,
+"conceito": "Consenso ilusório",
+"eixo": "ia",
+"tese": "Muitos agentes derivados do mesmo código podem parecer independentes. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Com votos (V_m), correlações ( ho_{mn}) e pesos (w_m), define-se (N_{eff}=(sum_mw_m)^2/sum_{m,n}w_mw_n ho_{mn}). O estimando compara confiança nominal do consenso e frequência empírica de correção condicionada ao número efetivo de fontes. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas renomeie uma impre",
+"mecanismo": "A linhagem identifica código, dados e pré-treinos compartilhados; a representação mede estados semelhantes; e a decisão observa erros correlacionados. Muitas respostas iguais podem ser cópias da mesma evidência, portanto unanimidade aparente não multiplica informação. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem e",
+"diagnostico": "• Construir grafo de linhagem e estimar dependência residual entre agentes após controlar dificuldade, arquitetura e fonte dos dados. • Comparar calibração do consenso usando número nominal e (N_{eff}), verificando qual explica melhor a frequência de erros conjuntos. • Adicionar fontes realmente heterogêneas e medir se a concordância passa a fornecer informação incremental fora da amostra. O resultado é documentado c",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 231,
+"conceito": "Seleção de hiperparâmetros",
+"eixo": "ia",
+"tese": "Escolher a melhor configuração no teste cria otimismo. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Se (Lambda) é o espaço de configurações, (hatlambda=argmin_{lambdainLambda}hat R_{val}(lambda)). O estimando de otimismo é (Omega=hat R_{outer}(hatlambda)-min_lambdahat R_{val}(lambda)), condicionado ao número efetivo de tentativas, dependência e adaptatividade da busca. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a ",
+"mecanismo": "A busca propõe configurações, a avaliação interna estima desempenho, a decisão escolhe um extremo amostral e a camada externa avalia o procedimento inteiro. Quanto maior e mais adaptativa a exploração, maior a oportunidade de selecionar ruído particular da validação. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem ex",
+"diagnostico": "• Executar validação cruzada aninhada, refazendo busca e seleção dentro de cada dobra externa, e comparar estimativas internas e externas. • Registrar todas as tentativas e relacionar o otimismo observado ao tamanho efetivo e à adaptatividade do espaço explorado. • Repetir a busca em tarefas nulas por permutação para medir o máximo obtido apenas pela multiplicidade. O resultado é documentado com magnitude, incerteza ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 236,
+"conceito": "Aprendizagem online",
+"eixo": "ia",
+"tese": "O modelo atualiza-se à medida que dados chegam. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "No instante (t), ( heta_t=A(Z_{1:t-1})) recebe perda (ell_t=ell( heta_t,Z_t)) antes da atualização ( heta_{t+1}=U( heta_t,Z_t)). Os estimandos incluem risco prequential, regret acumulado e estabilidade paramétrica, sempre preservando a precedência informacional. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação a",
+"mecanismo": "A camada temporal separa estado anterior e observação corrente, a avaliação registra perda antes de contato com o ponto e a atualização incorpora evidência depois. Memória, taxa de aprendizagem e detecção de mudança regulam estabilidade e plasticidade. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem exclui mecanismos",
+"diagnostico": "• Confirmar por logs que cada escore antecede a atualização, usando hashes de estado e carimbos temporais monotônicos. • Comparar curvas prequential de modelo estático, atualização acumulativa e memória decrescente sob a mesma ordem e inicialização. • Medir variação paramétrica e degradação em blocos anteriores após cada atualização, separando adaptação de esquecimento. O resultado é documentado com magnitude, incert",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 241,
+"conceito": "Esquecimento adaptativo",
+"eixo": "ia",
+"tese": "Dados recentes podem receber maior peso em processos mutáveis. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Pesos (w_{t,i}=alpha^{t-i}), com meia-vida (h_{1/2}=log(0.5)/logalpha), definem (hat R_t=sum_{i<t}w_{t,i}ell_i/sum_{i<t}w_{t,i}). O estimando compara risco de esquecimento pré-fixado e memória uniforme, estratificado por regimes e períodos estáveis. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas renomei",
+"mecanismo": "A memória decide quanto passado permanece ativo, a detecção estima mudança e a atualização converte pesos em parâmetros. Esquecimento acelera adaptação em rupturas, mas aumenta variância e apaga evidência quando a aparente mudança é apenas flutuação. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem exclui mecanismos c",
+"diagnostico": "• Traçar risco e variância para meias-vidas escolhidas sem consultar a avaliação, incluindo memória uniforme como referência. • Estimar rupturas independentemente e verificar se qualquer vantagem se concentra depois delas, não em trechos estáveis. • Reavaliar blocos antigos após atualizações para quantificar o custo de retenção sacrificado pela ênfase no recente. O resultado é documentado com magnitude, incerteza e r",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 246,
+"conceito": "Detecção de anomalias",
+"eixo": "ia",
+"tese": "Casos raros podem ser isolados sem rótulo prévio. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Um escore (s(x)) ordena observações por distância, densidade ou energia, e (A(x)=mathbf1[s(x)> au]). Os estimandos são falso positivo em referência limpa, precisão entre casos revisados e estabilidade da ordenação sob reamostragem, não apenas a porcentagem marcada. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notaçã",
+"mecanismo": "A representação define diferenças visíveis, a referência estima normalidade, o escore mede desvio e a decisão aplica custos. Uma anomalia estatística pode ser erro, novidade legítima ou subpopulação rara; significado e raridade pertencem a camadas distintas. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem exclui meca",
+"diagnostico": "• Calibrar ( au) em referência independente e medir falsos positivos por grupo, período e região do espaço de atributos. • Injetar perturbações sintéticas de magnitude conhecida para construir curvas de sensibilidade sem ajustar aos casos reais destacados. • Repetir modelagem em reamostragens e calcular concordância do ranking, localizando observações dependentes de poucos pontos. O resultado é documentado com magnit",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 251,
+"conceito": "Modelo residual",
+"eixo": "ia",
+"tese": "Uma IA pode aprender apenas o que modelos simples não explicam. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Com baseline (g(X)) congelado, definem-se resíduos fora de dobra (r_i=Y_i-g(X_i)); (h(Z)) aprende apenas essa parcela. O estimando (Delta_R=R(g+h)-R(g)) mede ganho incremental em avaliação independente, penalizado pela complexidade adicional e pela busca. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas r",
+"mecanismo": "A camada básica captura marginais e relações simples, a residual recebe o que ficou sem explicação e a composição aplica correções. Sinal residual estável produz ganho incremental; ruído residual permite apenas que flexibilidade adicional memorize exceções. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem exclui mecan",
+"diagnostico": "• Examinar resíduos fora de dobra quanto a média, heterocedasticidade, autocorrelação e dependências, corrigindo a multiplicidade das buscas. • Comparar (h) com correções nulas de igual complexidade, incluindo resíduos permutados e atributos sem vínculo substantivo. • Avaliar baseline, correção e composição em amostra separada, relatando ganho, incerteza e regiões de piora. O resultado é documentado com magnitude, in",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 256,
+"conceito": "Explicabilidade pós-hoc",
+"eixo": "ia",
+"tese": "Uma explicação pode racionalizar uma decisão sem reproduzir o mecanismo interno. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para modelo (f) e explicação local (e_x), define-se fidelidade (F_x=1-mathbb E_{zsim N(x)}d(f(z),g_{e_x}(z))). Estimam-se fidelidade, estabilidade e complexidade cognitiva separadamente, pois plausibilidade humana não equivale a reprodução do comportamento do modelo. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a nota",
+"mecanismo": "A camada comportamental observa saídas, a explicativa constrói aproximação, a apresentação converte-a em visual ou texto e a humana atribui sentido. Uma narrativa pode ser compreensível sem ser fiel, e uma explicação fiel pode não ser simples. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem exclui mecanismos concorre",
+"diagnostico": "• Randomizar parâmetros e rótulos; a explicação deve mudar quando o mecanismo do modelo é destruído. • Medir fidelidade por inserção, deleção e perturbações plausíveis, com vizinhanças definidas sem consultar o mapa produzido. • Repetir explicações para entradas próximas e sementes distintas, quantificando estabilidade e sensibilidade local. O resultado é documentado com magnitude, incerteza e referência nula apropri",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 261,
+"conceito": "Regra simbólica extraída",
+"eixo": "ia",
+"tese": "Conhecimento de modelo complexo pode ser condensado em regra auditável. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para regra (r), definem-se fidelidade (F=P[r(X)=f(X)]), cobertura (C=P[Xin dom(r)]) e complexidade (K(r)) por literais, profundidade ou comprimento descritivo. O estimando combina fidelidade externa e penalização, em vez de ajuste interno isolado. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas renomeie ",
+"mecanismo": "A amostragem escolhe comportamentos consultados, a busca explora expressões, a seleção equilibra ajuste e simplicidade e a semântica traduz o resultado. Regras claras podem omitir exceções decisivas se cobertura e estabilidade não forem medidas. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem exclui mecanismos concor",
+"diagnostico": "• Testar fidelidade e cobertura em consultas independentes, estratificadas por região e distância ao limite decisório. • Comparar com regras aleatórias ou árvores de igual tamanho, controlando linguagem disponível e orçamento de busca. • Repetir extração em reamostragens e medir estabilidade de literais, limiares, exceções e equivalência funcional. O resultado é documentado com magnitude, incerteza e referência nula ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 266,
+"conceito": "Aprendizagem causal",
+"eixo": "ia",
+"tese": "O modelo procura relações invariantes em vez de correlação superficial. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Em ambientes (e), busca-se (S) tal que (P_e(Ymid X_S)) seja invariável, ou estima-se ( au=E[Ymid do(A=1)]-E[Ymid do(A=0)]). O modelo declara grafo, intervenções, variáveis ocultas, população e estimando antes da análise. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas renomeie uma impressão visual sem po",
+"mecanismo": "A camada associativa encontra regularidades, a estrutural propõe mecanismos, a ambiental explora mudanças exógenas e a interventiva confronta implicações. Causalidade exige estabilidade adequada, temporalidade, exclusão de caminhos alternativos e consequências coerentes sob intervenções disponíveis. Cada camada é examinada separadamente, pois evidência em um nível não demonstra",
+"diagnostico": "• Testar invariância de resíduos e parâmetros entre ambientes independentes, incluindo mudanças apenas em mecanismos periféricos. • Aplicar controles negativos de exposição e resultado para detectar confundimento, seleção ou erro de medição residual. • Comparar grafos equivalentes por independências implicadas e explicitar quais dados adicionais distinguiriam direções. O resultado é documentado com magnitude, incerte",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 271,
+"conceito": "Meta-aprendizagem",
+"eixo": "ia",
+"tese": "Um sistema aprende como adaptar-se entre tarefas. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para tarefas ( ausim p( au)), suporte (S_ au), consulta (Q_ au) e adaptação ( heta'_ au=U_k( heta,S_ au)), estima-se (E_{ ausim p_{test}}R_{Q_ au}( heta'_ au)). Relata-se risco por exemplos e passos, comparado a pré-treino convencional. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas renomeie uma impress",
+"mecanismo": "A camada externa aprende inicialização, métrica ou atualizador; a interna usa poucos dados para especialização; e a avaliação mede transferência. O sistema pode captar estrutura comum ou memorizar identidades quando tarefas de construção e avaliação compartilham entidades. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais ",
+"diagnostico": "• Separar famílias por entidade ou mecanismo e medir adaptação em tarefas totalmente ausentes do meta-treino. • Comparar com pré-treino e ajuste fino sob o mesmo número de parâmetros, exemplos e atualizações internas. • Permutar associações dentro das tarefas para testar se o ganho depende da estrutura compartilhada alegada. O resultado é documentado com magnitude, incerteza e referência nula apropriada ao desenho.",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 276,
+"conceito": "Viés de confirmação",
+"eixo": "ia",
+"tese": "A mente procura evidências favoráveis e esquece falhas. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Cada evidência (E_i) recebe direção (d_iin{-1,0,1}), qualidade (q_i) e probabilidade de registro (p_i). Estima-se (Gamma=P(registromid d=1)/P(registromid d=-1)), ajustada por qualidade e oportunidade, além da assimetria de revisão documental. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apenas renomeie uma i",
+"mecanismo": "A atenção seleciona o notado, a interpretação resolve ambiguidades, a memória conserva ou esquece e a documentação escolhe o que entra no arquivo. Expectativa pode atuar em todas as camadas, gerando consistência aparente sem falsificação direta. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem exclui mecanismos concor",
+"diagnostico": "• Codificadores cegos classificam direção e qualidade de todas as ocorrências elegíveis, com medida de concordância e assimetria. • Registros contemporâneos são comparados a resumos posteriores, quantificando omissões, reclassificações e diferenças de detalhe. • Evidências balanceadas aparecem em ordem randomizada para verificar se critérios de aceitação permanecem simétricos. O resultado é documentado com magnitude,",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 281,
+"conceito": "Apofenia",
+"eixo": "ia",
+"tese": "Padrões significativos podem ser percebidos em ruído. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Com escore (S(D,h)) para hipótese (h), usa-se (M=max_{hinmathcal H}S(D,h)), comparado aos máximos (M^{(b)}) de dados substitutos que preservam propriedades relevantes. O estimando é o excesso do máximo observado, penalizado por complexidade e volume de busca. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apen",
+"mecanismo": "A percepção detecta saliência, a busca associa elementos, a narrativa comprime coincidências e a seleção retém histórias convincentes. O fenômeno resulta da interação entre ruído rico, espaço grande de hipóteses e avaliação posterior ao achado. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem exclui mecanismos concorr",
+"diagnostico": "• Avaliadores cegos examinam sequências observadas e substitutas, registrando quantidade, complexidade e especificidade dos padrões descritos. • Todas as hipóteses geradas são arquivadas, e o melhor escore é comparado ao máximo de buscas nulas equivalentes. • Reamostragem mede estabilidade; padrões que dependem de poucos pontos ou mudam de definição recebem baixa sustentação. O resultado é documentado com magnitude, ",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 286,
+"conceito": "Ilusão de agrupamento",
+"eixo": "ia",
+"tese": "Sequências aleatórias parecem alternar menos do que se espera intuitivamente. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Para sequência categórica, definem-se runs (R), maior bloco (L_{max}), varredura (W_k) e intervalos. O estimando é a posição dessas estatísticas na distribuição nula condicional às contagens marginais, obtida por permutação ou processo de referência ajustado. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notação apen",
+"mecanismo": "A percepção superestima alternância típica, a atenção destaca aglomerados locais e a inferência atribui mecanismo ao extremo observado. Como várias janelas são inspecionadas, algum bloco impressionante é esperado mesmo sem dependência, sobretudo em sequências longas. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem ex",
+"diagnostico": "• Comparar (R), (L_{max}) e (W_k) com permutações condicionadas às mesmas frequências e ao mesmo comprimento. • Repetir a análise em janelas fixadas antes da inspeção, reportando o máximo global e não só o trecho destacado. • Apresentar sequências reais e nulas cegamente, comparando julgamento humano de agrupamento e estatística calibrada. O resultado é documentado com magnitude, incerteza e referência nula apropriad",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 291,
+"conceito": "Falácia do jogador",
+"eixo": "ia",
+"tese": "Eventos passados são tratados como compensação obrigatória. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Se (Y_t) é o evento atual e (H_{t-1}) o histórico, independência implica (P(Y_t=ymid H_{t-1})=P(Y_t=y)). Estimam-se a divergência condicional e a diferença entre julgamentos após histórias balanceadas e desequilibradas, sempre em contexto acadêmico não operacional. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificação, evitando que a notaçã",
+"mecanismo": "A intuição espera equilíbrio local, a memória destaca sequências recentes e a inferência converte desequilíbrio em compensação. O erro transporta uma propriedade agregada de longo prazo para dependência negativa imediata sem mecanismo de reposição ou regulação. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem exclui m",
+"diagnostico": "• Usar processos simulados com probabilidades conhecidas e variar somente o histórico exibido, medindo alterações de julgamento em contexto educacional. • Estimar transições por comprimento de run e compará-las a permutações que preservam frequências marginais e tamanho. • Separar crença declarada de regularidade observada, verificando se a primeira muda quando a segunda permanece independente. O resultado é document",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 296,
+"conceito": "Narrativa retrospectiva",
+"eixo": "ia",
+"tese": "Uma explicação coerente é escrita depois que o desfecho é conhecido. O foco é verificar se o efeito sobrevive a janelas, subconjuntos e resoluções declarados antes.",
+"medida": "Sejam (H^{-}) o registro selado anterior e (H^{+}) a explicação posterior. Medem-se especificidade (K(H)), cobertura, exceções e distância semântica (d(H^{-},H^{+})). O estimando é o ganho aparente de ajuste obtido por alterações posteriores, comparado a narrativas sem acesso ao resultado. A análise relata estimativa pontual, intervalo de incerteza e sensibilidade à especificaç",
+"mecanismo": "A camada temporal separa expectativa e conhecimento, a memória reconstrói, a narrativa seleciona causas coerentes e a documentação consolida a versão final. Conhecer o resultado reduz alternativas lembradas e aumenta a sensação de inevitabilidade do que ocorreu. Cada camada é examinada separadamente, pois evidência em um nível não demonstra automaticamente os demais nem exclui ",
+"diagnostico": "• Comparar documentos datados antes e depois, codificando cegamente mudanças de regra, escopo, exceção, confiança e explicação. • Solicitar explicações para resultados ocultos ou simulados e medir quanta coerência surge sem informação discriminante. • Calcular cobertura e falsificabilidade das versões, identificando quando o ajuste melhora apenas pelo aumento de flexibilidade. O resultado é documentado com magnitude,",
+"aspectos": [
+"definição operacional",
+"assinatura temporal",
+"teste comparativo",
+"robustez e escala",
+"replicação independente"
+]
+},
+{
+"n": 301,
+"conceito": "Contextualidade física",
+"eixo": "fisica",
+"tese": "Resultados podem depender do contexto completo de medição, e não apenas de uma variável isolada. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Represente cada observação por Y_t e o contexto completo por C_t=(configuração, ambiente, protocolo). A hipótese relevante não é apenas P(Y_t), mas P(Y_t|C_t). O estimando é a variação Δ(c,c')=D[P(Y|C=c),P(Y|C=c')], usando uma distância probabilística pré-definida e intervalos obtidos em sessões independentes. Uma especificação empiricamente decidível estima um modelo contextua",
+"mecanismo": "O contexto precisa primeiro alterar uma variável física intermediária; essa variável deve modificar a dinâmica; e a mudança deve chegar ao registro final. Sem essa cadeia mensurável, 'contextualidade' descreve apenas estratificação estatística. O argumento ganha força quando o efeito desaparece ao equalizar C e reaparece deliberadamente quando C é modificado. A cadeia mecanísti",
+"diagnostico": "• Quantificar probabilidades conjuntas P(a,b|x,y), escolhas instrumentais x,y, eficiência de detecção e ordem das medições em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar um modelo contextual comparado a um modelo não contextual sujeito às mesmas marginais e confrontar resíduos, calibração e estabilidade paramétrica ",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 306,
+"conceito": "Decoerência e perda de fase",
+"eixo": "fisica",
+"tese": "Interações ambientais podem apagar coerências físicas antes da observação macroscópica. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Modele um estado aberto por ρ(t) e uma medida de coerência C(ρ), por exemplo a soma dos termos fora da diagonal. A hipótese prevê C(ρ_t)≈C(ρ_0)e^{-t/τ_d}, em que τ_d depende do acoplamento ambiental. O estimando central é τ_d medido diretamente, não inferido de frequências finais. Uma especificação empiricamente decidível estima uma equação mestra aberta com taxa de decoerência",
+"mecanismo": "Interações não controladas emaranham graus de liberdade do sistema com o ambiente. Ao ignorar o ambiente, as fases relativas tornam-se inacessíveis e o comportamento macroscópico aproxima uma mistura clássica. Para relacionar isso a uma sequência observada, seria indispensável demonstrar preparação coerente, evolução isolável e uma medida sensível à fase. A cadeia mecanística d",
+"diagnostico": "• Quantificar visibilidade de interferência V, elementos fora da diagonal |ρᵢⱼ|, temperatura e tempo de coerência T₂ em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar uma equação mestra aberta com taxa de decoerência Γ e ruído instrumental separado e confrontar resíduos, calibração e estabilidade paramétrica com altern",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 311,
+"conceito": "Probabilidade quântica não comutativa",
+"eixo": "fisica",
+"tese": "A ordem das perguntas pode alterar probabilidades em modelos quânticos abstratos. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Defina estados ρ e operadores de efeito E_a, E_b. A ordem importa quando Tr(E_b E_a ρ E_a) difere de Tr(E_a E_b ρ E_b), ou quando os observáveis não comutam. O estimando é um efeito de ordem pré-registrado, Δ_AB=P(b|A→B)-P(b|B→A), com protocolo idêntico fora da ordem. Uma especificação empiricamente decidível estima operadores positivos e regra de Born confrontados com um model",
+"mecanismo": "Modelos probabilísticos quânticos podem representar incompatibilidade entre perguntas ou medições, mas isso não implica automaticamente um substrato físico quântico. A teoria profunda separa três níveis: formalismo não comutativo, mecanismo de medição e evidência física. Apenas o primeiro pode ser ajustado a sequências categóricas sem instrumentação adicional. A cadeia mecaníst",
+"diagnostico": "• Quantificar frequências de medições sequenciais, diferença de ordem ΔAB e norma observável do comutador [A,B] em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar operadores positivos e regra de Born confrontados com um modelo probabilístico clássico de ordem e confrontar resíduos, calibração e estabilidade paramétrica ",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 316,
+"conceito": "Variáveis ocultas instrumentais",
+"eixo": "fisica",
+"tese": "Uma variável física não registrada pode organizar parte da dispersão aparente. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Escreva Y_t=f(Z_t,ε_t), onde Z_t é um vetor instrumental não registrado e ε_t representa variação residual. O alvo é a redução de incerteza I(Y_t;Z_t|H_{t-1}) ou o ganho de log-verossimilhança fora da amostra ao acrescentar Z_t a um modelo baseado apenas no histórico. Uma especificação empiricamente decidível estima uma família local de variáveis ocultas comparada a distribuiçõ",
+"mecanismo": "Uma causa oculta plausível deve existir antes do resultado, variar no tempo, acoplar-se fisicamente à dinâmica e ser mensurável por sensor independente. O simples fato de um modelo latente ajustar os dados não revela a natureza de Z: muitas variáveis diferentes produzem a mesma distribuição marginal. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura in",
+"diagnostico": "• Quantificar correlações por configuração, estatística CHSH S, independência das escolhas e eficiência dos detectores em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar uma família local de variáveis ocultas comparada a distribuições quânticas sob hipóteses de Bell explícitas e confrontar resíduos, calibração e estabil",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 321,
+"conceito": "Caos determinístico",
+"eixo": "fisica",
+"tese": "Um sistema determinístico pode parecer aleatório por sensibilidade extrema às condições iniciais. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Considere x_{t+1}=F(x_t;θ) e Y_t=h(x_t)+η_t. A hipótese requer dependência sensível: ||δx_t||≈||δx_0||e^{λt} com maior expoente de Lyapunov λ>0, além de dimensão de incorporação finita. O estimando deve ser corrigido por ruído e comparado a dados substitutos. Uma especificação empiricamente decidível estima uma dinâmica determinística não linear confrontada com ruído colorido e",
+"mecanismo": "Determinismo não equivale a previsibilidade ilimitada. Pequenos erros nas condições iniciais crescem até apagar informação prática, embora a trajetória permaneça regida por F. Para distinguir caos de ruído colorido, é preciso observar o estado com alta frequência, reconstruir geometria e demonstrar invariantes dinâmicos consistentes. A cadeia mecanística deve ligar perturbação,",
+"diagnostico": "• Quantificar expoente máximo de Lyapunov λmax, dimensão de correlação D₂, atraso τ e dimensão de incorporação m em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar uma dinâmica determinística não linear confrontada com ruído colorido e processos estocásticos equivalentes e confrontar resíduos, calibração e estabilidade ",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 326,
+"conceito": "Ruído térmico",
+"eixo": "fisica",
+"tese": "Flutuações térmicas podem introduzir variação física pequena, porém real. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Modele a perturbação térmica ξ(t) com média zero e espectro ligado à dissipação; em aproximações lineares, a densidade espectral pode obedecer a uma relação do tipo S_ξ(f)∝k_BT·R(f). O estimando é a mudança da variância residual por unidade de temperatura, controlando carga e sessão. Uma especificação empiricamente decidível estima ruído térmico estacionário separado de deriva,",
+"mecanismo": "Temperatura afeta expansão, atrito, eletrônica e viscosidade. A teoria precisa escolher uma rota concreta, medir a variável intermediária e prever direção de efeito. Dizer apenas que 'o calor altera tudo' torna a hipótese flexível demais e impossível de refutar. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por temperatura T, densidade",
+"diagnostico": "• Quantificar temperatura T, densidade espectral de potência, variância, largura de banda e constante efetiva kBT em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar ruído térmico estacionário separado de deriva, ruído eletrônico e perturbação mecânica e confrontar resíduos, calibração e estabilidade paramétrica com alte",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 331,
+"conceito": "Vibração mecânica",
+"eixo": "fisica",
+"tese": "Oscilações do suporte podem alterar trajetórias físicas em sistemas sensíveis. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Represente a aceleração medida por a(t) e sua densidade espectral S_a(f). A saída depende de características como potência em bandas B_j e fase relativa. O estimando é o ganho condicional de Y ao incluir essas características, com defasagens compatíveis com propagação física. Uma especificação empiricamente decidível estima um sistema massa–mola–amortecedor com excitação medida",
+"mecanismo": "Oscilações do suporte podem modificar contato, orientação ou trajetória. Uma narrativa causal exige fonte, caminho de transmissão, resposta do sistema e registro. A mesma frequência deve aparecer no sensor e numa variável intermediária antes de surgir na saída. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por aceleração triaxial, desl",
+"diagnostico": "• Quantificar aceleração triaxial, deslocamento, frequência, fase, amplitude e função de transferência do suporte em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar um sistema massa–mola–amortecedor com excitação medida e modos ressonantes identificáveis e confrontar resíduos, calibração e estabilidade paramétrica com a",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 336,
+"conceito": "Deriva de calibração",
+"eixo": "fisica",
+"tese": "Componentes podem mudar lentamente de comportamento sem uma quebra abrupta. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Permita que um parâmetro θ_t evolua lentamente, por exemplo θ_t=θ_{t-1}+u_t, e que Y_t∼p(y|θ_t). O estimando é a variância de inovação de θ e sua correspondência com medidas de referência. Modelos de estado devem competir com um parâmetro constante penalizado. Uma especificação empiricamente decidível estima um estado latente de calibração com deriva suave ou pontos de mudança ",
+"mecanismo": "Desgaste, aquecimento e reajustes podem deslocar parâmetros gradualmente. Uma deriva física deve aparecer primeiro numa calibração ou variável intermediária; só então pode explicar mudança da distribuição final. Mudança estatística sem trilha instrumental não identifica a causa. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por resíduo",
+"diagnostico": "• Quantificar resíduo contra padrão, inclinação, intercepto, temperatura, tempo de operação e histórico de manutenção em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar um estado latente de calibração com deriva suave ou pontos de mudança penalizados e confrontar resíduos, calibração e estabilidade paramétrica com alter",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 341,
+"conceito": "Assimetria geométrica",
+"eixo": "fisica",
+"tese": "Pequenas diferenças de geometria podem quebrar a simetria ideal do sistema. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Associe cada região física s a um parâmetro α_s e modele P(Y=s)∝exp(α_s), com soma de α igual a zero. O alvo é relacionar α_s a medições geométricas g_s por α_s=βg_s+ε_s. A hipótese forte exige β estável entre orientações e sessões. Uma especificação empiricamente decidível estima um campo geométrico de efeitos posicionais comparado à hipótese de simetria rotacional a partir de",
+"mecanismo": "Diferenças de raio, inclinação, rugosidade ou alinhamento podem quebrar simetria. A cadeia causal vai da geometria ao campo de forças, deste à trajetória e então à frequência. Frequência desigual isolada não revela qual elo, se algum, existe. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por ângulo, raio, posição, massa, excentricidade",
+"diagnostico": "• Quantificar ângulo, raio, posição, massa, excentricidade, nivelamento e resposta espacial do instrumento em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar um campo geométrico de efeitos posicionais comparado à hipótese de simetria rotacional e confrontar resíduos, calibração e estabilidade paramétrica com alternativa",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 346,
+"conceito": "Acoplamento operador-sistema",
+"eixo": "fisica",
+"tese": "Condições de operação podem atuar como causa externa ao mecanismo principal. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Modele Y_t por efeitos de sessão e condição operacional: g(E[Y_t])=α+u_s+βO_t+γX_t. O estimando β representa diferença entre protocolos comparáveis, não identidade pessoal. Efeitos aleatórios evitam transformar poucos indivíduos em leis gerais. Uma especificação empiricamente decidível estima efeitos mistos que separam variação do operador, do instrumento e da interação entre a",
+"mecanismo": "A operação pode alterar temporização, força, preparação ou manutenção. Para ser causal, a condição precisa preceder a dinâmica e agir por variável intermediária registrada. Diferenças entre pessoas podem refletir turno, equipamento ou seleção de sessões. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por força, torque, duração, trajetór",
+"diagnostico": "• Quantificar força, torque, duração, trajetória, identidade anonimizada do operador e estado anterior do equipamento em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar efeitos mistos que separam variação do operador, do instrumento e da interação entre ambos e confrontar resíduos, calibração e estabilidade paramétrica ",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 351,
+"conceito": "Latência e ordenação de dados",
+"eixo": "fisica",
+"tese": "A infraestrutura de registro pode deslocar ou reordenar observações. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Cada evento possui tempo físico T_t, tempo de captura C_t e tempo de exibição D_t. A latência L_t=D_t-T_t e possíveis inversões I(C_i>C_j|T_i<T_j) definem o problema. O estimando é a taxa de inversão e seu impacto nas estatísticas de lag. Uma especificação empiricamente decidível estima uma distribuição de latência com relógios dessincronizados e ordem parcial entre registros a",
+"mecanismo": "Filas, buffering, transmissão e renderização podem deslocar eventos. Uma análise temporal aplicada à ordem de tela pode então criar transições inexistentes na ordem física. O mecanismo é informacional, não necessariamente do gerador. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por timestamps de origem e recepção, atraso de rede, núme",
+"diagnostico": "• Quantificar timestamps de origem e recepção, atraso de rede, número de sequência, resolução do relógio e perdas em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar uma distribuição de latência com relógios dessincronizados e ordem parcial entre registros e confrontar resíduos, calibração e estabilidade paramétrica com ",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 356,
+"conceito": "Censura de observação",
+"eixo": "fisica",
+"tese": "A interface pode exibir apenas um subconjunto dos eventos produzidos. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Defina R_t=1 quando um evento é observado. A distribuição disponível é P(Y|R=1), que coincide com P(Y) apenas sob condições de ignorabilidade. O estimando envolve P(R=1|Y,X) e análise de sensibilidade para mecanismos de ausência não aleatória. Uma especificação empiricamente decidível estima um processo de seleção P(C=1|X,Z) distinguindo censura aleatória, informativa e truncam",
+"mecanismo": "Filtros, cortes de tela e políticas de retenção podem selecionar eventos por categoria, tempo ou destaque. A seleção altera frequências e dependências, mesmo quando o processo de origem é estável. É necessário modelar o caminho produção → retenção → exibição. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por indicador C de visibilidade",
+"diagnostico": "• Quantificar indicador C de visibilidade, posição do corte, duração ausente, covariáveis do registro e valor parcialmente observado em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar um processo de seleção P(C=1|X,Z) distinguindo censura aleatória, informativa e truncamento e confrontar resíduos, calibração e estabilid",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 361,
+"conceito": "Seleção por destaque",
+"eixo": "fisica",
+"tese": "Elementos visuais intensos podem receber atenção desproporcional. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Separe ocorrência Y_t, destaque visual H_t e lembrança/seleção S_t. A hipótese cognitiva testa P(S=1|H,Y) e como relatórios condicionados a S distorcem P(Y). O estimando é a razão de seleção entre eventos destacados e comuns. Uma especificação empiricamente decidível estima um mecanismo de atenção que separa frequência real de probabilidade diferencial de registro a partir de c",
+"mecanismo": "Cor, tamanho e multiplicadores visuais capturam atenção, aumentam memória e influenciam quais episódios entram na narrativa. Isso pode fazer raridades parecerem causalmente centrais, embora a seleção aconteça depois do resultado. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por cor, brilho, posição, tamanho do destaque, probabilidade ",
+"diagnostico": "• Quantificar cor, brilho, posição, tamanho do destaque, probabilidade de transcrição e concordância entre leitores cegos em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar um mecanismo de atenção que separa frequência real de probabilidade diferencial de registro e confrontar resíduos, calibração e estabilidade paramét",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 366,
+"conceito": "Quebra espontânea de simetria",
+"eixo": "fisica",
+"tese": "Um sistema pode escolher estados macroscópicos distintos apesar de leis simétricas. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Defina um parâmetro de ordem m que seja zero na fase simétrica e diferente de zero após transição. Um potencial efetivo V(m)=a m²+b m⁴ ilustra a mudança quando a altera sinal. O estimando é m e sua dependência de um parâmetro de controle físico. Uma especificação empiricamente decidível estima um potencial simétrico com mínimos degenerados e perturbações externas explicitamente",
+"mecanismo": "Leis simétricas podem admitir múltiplos estados estáveis; flutuações escolhem um deles. Para aplicar o conceito, é preciso identificar graus de liberdade, simetria, fase e transição. Frequências desiguais sem parâmetro de ordem não bastam. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por parâmetro de ordem m, campo externo h, suscepti",
+"diagnostico": "• Quantificar parâmetro de ordem m, campo externo h, susceptibilidade, distribuição de orientações e tamanho do sistema em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar um potencial simétrico com mínimos degenerados e perturbações externas explicitamente mensuradas e confrontar resíduos, calibração e estabilidade para",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 371,
+"conceito": "Ressonância estocástica",
+"eixo": "fisica",
+"tese": "Ruído pode aumentar a detectabilidade de um sinal fraco em condições específicas. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Considere sinal sub-limiar s(t), ruído de intensidade D e resposta R(D). A ressonância estocástica prevê uma curva não monotônica, com máximo em D*. O estimando pode ser ganho de relação sinal-ruído na frequência de s, definido antes do experimento. Uma especificação empiricamente decidível estima um sistema não linear biestável comparado a um filtro linear com igual largura de",
+"mecanismo": "Ruído moderado ajuda um sistema não linear a atravessar barreiras em sincronia com um sinal fraco; pouco ruído não cruza, ruído excessivo destrói sincronização. Essa forma em U invertido é mais específica que afirmar genericamente que ruído ajuda. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por intensidade de ruído D, razão sinal–ruí",
+"diagnostico": "• Quantificar intensidade de ruído D, razão sinal–ruído, coerência espectral, limiar e amplitude do sinal subthreshold em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar um sistema não linear biestável comparado a um filtro linear com igual largura de banda e confrontar resíduos, calibração e estabilidade paramétrica co",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 376,
+"conceito": "Memória física do equipamento",
+"eixo": "fisica",
+"tese": "Estados internos podem persistir entre eventos sucessivos. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Introduza estado latente z_t com relaxação z_{t+1}=ρz_t+u_t, |ρ|<1, e saída Y_t∼p(y|z_t). O alvo é ρ ou o tempo τ=-Δt/logρ, estimado com sensores ou perturbações que revelem z. Modelos sem memória são o controle principal. Uma especificação empiricamente decidível estima um processo semi-Markov ou estado latente com relaxação física e parâmetros de memória a partir de estado an",
+"mecanismo": "Calor, carga, posição ou deformação podem persistir entre ciclos. A memória deve ter portador físico, direção e escala de relaxação. Dependência entre saídas pode sugeri-la, mas também pode nascer de ambiente comum ou seleção. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por estado anterior, tempo de repouso, temperatura, histerese, d",
+"diagnostico": "• Quantificar estado anterior, tempo de repouso, temperatura, histerese, desgaste e resposta a ciclos padronizados em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar um processo semi-Markov ou estado latente com relaxação física e parâmetros de memória e confrontar resíduos, calibração e estabilidade paramétrica com alt",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 381,
+"conceito": "Intermitência dinâmica",
+"eixo": "fisica",
+"tese": "Sistemas complexos podem alternar entre fases calmas e explosivas. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Modele alternância entre estados z_t∈{calmo,ativo} com durações próprias e emissão p(Y|z). A teoria prevê distribuições de tempo de permanência e transições específicas, possivelmente caudas de potência. O estimando não é apenas o número de clusters, mas os parâmetros de permanência. Uma especificação empiricamente decidível estima uma dinâmica intermitente confrontada com mist",
+"mecanismo": "Sistemas não lineares próximos de bifurcações podem permanecer longos períodos num regime e exibir rajadas breves. Misturas estáticas e mudanças externas também produzem blocos; a diferença está na dinâmica de transição e nos marcadores físicos simultâneos. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por durações laminares, amplitude",
+"diagnostico": "• Quantificar durações laminares, amplitudes de rajada, expoentes locais, λmax e distância a uma bifurcação em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar uma dinâmica intermitente confrontada com mistura de regimes e processo pontual não homogêneo e confrontar resíduos, calibração e estabilidade paramétrica com alt",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 386,
+"conceito": "Sincronização externa",
+"eixo": "fisica",
+"tese": "Um estímulo periódico externo pode modular um sistema físico. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Se φ_t é a fase do sistema e ψ_t a fase de um forçamento externo, sincronização implica concentração de Δφ=φ-ψ. O parâmetro de ordem R=|N^{-1}Σe^{iΔφ_t}| mede travamento de fase. O estimando inclui R e faixa de captura sob frequências próximas. Uma especificação empiricamente decidível estima osciladores forçados com intensidade de acoplamento comparados a uma causa comum não r",
+"mecanismo": "Um ritmo externo pode modular dinâmica por acoplamento fraco. A hipótese precisa identificar fonte, canal e fase. Periodicidade interna isolada não demonstra sincronização; é necessária coerência entre duas séries medidas independentemente. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por fase instantânea, phase-locking value, frequên",
+"diagnostico": "• Quantificar fase instantânea, phase-locking value, frequência, timestamps do estímulo e atraso de acoplamento em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar osciladores forçados com intensidade de acoplamento comparados a uma causa comum não registrada e confrontar resíduos, calibração e estabilidade paramétrica c",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 391,
+"conceito": "Emergência macroscópica",
+"eixo": "fisica",
+"tese": "Regularidades coletivas podem surgir sem existir em eventos isolados. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "Considere microestados x_t e variável coletiva M_t=Φ(x_{t-k:t}). Emergência operacional exige que M tenha dinâmica fechada aproximada e poder explicativo que não dependa de memorizar todos os microdetalhes. O estimando compara suficiência e estabilidade de M entre escalas. Uma especificação empiricamente decidível estima uma descrição macro reduzida comparada ao modelo microscó",
+"mecanismo": "Interações locais podem produzir regularidades coletivas, mas 'emergente' não significa inexplicado. É preciso definir coarse-graining, mostrar que a variável macro é robusta e identificar em que escala a descrição se torna autônoma. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por parâmetro coletivo M=g(X), informação mútua, estabili",
+"diagnostico": "• Quantificar parâmetro coletivo M=g(X), informação mútua, estabilidade ao coarse-graining e variância microscópica residual em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar uma descrição macro reduzida comparada ao modelo microscópico e a agregações aleatórias equivalentes e confrontar resíduos, calibração e estabili",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+},
+{
+"n": 396,
+"conceito": "Limite de resolução",
+"eixo": "fisica",
+"tese": "A quantização do sensor pode criar degraus e padrões aparentes. O foco está em separar essa explicação de alternativas que produzem o mesmo desenho visual.",
+"medida": "A observação é Y=Q_δ(X)+ε, onde Q_δ quantiza o estado latente X com resolução δ. O objetivo é estimar quais propriedades permanecem identificáveis sob δ e ruído. Limites inferiores de erro e análises multi-resolução definem o conteúdo informacional disponível. Uma especificação empiricamente decidível estima um canal de medição quantizado que separa estado latente de observaçõe",
+"mecanismo": "Arredondamento, amostragem e categorização fundem estados distintos. Padrões finos podem desaparecer; outros podem ser criados por aliasing. A teoria deve separar incapacidade do sistema de medir de ausência do fenômeno no estado latente. A cadeia mecanística deve ligar perturbação, estado intermediário e leitura instrumental por passo de quantização Δ, resolução temporal, taxa",
+"diagnostico": "• Quantificar passo de quantização Δ, resolução temporal, taxa de amostragem, saturação, erro de arredondamento e faixa dinâmica em blocos cronológicos independentes, com unidades, resolução, intervalos de incerteza e critérios de exclusão fixados antes da comparação. • Ajustar um canal de medição quantizado que separa estado latente de observações agrupadas e confrontar resíduos, calibração e estabilidade paramétric",
+"aspectos": [
+"assinatura observacional",
+"teste diferencial",
+"controle causal",
+"limite epistêmico",
+"replicação física"
+]
+}
+]

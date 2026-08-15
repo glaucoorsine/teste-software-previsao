@@ -20,3 +20,5 @@
 {"quando": 1786770382.531875, "saiu": "30", "acertou": true, "escolhidos": ["29", "24"], "giros": 3, "tipo": "acerto", "quem_tinha": [], "n_fontes": 0, "fontes": [], "jogadores": null, "mesa_cheia": null, "faixa": null}
 {"quando": 1786777898.9914389, "saiu": "30", "acertou": false, "escolhidos": ["29", "24"], "giros": 3, "tipo": "cegueira", "quem_tinha": [], "n_fontes": 0, "fontes": [], "jogadores": null, "mesa_cheia": null, "faixa": null}
 {"quando": 1786777898.9960322, "saiu": "30", "acertou": true, "escolhidos": ["29", "24"], "giros": 3, "tipo": "acerto", "quem_tinha": [], "n_fontes": 0, "fontes": [], "jogadores": null, "mesa_cheia": null, "faixa": null}
+{"quando": 1786796534.7624083, "saiu": "30", "acertou": false, "escolhidos": ["29", "24"], "giros": 3, "tipo": "cegueira", "quem_tinha": [], "n_fontes": 0, "fontes": [], "jogadores": null, "mesa_cheia": null, "faixa": null}
+{"quando": 1786796534.7651837, "saiu": "30", "acertou": true, "escolhidos": ["29", "24"], "giros": 3, "tipo": "acerto", "quem_tinha": [], "n_fontes": 0, "fontes": [], "jogadores": null, "mesa_cheia": null, "faixa": null}

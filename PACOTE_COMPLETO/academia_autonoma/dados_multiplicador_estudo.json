@@ -1,0 +1,46 @@
+{
+ "n_fichas": 416,
+ "veredictos": {
+  "SEM SINAL CONFIRMADO": 156,
+  "SEM GANHO ATUAL": 52,
+  "REPLICAÇÃO AUSENTE": 104,
+  "CANDIDATO EXPLORATÓRIO": 52,
+  "EXPLORATÓRIO E INSTÁVEL": 52
+ },
+ "por_serie": {
+  "mega_fire": {
+   "n": 78,
+   "skill": {
+    "discriminação de ocorrência": -3.4,
+    "calibração": -3.4,
+    "magnitude": -16.5,
+    "estabilidade": -3.4
+   }
+  },
+  "lightning": {
+   "n": 78,
+   "skill": {
+    "discriminação de ocorrência": 8.2,
+    "calibração": 8.2,
+    "magnitude": -59.2,
+    "estabilidade": 8.2
+   }
+  },
+  "crazy_time": {
+   "n": 77,
+   "skill": {
+    "discriminação de ocorrência": -15.4,
+    "calibração": 8.7,
+    "magnitude": 8.7
+   }
+  },
+  "crazy_time_a": {
+   "n": 77,
+   "skill": {
+    "discriminação de ocorrência": -9.9,
+    "calibração": 30.1,
+    "magnitude": 30.1
+   }
+  }
+ }
+}
