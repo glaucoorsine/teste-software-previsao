@@ -12,3 +12,10 @@ PACOTE_COMPLETO/Logs/central_log.txt
 
 # zip de entrega — artefato de build, a fonte ja esta versionada
 PACOTE_COMPLETO_*.zip
+
+# Residuo que os TESTES escrevem toda vez que rodam. Ficavam versionados e
+# apareciam como alteracao a cada suite, escondendo mudanca de verdade no meio.
+PACOTE_COMPLETO/Logs/autopsia_*.jsonl
+PACOTE_COMPLETO/Logs/central_log.txt
+PACOTE_COMPLETO/Logs/*_ciclo_ativo.json
+PACOTE_COMPLETO/Logs/fontes_que_funcionam.json
