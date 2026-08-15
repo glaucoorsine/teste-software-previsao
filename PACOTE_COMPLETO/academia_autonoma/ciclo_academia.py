@@ -38,6 +38,10 @@ from .agentes_multiplicador import (cacar_multiplicadores as _cacar_mult,
 # Os caçadores são caros (reordenações). Rodar a cada giro seria inviável e
 # desnecessário: o retrato deles muda devagar. A cada N ciclos é suficiente.
 CACADORES_A_CADA = 15
+# O catálogo de relações é mais caro ainda (6000 embaralhamentos no refino) e
+# responde sobre a FORMA do histórico, não sobre o último giro — não muda de
+# um giro para o outro.
+RELACOES_A_CADA = 60
 _ultimo_cacar = {}
 _passo_agg = {}
 
@@ -366,6 +370,17 @@ def _ciclo_body(dataset_id: str, historico, settled=None, mults=None) -> Dict[st
             cand_cacadores.extend(str(x) for x in (_rr.get("candidatos") or []))
         except Exception as e:
             msgs.append(f"[Regras do operador] erro: {type(e).__name__}: {e}")
+        # A14 — o catálogo de relações. Roda de vez em quando porque a régua é
+        # cara (6000 embaralhamentos no refino), e o que ela responde não muda
+        # a cada giro: é sobre a forma do histórico, não sobre o último número.
+        try:
+            if _n % RELACOES_A_CADA == 0:
+                from .agentes_relacoes import varrer as _varrer, resumo as _res_rel
+                _rel = _varrer(hist)
+                for _l in _res_rel(_rel).split("\n"):
+                    msgs.append(_l)
+        except Exception as e:
+            msgs.append(f"[Relações] erro: {type(e).__name__}: {e}")
         try:
             _ran = cacar_anomalias(hist)
             for _l in resumo_anomalias(_ran).split("\n"):
