@@ -574,6 +574,7 @@ class PainelMesa(ctk.CTkFrame):
         self.mesa_cheia = None
         self.faixa_publico = {}
         self.ultimo_publico = 0.0
+        self._ultimo_erro_log = 0.0
         self.vivo = True
         self.ultimo_estado = "iniciando"
         self.arquivo = PASTA / ESTADO[jogo]
@@ -904,8 +905,28 @@ class PainelMesa(ctk.CTkFrame):
             cap = capturar(self.jogo, page_size=50, max_pages=2)
             rows = cap.get("rows") or []
             if not rows:
-                self._estado(f"sem dados: {str(cap.get('err') or '')[:34]}",
-                             VERMELHO)
+                # FALHAR CALADO FOI O QUE DEIXOU O CRAZY TIME A INVISIVEL.
+                #
+                # Ele reclamou tres vezes que a mesa nao funciona. Nos tres
+                # logs que mandou, `crazy_time_a` aparece ZERO vezes -- nem
+                # erro. O motivo estava aqui: a falha ia para a TELA e nunca
+                # para o log, entao nao havia o que diagnosticar.
+                #
+                # Agora vai para o log tambem, com o endereco que foi tentado.
+                # Uma vez a cada dois minutos no maximo, para nao encher o
+                # arquivo: o que interessa e existir o rastro, nao repeti-lo.
+                _msg = str(cap.get("err") or "sem resposta da fonte")
+                self._estado(f"sem dados: {_msg[:34]}", VERMELHO)
+                _agora = time.time()
+                if _agora - getattr(self, "_ultimo_erro_log", 0) > 120:
+                    self._ultimo_erro_log = _agora
+                    try:
+                        from fluxo_captura import enderecos_para
+                        _tentou = (enderecos_para(self.jogo) or ["?"])[0]
+                    except Exception:
+                        _tentou = "?"
+                    registrar(f"{self.jogo} SEM_DADOS {_msg[:90]} "
+                              f"| tentou: {_tentou}")
                 return
             offline = bool(cap.get("offline"))
             mudou = bool(cap.get("novo_head"))

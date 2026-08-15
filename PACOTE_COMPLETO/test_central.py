@@ -791,6 +791,37 @@ if _a12:
     checa(_a12[0]["peso"] <= 1.6,
           "com voz normal, nao com o maior peso da mesa", _a12[0]["peso"])
 
+print("\n[27] a mesa que nao abre TEM que deixar rastro no log")
+# Ele reclamou tres vezes do Crazy Time A. Nos tres logs que mandou, a palavra
+# "crazy_time_a" aparece ZERO vezes -- nem erro. A falha ia so para a tela.
+import inspect as _insp
+_src = _insp.getsource(CENTRAL.PainelMesa._trabalhar)
+checa("SEM_DADOS" in _src,
+      "a falha de captura vai para o log, nao so para a tela")
+checa("_ultimo_erro_log" in _src,
+      "com intervalo, para nao encher o arquivo")
+checa("tentou:" in _src,
+      "e diz QUAL endereco foi tentado -- sem isso nao da para diagnosticar")
+
+print("\n[28] o consenso explicado em portugues")
+from explicador import explicar, frase_da_fonte, explicar_vazio
+_fpn = {"21": ["REGRA_OPERADOR", "GAP_CICLO"], "14": ["ACADEMIA_A07"]}
+_txt = explicar(["21", "14"], _fpn,
+                n_efetivo={"nominal": 9, "efetivo": 3.0, "inflacao": 3.0})
+print("       " + _txt.replace("\n", "\n       "))
+checa("POR QUE ESTES" in _txt, "a explicacao tem titulo claro")
+checa("sua regra" in _txt, "a regra DELE aparece como regra dele, com nome")
+checa("peso" not in _txt.lower(), "e nenhum numero interno meu vaza", _txt[:60])
+checa("valem 3 opinioes" in _txt or "3 opini" in _txt,
+      "a ficha 226 dita de um jeito que se entende")
+checa("teoria que a academia validou" in _txt,
+      "nome de teoria interna vira frase, nao codigo")
+checa(frase_da_fonte("FONTE_QUE_NAO_EXISTE"),
+      "fonte desconhecida ainda gera alguma frase")
+checa(explicar([], {}) == "", "sem numero, sem explicacao inventada")
+checa("é resposta, não falha" in explicar_vazio(),
+      "e o AGUARDANDO tambem e explicado")
+
 print()
 if falhas:
     print("FALHAS:", falhas)
