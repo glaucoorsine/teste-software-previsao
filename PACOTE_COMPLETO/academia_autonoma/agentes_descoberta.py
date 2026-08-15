@@ -358,9 +358,62 @@ class A12ExploradorNovidade(AgenteBase):
                                      descricao=f"novidade escala w={w} v={v}"))
         return out[: self.orcamento]
 
+class A13Finais(AgenteBase):
+    """O agente que faltava: descobrir no mundo dos FINAIS.
+
+    Ele perguntou por que as IAs não descobrem o que ele descobre. Fui ver, e
+    a resposta era simples e feia: `final_in` existia no vocabulário, mas
+    NENHUM dos doze descobridores propunha uma hipótese de final. Elas não
+    achavam a teoria dele porque não sabiam dizer aquela palavra.
+
+    Este agente olha o final do último número e pergunta se algum grupo de
+    finais vem atrás com força. Ele não recebe as famílias dele prontas: monta
+    os grupos a partir do que está saindo, para poder achar famílias que ele
+    ainda não percebeu — inclusive alguma que contradiga as três conhecidas.
+    """
+    id = "A13"; nome = "FINAIS"
+
+    def propor(self, eventos, dataset_id, dominio):
+        h = _vals(eventos)
+        if len(h) < 30:
+            return []
+        out = []
+        # o que vem depois de cada final, medido no próprio histórico
+        depois = defaultdict(Counter)
+        for a, b in zip(h[1:], h):          # h vem do mais novo para o mais velho
+            try:
+                depois[str(a)[-1]][str(b)[-1]] += 1
+            except Exception:
+                continue
+        for fin, cont in depois.items():
+            if sum(cont.values()) < 12:
+                continue
+            grupo = [f for f, _ in cont.most_common(3)]
+            expr = {"op": "and", "args": [
+                {"op": "final_in", "finais": [fin]},
+                {"op": "in_set", "valores": sorted(
+                    x for x in dominio if str(x)[-1] in set(grupo))},
+            ]}
+            out.append(make_hipotese(
+                expr, self.id, dataset_id, dataset_id, 30,
+                descricao=f"final {fin} → finais {','.join(grupo)}"))
+            if len(out) >= self.orcamento:
+                break
+        # e a forma pura: o final se repete
+        for fin, _ in Counter(str(x)[-1] for x in h[:60] if x).most_common(3):
+            expr = {"op": "final_in", "finais": [fin]}
+            out.append(make_hipotese(
+                expr, self.id, dataset_id, dataset_id, 40,
+                descricao=f"final {fin} chama final {fin}"))
+            if len(out) >= self.orcamento:
+                break
+        return out[: self.orcamento]
+
+
 AGENTES = [
     A01ComposicaoSimbolica(), A02SequenciaOrdemVariavel(), A03MotivosSubseq(),
     A04Recorrencia(), A05GrafoCoocorrencia(), A06RegimesMultiescala(),
     A07Interacoes(), A08Temporalidade(), A09EstadosSemelhantes(),
     A10RepresentacaoLatente(), A11Residuos(), A12ExploradorNovidade(),
+    A13Finais(),
 ]
