@@ -1840,6 +1840,53 @@ class PipelinePerceptivo:
                                     f"{_alvo_tr}")
                 except Exception as _e:
                     msgs.append(f"[Transição ditada] erro: {type(_e).__name__}")
+
+                # A FAMÍLIA QUENTE, e dentro dela os que menos saíram.
+                #
+                # Percepção dele olhando a tela do Mega Fire, 15/08: "elas não
+                # olharam o histórico anterior. Dificilmente viria um número
+                # repetido assim; ela colocou 10 e 11, mas o 10 e o 11 já
+                # tinham ali. Se fossem se basear pelo 0-1-3-6, que é o que
+                # mais está aparecendo, teria colocado 21." E o 21 saiu.
+                #
+                # São duas coisas juntas, e é o cruzamento delas que ele
+                # descreve: QUAL família está quente (não a família do último
+                # número, que era o que eu já tinha), e DENTRO dela preferir
+                # quem ainda não saiu na janela.
+                #
+                # Medido no histórico dele, 1364 a 1929 ativações por mesa:
+                #     lightning  1,02x  ·  immersive  1,03x  ·  mega_fire 1,06x
+                # Sete das nove medições acima do acaso. Pouco para afirmar,
+                # consistente demais para ignorar — então entra como voz.
+                try:
+                    _jan = _cron[-20:] if len(_cron) >= 20 else _cron
+                    _c = {}
+                    for _x in _jan:
+                        for _nm, _f in (("0-1-3-6", (0, 1, 3, 6)),
+                                        ("0-2-7-8", (0, 2, 7, 8)),
+                                        ("4-5-9", (4, 5, 9))):
+                            if _x % 10 in _f:
+                                _c[_nm] = _c.get(_nm, 0) + 1
+                    if _c:
+                        _quente = max(_c, key=lambda k: _c[k])
+                        _fins = {"0-1-3-6": (0, 1, 3, 6),
+                                 "0-2-7-8": (0, 2, 7, 8),
+                                 "4-5-9": (4, 5, 9)}[_quente]
+                        _pool = [x for x in range(37) if x % 10 in _fins]
+                        _vistos = {}
+                        for _x in _jan:
+                            _vistos[_x] = _vistos.get(_x, 0) + 1
+                        # os que menos saíram vêm primeiro: o peso decai por
+                        # posição, então a ordem é a preferência dele
+                        _ordem = sorted(_pool, key=lambda x: (_vistos.get(x, 0), x))
+                        hips.append({"nome": "REGRA_FAMILIA_QUENTE",
+                                     "nums": [str(x) for x in _ordem],
+                                     "peso": 1.8})
+                        msgs.append(f"[Família quente] {_quente} "
+                                    f"({_c[_quente]} nos últimos {len(_jan)}) "
+                                    f"→ menos vistos: {_ordem[:7]}")
+                except Exception as _e:
+                    msgs.append(f"[Família quente] erro: {type(_e).__name__}")
             except Exception as _e:
                 msgs.append(f"[Regra do operador] erro: {type(_e).__name__}: {_e}")
 
