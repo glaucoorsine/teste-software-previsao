@@ -25,27 +25,30 @@ from progresso_teste import Progresso, _mmss  # noqa: E402
 
 # (arquivo, marca de sucesso no fim da saída, limite em segundos, custo típico)
 #
-# O CUSTO é o que faz a estimativa de tempo prestar. Onze destes levam
-# segundos e o último leva a maior parte de uma hora; sem declarar isso, a
-# barra anunciaria "falta 4s" com quarenta minutos pela frente. O número não
-# precisa ser exato — ele é reajustado pelo ritmo real da máquina dele
-# conforme a suíte anda.
+# O CUSTO é em SEGUNDOS, medidos aqui. Onze destes levam um segundo e o último
+# leva vinte minutos; sem declarar isso, a barra anunciaria "falta 4s" com
+# vinte minutos pela frente — foi exatamente o que ela fez antes destes
+# números existirem.
+#
+# O ritmo da máquina dele corrige a estimativa, mas só depois que uma fatia
+# suficiente do trabalho passou: reajustar pelos doze testes de um segundo
+# diria que o pesado também leva um segundo.
 TESTES = [
-    ("test_central.py", "CENTRAL_TESTES_OK", 300, 8),
-    ("test_base_auditoria.py", "BASE_AUDITORIA_OK", 300, 6),
-    ("test_multiplicador.py", "MULTIPLICADOR_OK", 900, 60),
-    ("test_autopsia.py", "AUTOPSIA_OK", 200, 3),
-    ("test_publico.py", "PUBLICO_OK", 200, 3),
-    ("test_captador.py", "CAPTADOR_OK", 200, 3),
-    ("test_resultado.py", "RESULTADO_OK", 200, 3),
-    ("test_notificador.py", "NTFY_OK", 200, 5),
-    ("test_fluxo_captura.py", "FLUXO_TESTES_OK", 300, 6),
-    ("test_honestidade_gates.py", "HONEST_TESTS_OK", 300, 6),
-    ("test_coletor_sites.py", "COLETOR_OK", 300, 6),
-    ("teste_a6_ruido.py", None, 900, 20),
-    # o pesado: 25 roletas limpas + 25 viciadas, cada uma com régua de
-    # permutação. Meia hora é o normal dele, não travamento.
-    ("teste_ocorrencia.py", None, 5400, 2100),
+    ("test_central.py", "CENTRAL_TESTES_OK", 300, 1),
+    ("test_base_auditoria.py", "BASE_AUDITORIA_OK", 300, 1),
+    ("test_multiplicador.py", "MULTIPLICADOR_OK", 900, 2),
+    ("test_autopsia.py", "AUTOPSIA_OK", 200, 1),
+    ("test_publico.py", "PUBLICO_OK", 200, 1),
+    ("test_captador.py", "CAPTADOR_OK", 200, 1),
+    ("test_resultado.py", "RESULTADO_OK", 200, 1),
+    ("test_notificador.py", "NTFY_OK", 200, 4),
+    ("test_fluxo_captura.py", "FLUXO_TESTES_OK", 300, 1),
+    ("test_honestidade_gates.py", "HONEST_TESTS_OK", 300, 1),
+    ("test_coletor_sites.py", "COLETOR_OK", 300, 1),
+    ("teste_a6_ruido.py", None, 900, 1),
+    # o pesado: 75 roletas com regua de permutacao, divididas pelos nucleos.
+    # Vinte minutos aqui e o normal, nao travamento.
+    ("teste_ocorrencia.py", None, 5400, 1200),
 ]
 
 
@@ -73,8 +76,8 @@ def main() -> int:
           + (f"  ({len(faltando)} não encontrados: "
              f"{', '.join(faltando)})" if faltando else ""))
     _tot = sum(x[3] for x in existem)
-    print(f"  O último deles sozinho leva a maior parte do tempo — 25 roletas"
-          f" limpas e 25 viciadas, com régua de permutação.")
+    print("  O último deles sozinho leva a maior parte do tempo — 75 roletas"
+          " com régua de permutação, divididas pelos núcleos da máquina.")
     print(f"  Estimativa total desta suíte: ~{_mmss(_tot)}.\n")
     p = Progresso(len(existem), titulo="suíte completa",
                   pesos=[x[3] for x in existem])

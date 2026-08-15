@@ -11,12 +11,17 @@ suíte travada, e a única saída é matar o processo e perder tudo.
 A conta do tempo restante é honesta com o que sabe, de dois jeitos:
 
     sem pesos    usa o tempo médio das etapas já terminadas
-    com pesos    o chamador declara o custo típico de cada etapa e a conta vai
-                 pelo custo que falta, reajustado pelo ritmo real da máquina
+    com pesos    o chamador declara o custo de cada etapa EM SEGUNDOS e a conta
+                 vai pelo custo que falta
 
 O segundo existe porque o primeiro mente quando as etapas têm tamanhos muito
-diferentes — onze testes de segundos e um de meia hora fazem a média anunciar
-"falta 4s" com quarenta minutos pela frente.
+diferentes — doze testes de um segundo e um de vinte minutos fazem a média
+anunciar "falta 4s" com vinte minutos pela frente.
+
+O ritmo real da máquina corrige os pesos declarados, mas só depois que um
+quinto do trabalho passou: calibrar o custo de uma etapa de vinte minutos pelo
+ritmo de doze etapas de um segundo dá uma estimativa confiante e errada — que
+é pior que uma estimativa marcada como chute.
 
 Enquanto há pouca observação a estimativa aparece com "~" na frente, porque é
 isso que ela é — um chute que melhora sozinho a cada etapa.
@@ -71,11 +76,14 @@ class Progresso:
         if self.pesos:
             falto = sum(self.pesos[self.feito:])
             gasto_peso = self.peso_total - falto
-            if self.duracoes and gasto_peso > 0:
-                # reajusta a previsão pelo ritmo real desta máquina
+            if self.duracoes and gasto_peso >= 0.2 * self.peso_total:
+                # Reajusta pelo ritmo real desta máquina -- mas só depois que
+                # um quinto do trabalho passou. Calibrar o custo de uma etapa
+                # de vinte minutos pelo ritmo de doze etapas de um segundo dá
+                # uma estimativa confiante e errada.
                 ritmo = gasto / gasto_peso
                 restante = falto * ritmo
-                certeza = "" if self.feito >= 3 else "~"
+                certeza = ""
             else:
                 restante = falto
                 certeza = "~"
@@ -127,7 +135,7 @@ class Progresso:
         if self.pesos:
             falto = sum(self.pesos[self.feito:])
             gasto_peso = self.peso_total - falto
-            if self.duracoes and gasto_peso > 0:
+            if self.duracoes and gasto_peso >= 0.2 * self.peso_total:
                 return falto * ((time.time() - self.t0) / gasto_peso)
             return float(falto)
         if not self.duracoes:
