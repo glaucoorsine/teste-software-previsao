@@ -119,7 +119,7 @@ class MesaFalsa(CENTRAL.PainelMesa):
         self.ultimo_estado = "teste"
         self.arquivo = CENTRAL.PASTA / CENTRAL.ESTADO[jogo]
         for n in ("faixa", "placar", "placar_num", "contadores", "hist",
-                  "feed", "st", "academia"):
+                  "feed", "st", "academia", "publico"):
             setattr(self, n, Boneco())
         self.caixas = [Boneco() for _ in range(7)]
         self.hist_col = [{"topo": Boneco(), "mult": Boneco(),
@@ -132,6 +132,7 @@ class MesaFalsa(CENTRAL.PainelMesa):
         self.jogadores = None
         self.mesa_cheia = None
         self.ultimo_publico = 9e18      # nunca consulta no teste
+        self.faixa_publico = {}
         self._carregar()
 
     def after(self, ms, fn=None, *a):

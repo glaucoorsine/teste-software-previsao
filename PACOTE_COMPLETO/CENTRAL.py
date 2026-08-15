@@ -562,6 +562,7 @@ class PainelMesa(ctk.CTkFrame):
         # for gravado junto de cada janela.
         self.jogadores = None
         self.mesa_cheia = None
+        self.faixa_publico = {}
         self.ultimo_publico = 0.0
         self.vivo = True
         self.ultimo_estado = "iniciando"
@@ -585,6 +586,9 @@ class PainelMesa(ctk.CTkFrame):
         self.st = ctk.CTkLabel(topo, text="iniciando…", text_color=ROXO,
                                font=("Arial", 13))
         self.st.pack(side="left", padx=14)
+        self.publico = ctk.CTkLabel(topo, text="", font=("Arial", 13, "bold"),
+                                    text_color=FRACO)
+        self.publico.pack(side="left", padx=10)
 
         corpo = ctk.CTkFrame(self, fg_color="transparent")
         corpo.pack(fill="both", expand=True, padx=16, pady=6)
@@ -803,7 +807,8 @@ class PainelMesa(ctk.CTkFrame):
                     self.jogo, self.ultimas_escolhas or [], n, fechou_bem,
                     candidatos_por_fonte=getattr(self, "fontes_da_janela", {}),
                     giros=int(self.ultima_janela or 0),
-                    jogadores=self.jogadores, mesa_cheia=self.mesa_cheia)
+                    jogadores=self.jogadores, mesa_cheia=self.mesa_cheia,
+                    faixa=(self.faixa_publico or {}).get('faixa'))
                 registrar(f"{self.jogo} AUTOPSIA {_l.get('tipo')} "
                           f"saiu={n} tinha={_l.get('quem_tinha')}")
             except Exception as e:
@@ -1032,12 +1037,24 @@ class PainelMesa(ctk.CTkFrame):
         def tarefa():
             try:
                 from fonte_gamblingcounting import coletar
+                from publico_mesa import observar, classificar
                 d = coletar(self.jogo)
                 if d.get("jogadores"):
                     self.jogadores = d["jogadores"]
-                    self.mesa_cheia = d.get("mesa_cheia")
+                    # TODA leitura é guardada: é sobre elas que as faixas se
+                    # recalibram depois. Sem gravar, "mínimo/médio/cheia"
+                    # continuaria sendo palpite meu para sempre.
+                    observar(self.jogo, self.jogadores)
+                    c = classificar(self.jogo, self.jogadores)
+                    self.faixa_publico = c
+                    self.mesa_cheia = (c.get("faixa") == "cheia")
                     registrar(f"{self.jogo} PUBLICO {self.jogadores} "
-                              f"cheia={self.mesa_cheia}")
+                              f"faixa={c.get('faixa')} ({c.get('conselho')})")
+                    self.after(0, lambda t=c: self.publico.configure(
+                        text=f"mesa: {t['jogadores']} pessoas · {t['rotulo']} — "
+                             f"{t['conselho']}",
+                        text_color={"cheia": VERDE, "media": AMARELO,
+                                    "vazia": VERMELHO}.get(t.get("faixa"), FRACO)))
             except Exception as e:
                 registrar(f"{self.jogo} publico: {type(e).__name__}")
 
