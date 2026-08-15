@@ -98,7 +98,7 @@ def normalizar_evento(raw: dict, dataset_id: str) -> Optional[dict]:
     settled = canonical_ts(raw.get("settled") or raw.get("settledAt") or raw.get("ts"))
     tags = raw.get("tags") or []
     return {
-        "n": s if dataset_id == "crazy_time" else (int(s) if s.isdigit() else s),
+        "n": s if str(dataset_id).startswith("crazy_time") else (int(s) if s.isdigit() else s),
         "valor": s,
         "settled": settled,
         "tags": tags,

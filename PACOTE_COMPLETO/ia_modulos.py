@@ -83,6 +83,18 @@ TIERS = {27,13,36,11,30,8,23,10,5,24,16,33}
 ORPHELINS = {1,20,14,31,9,17,34,6}
 CT_SETORES = ["1","2","5","10","CoinFlip","CashHunt","Pachinko","CrazyBonus"]
 CT_CICLO = {"1":2.6,"2":4.2,"5":7.7,"10":13.5,"CoinFlip":13.5,"CashHunt":27,"Pachinko":27,"CrazyBonus":54}
+# A RODA DO CRAZY TIME NAO E UNIFORME, E ESQUECER ISSO TRAVOU A MESA NO "5".
+#
+# Sao 54 fatias muito desiguais. Comparar contra 1/8 = 12,5% faz o Pachinko
+# (2 fatias, 3,7%) parecer eternamente atrasado -- ele sai pouco porque tem
+# poucas fatias, nao porque esta devendo. Relatado por ele: "crazy time esta
+# travado no 5, nao funciona bem", e a medicao confirmou: em seis voltas as
+# sugestoes foram 5, 10, Pachinko, CashHunt -- os quatro MAIS RAROS -- e o "1"
+# (21 fatias, 38,9%) nao apareceu uma vez.
+CT_FATIAS = {"1": 21, "2": 13, "5": 7, "10": 4,
+             "CoinFlip": 4, "CashHunt": 2, "Pachinko": 2, "CrazyBonus": 1}
+CT_TOTAL_FATIAS = 54
+CT_P = {s: n / CT_TOTAL_FATIAS for s, n in CT_FATIAS.items()}
 MAP_CT_TO_IDX = {s:i for i,s in enumerate(CT_SETORES)}
 MAP_IDX_TO_CT = {i:s for i,s in enumerate(CT_SETORES)}
 
@@ -253,9 +265,17 @@ class ModeloEstatistico:
 
     def rank_ct(self, feats, prior_atraso=False, w_isol=1.0):
         sc = defaultdict(float)
-        gap_w = 2.4 if prior_atraso else 2.0
+        # O ATRASO PESAVA 7x MAIS QUE A FREQUENCIA -- e numa roda desigual isso
+        # e um empurrao permanente para os simbolos raros. O gap ja vem
+        # normalizado pelo ciclo de cada simbolo, mas com 1 fatia em 54 ele
+        # oscila muito e estoura facil; por isso entra com teto.
+        gap_w = 1.2 if prior_atraso else 1.0
         for s,g in (feats.get("gaps_ratio") or {}).items():
-            sc[s] += g * gap_w * max(1.0, w_isol)
+            sc[s] += min(float(g), 3.0) * gap_w * max(1.0, w_isol)
+        # E a chance REAL de cada simbolo entra como piso: o "1" ocupa 21 das
+        # 54 fatias e nao pode ficar fora da conversa por nao estar atrasado.
+        for s, pr in CT_P.items():
+            sc[s] += pr * 4.0
         for s,c in (feats.get("freq") or {}).items():
             sc[s] += c * 0.3
         ranked = sorted(sc, key=lambda s: -sc[s])
@@ -269,7 +289,9 @@ class ModeloAnomalia:
         conf = min(1.0, len(a)/5.0) * (1.2 if boost else 1.0)
         return a, min(1.0, conf)
     def rank_ct(self, feats, boost=False):
-        a = [s for s,g in (feats.get("gaps_ratio") or {}).items() if g>=2.5][:5]
+        # so conta como anomalia quem esta MUITO alem do proprio ciclo, e o
+        # CrazyBonus (1 fatia em 54) chega em 2,5 com frequencia por acaso
+        a = [s for s,g in (feats.get("gaps_ratio") or {}).items() if g>=3.5][:5]
         conf = min(1.0, len(a)/3.0) * (1.2 if boost else 1.0)
         return a, min(1.0, conf)
 
@@ -283,9 +305,21 @@ class ModeloSetor:
         out = list(dict.fromkeys(pool[:8]+viz))[:10]
         return out, sq, 0.7 if pool else 0.2
     def rank_ct(self, feats):
+        """Antes esta fonte votava SEMPRE e SO nos quatro bonus.
+
+        Os quatro bonus juntos sao 9 das 54 fatias -- 16,7% da roda. Uma fonte
+        que aponta so eles, em todo giro, com peso 2.0, e um voto fixo nos mais
+        raros; era ela a principal responsavel pela mesa "travada no 5".
+
+        Agora ela ranqueia os OITO simbolos, combinando o atraso normalizado
+        com a chance real de cada fatia. Os bonus continuam podendo aparecer --
+        quando estiverem de fato atrasados, nao por serem bonus.
+        """
         gr = feats.get("gaps_ratio") or {}
-        bonus = sorted(["CoinFlip","CashHunt","Pachinko","CrazyBonus"], key=lambda s: -gr.get(s,0))
-        return bonus, "BONUS_GROUP", 0.6
+        ordem = sorted(CT_SETORES,
+                       key=lambda s: -(min(float(gr.get(s, 0)), 3.0)
+                                       + CT_P.get(s, 0.125) * 4.0))
+        return ordem, "RODA_CT", 0.6
 
 class BaselineFrequencia:
     """Baseline simples: top-k por frequência no passado — mesmo k do modelo."""
@@ -314,10 +348,28 @@ class GeradorHipoteses:
         if anom: hips.append({"nome":"ANOMALIA","nums":anom,"peso":1.8})
         setor_nums,_,_ = ranks["setor"]
         if setor_nums: hips.append({"nome":"SETOR","nums":setor_nums,"peso":1.6})
+        # ANTI_12: A FONTE QUE TRAVAVA A MESA.
+        #
+        # Ela dispara quando o "1" e o "2" aparecem muito -- so que os dois
+        # juntos sao 34 das 54 fatias, 63% da roda. Em 35 giros isso da umas 22
+        # ocorrencias POR CONSTRUCAO, e o gatilho era 12. Ou seja: ela disparava
+        # em praticamente todo giro, com o MAIOR peso da mesa (2.5), votando
+        # sempre nos raros. Era um veto permanente contra os dois simbolos mais
+        # provaveis -- a causa do "crazy time travado no 5" que ele relatou.
+        #
+        # A ideia por tras dela nao e boba: 1 e 2 pagam pouco. Mas este software
+        # mede ACERTO, e nessa conta excluir 63% da roda e sabotagem. Agora ela
+        # so fala quando os dois estao MESMO acima do proprio esperado, e com
+        # peso de voz normal em vez do maior da mesa.
         fr = Counter(feats.get("freq") or {})
-        if fr.get("1",0)+fr.get("2",0)>=12:
-            bonus=[s for s in ("CashHunt","Pachinko","CrazyBonus","10","5") if (feats.get("gaps_ratio") or {}).get(s,0)>=0.7]
-            hips.append({"nome":"ANTI_12","nums":bonus or ["5","10","CashHunt"],"peso":2.5})
+        _n_jan = max(1, sum(fr.values()))
+        _esperado_12 = (CT_P["1"] + CT_P["2"]) * _n_jan
+        if fr.get("1", 0) + fr.get("2", 0) >= _esperado_12 * 1.25:
+            gr = feats.get("gaps_ratio") or {}
+            bonus = [s for s in ("CashHunt", "Pachinko", "CrazyBonus", "10", "5")
+                     if gr.get(s, 0) >= 1.0]
+            if bonus:
+                hips.append({"nome": "ANTI_12", "nums": bonus, "peso": 1.4})
         return hips
 
 class Critico:
@@ -1397,7 +1449,21 @@ ALVO_ACERTO_JANELA = 0.53
 # precisa mudar; o piso de janela continua valendo e a lista volta a ser curta.
 COBERTURA_LARGA = True
 ALVO_ACERTO_NUMERO = 0.53
-K_COBERTURA_LARGA = 20
+
+# ELE VIU 20 NA TELA E DECIDIU 12.
+#
+#     "Mas 20 números é demais, deixe até 12"
+#
+# É decisão dele, e a conta muda junto -- 12 números nao alcancam os 53% de
+# acerto POR GIRO (12/37 = 32,4%), so os de JANELA:
+#
+#     acerto de NUMERO por giro       32,4%
+#     acerto de JANELA em 3 giros     69,2%
+#     acerto de JANELA em 5 giros     85,9%
+#
+# O piso de janela continua cumprido com folga. O de numero deixou de ser
+# alcancavel, e isso esta dito aqui em vez de fingido no placar.
+K_COBERTURA_LARGA = 12
 
 
 def k_para_alvo_numero(alvo: float, n_classes: int) -> int:
@@ -1504,8 +1570,9 @@ class PipelinePerceptivo:
         # simbolos e cobrir 20 nao existe.
         if COBERTURA_LARGA and not self.is_ct:
             # o k que o piso de acerto POR GIRO exige (53% -> 20 de 37)
-            _k = k_para_alvo_numero(ALVO_ACERTO_NUMERO, self.n_classes)
-            self.k_min = self.k_max = max(K_COBERTURA_LARGA, _k)
+            # o teto e o dele; k_para_alvo_numero fica como referencia do que
+            # os 53% por giro exigiriam (20), para o placar poder dizer.
+            self.k_min = self.k_max = K_COBERTURA_LARGA
         self.k_alvos = self.k_max
         self.prefs = {"peso_isol":1.0,"boost_anti":False,"prioritizar_atraso":False,"reduzir_12":False,"janela":None}
 

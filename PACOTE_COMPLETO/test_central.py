@@ -681,12 +681,15 @@ print("\n[23b] os pisos de 53% que ele pediu")
 checa(1 - (1 - _esperado / 37) ** 5 >= 0.53,
       f"com {_esperado} numeros a janela de 5 passa de 53%",
       f"{1-(1-_esperado/37)**5:.1%}")
-if COBERTURA_LARGA:
-    checa(_esperado / 37 >= ALVO_ACERTO_NUMERO,
-          f"e o acerto por giro tambem: {_esperado}/37",
+# O piso de NUMERO exigiria 20 numeros (53% x 37). Ele viu os 20 na tela e
+# decidiu 12 -- "20 numeros e demais". Entao o piso de numero deixou de ser
+# alcancavel, e o teste cobra que isso esteja DITO, nao fingido.
+checa(k_para_alvo_numero(0.53, 37) == 20,
+      "a conta do piso de numero da 20, e nao ha como ser menos")
+if COBERTURA_LARGA and _esperado < 20:
+    checa(_esperado / 37 < ALVO_ACERTO_NUMERO,
+          f"com {_esperado} numeros o piso por giro NAO e alcancado, e tudo bem",
           f"{_esperado/37:.1%}")
-    checa(k_para_alvo_numero(0.53, 37) == 20,
-          "a conta do piso de numero da 20, e nao ha como ser menos")
 checa(k_para_alvo(5, ALVO_ACERTO_JANELA, 37, 10) == 6,
       "janela de 5 precisa de 6 numeros para o piso de janela")
 checa(k_para_alvo(3, ALVO_ACERTO_JANELA, 37, 10) == 9,
@@ -735,6 +738,46 @@ checa(_s3["5"] > _s2["1"],
       (round(_s3["5"], 2), round(_s2["1"], 2)))
 checa(_s2["1"] > 0, "mas o generico continua votando -- nao e excluido",
       _s2["1"])
+
+print("\n[26] Crazy Time: a roda nao e uniforme, e o software nao pode esquecer")
+from ia_modulos import (CT_FATIAS, CT_P, CT_SETORES, ModeloEstatistico,
+                        ModeloSetor, GeradorHipoteses)
+from collections import Counter as _C
+checa(sum(CT_FATIAS.values()) == 54, "as 54 fatias somam certo",
+      sum(CT_FATIAS.values()))
+checa(abs(CT_P["1"] - 21/54) < 1e-9, "o 1 ocupa 21 fatias (38,9%)")
+
+# A fonte SETOR votava SEMPRE e SO nos quatro bonus -- 9 fatias de 54.
+_feats = {"gaps_ratio": {s: 1.0 for s in CT_SETORES}, "freq": {}}
+_ordem, _rot, _c = ModeloSetor().rank_ct(_feats)
+checa(len(_ordem) == 8, "a fonte da roda ranqueia os OITO simbolos", len(_ordem))
+checa("1" in _ordem and "2" in _ordem,
+      "e o 1 e o 2 estao nela -- eram excluidos por construcao", _ordem)
+checa(_ordem[0] == "1",
+      "com todos igualmente atrasados, quem lidera e quem tem mais fatias",
+      _ordem[:3])
+
+# ANTI_12 disparava sempre: 1+2 sao 63% da roda, o gatilho era 12 em 35.
+_g = GeradorHipoteses()
+_ranks = {"estat": (["1"], {}, 0.5), "anom": ([], 0.0),
+          "setor": (["1", "2"], "RODA_CT", 0.6)}
+_normal = {"1": 14, "2": 8, "5": 5, "10": 3, "CoinFlip": 3, "CashHunt": 1}
+_hips = _g.ct({"freq": _normal, "gaps_ratio": {s: 1.5 for s in CT_SETORES}},
+              _ranks)
+checa(not any(h["nome"] == "ANTI_12" for h in _hips),
+      "com 1 e 2 na frequencia NORMAL, o anti-12 fica calado",
+      [h["nome"] for h in _hips])
+
+_demais = {"1": 26, "2": 14, "5": 2, "10": 1}      # 1+2 muito acima do normal
+_hips2 = _g.ct({"freq": _demais, "gaps_ratio": {s: 1.5 for s in CT_SETORES}},
+               _ranks)
+checa(any(h["nome"] == "ANTI_12" for h in _hips2),
+      "e quando eles passam MESMO do esperado, ela fala",
+      [h["nome"] for h in _hips2])
+_a12 = [h for h in _hips2 if h["nome"] == "ANTI_12"]
+if _a12:
+    checa(_a12[0]["peso"] <= 1.6,
+          "com voz normal, nao com o maior peso da mesa", _a12[0]["peso"])
 
 print()
 if falhas:

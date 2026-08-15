@@ -399,7 +399,7 @@ def classificar(items):
 def ciclo_jogo(jogo):
     linhas = [f"===== {jogo.upper()} ====="]
     try:
-        if jogo == "crazy_time":
+        if str(jogo).startswith("crazy_time"):
             sec = fetch_ct()
             if len(sec) < 15:
                 return f"{jogo}: poucos dados ({len(sec)})\n"

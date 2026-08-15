@@ -291,7 +291,7 @@ def main():
         if not vals:
             continue
         dados[j] = {"n": len(vals),
-                    "medidas": medidas_ct(vals) if j == "crazy_time"
+                    "medidas": medidas_ct(vals) if str(j).startswith("crazy_time")
                     else medidas_roleta(vals)}
     if not dados:
         print("Nenhum histórico encontrado. Rode a coleta primeiro.")

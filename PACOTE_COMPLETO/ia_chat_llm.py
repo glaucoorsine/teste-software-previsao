@@ -367,7 +367,7 @@ def analisar_e_gerar_ordens_auto():
                     "boost_anti": True, "janela": 3,
                     "motivo": f"auto: taxa {taxa:.0f}% < 30% ({ok}/{total})",
                 })
-                if jogo == "crazy_time":
+                if str(jogo).startswith("crazy_time"):
                     ordem["reduzir_12"] = True
             elif taxa is not None and taxa >= 40 and total >= 5:
                 ordem.update({"peso_motor": 3.2, "janela": 3, "motivo": f"auto: taxa boa {taxa:.0f}%"})

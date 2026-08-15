@@ -506,7 +506,7 @@ def _ciclo_body(dataset_id: str, historico, settled=None, mults=None) -> Dict[st
                         msgs.append(f"[Sites] erro: {type(_e).__name__}")
             except Exception as e:
                 msgs.append(f"[Multiplicadores] erro: {type(e).__name__}: {e}")
-        if dataset_id == "crazy_time":
+        if str(dataset_id).startswith("crazy_time"):
             try:
                 _rct = _av_ct([str(x) for x in reversed(hist)])
                 _l = _res_ct(_rct)

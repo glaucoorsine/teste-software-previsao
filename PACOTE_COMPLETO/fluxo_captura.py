@@ -33,13 +33,78 @@ API_BY_GAME = {
 }
 
 # Candidatos alternativos por mesa, tentados quando o principal nao responde.
+# CRAZY TIME A NAO ABRE, E O MOTIVO E O NOME DO ENDERECO.
+#
+# Ele relatou: "Crazy time a tambem nao [funcionou]". A mesa existe, o resto do
+# software esta pronto para ela, e o que falta e uma unica coisa -- como o
+# provedor chama essa mesa na URL. Nao da para adivinhar daqui: o proxy deste
+# ambiente bloqueia o dominio, entao quem descobre e a maquina dele.
+#
+# A lista abaixo cobre as grafias plausiveis, e agora existe uma segunda
+# familia de candidatos: o trackpotapi, que o coletor ja descobriu sozinho para
+# lightning e immersive (esta em Logs/fontes_descobertas.json, na maquina dele).
+# Se o casino.org nao tiver essa mesa, e bem possivel que o outro tenha.
+#
+# O que responder primeiro fica GRAVADO (ver `_lembrar_fonte`), entao a
+# descoberta acontece uma vez e nunca mais.
 API_ALTERNATIVAS = {
     "crazy_time_a": [
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime-a",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimeA",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazy-time-a",
+        "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime2",
+        "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimeatable",
+        "https://api.trackpotapi.com/api/trackersino/crazy-time-a/history",
+        "https://api.trackpotapi.com/api/trackersino/crazytimea/history",
+        "https://api.trackpotapi.com/api/trackersino/crazy-time-a-roulette/history",
     ],
 }
+
+# onde fica gravado o endereco que respondeu, por mesa
+FONTES_OK = ROOT / "Logs" / "fontes_que_funcionam.json"
+
+
+def _lembrar_fonte(dataset_id: str, url: str) -> None:
+    """Grava o endereco que respondeu, para nao procurar de novo."""
+    try:
+        import json as _j
+        d = {}
+        if FONTES_OK.is_file():
+            d = _j.loads(FONTES_OK.read_text(encoding="utf-8"))
+        if d.get(dataset_id) == url:
+            return
+        d[dataset_id] = url
+        FONTES_OK.parent.mkdir(parents=True, exist_ok=True)
+        FONTES_OK.write_text(_j.dumps(d, ensure_ascii=False, indent=1),
+                             encoding="utf-8")
+    except Exception:
+        pass
+
+
+def fonte_lembrada(dataset_id: str):
+    try:
+        import json as _j
+        if FONTES_OK.is_file():
+            return (_j.loads(FONTES_OK.read_text(encoding="utf-8"))
+                    or {}).get(dataset_id)
+    except Exception:
+        pass
+    return None
+
+
+def enderecos_para(dataset_id: str):
+    """Todos os candidatos desta mesa, com o que ja funcionou na frente."""
+    lista = []
+    lembrado = fonte_lembrada(dataset_id)
+    if lembrado:
+        lista.append(lembrado)
+    principal = API_BY_GAME.get(dataset_id)
+    if principal and principal not in lista:
+        lista.append(principal)
+    for u in API_ALTERNATIVAS.get(dataset_id, []):
+        if u not in lista:
+            lista.append(u)
+    return lista
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -364,13 +429,28 @@ def capturar(
       mults: lista de multiplicadores (roleta)
     """
     fontes_extra: List[str] = []
-    api = API_BY_GAME.get(dataset_id)
-    if not api:
+    candidatos = enderecos_para(dataset_id)
+    if not candidatos:
         return {"rows": [], "novo_head": False, "head_id": None, "err": "dataset desconhecido", "mults": []}
 
-    items, err = fetch_paginas(
-        api, HEADERS, page_size=page_size, max_pages=max_pages, duration=duration
-    )
+    # AS ALTERNATIVAS EXISTIAM E NUNCA ERAM TENTADAS.
+    #
+    # `API_ALTERNATIVAS` estava escrita no topo do arquivo desde que o Crazy
+    # Time A entrou, com tres grafias possiveis do endereco -- e este trecho
+    # usava so o principal. Se ele nao respondesse, a mesa simplesmente nao
+    # abria, sem nunca experimentar as outras. Era o caso do Crazy Time A.
+    #
+    # Agora percorre os candidatos e GRAVA o que funcionar, para a procura
+    # acontecer uma vez so.
+    items, err, api = [], None, candidatos[0]
+    for _url in candidatos:
+        items, err = fetch_paginas(
+            _url, HEADERS, page_size=page_size, max_pages=max_pages,
+            duration=duration)
+        if items:
+            api = _url
+            _lembrar_fonte(dataset_id, _url)
+            break
     if err and not items:
         # A API caiu -- mas o historico ja coletado esta salvo em disco.
         # Devolver rows=[] fazia a tela apagar e o motor parar de analisar por
@@ -396,7 +476,13 @@ def capturar(
                 "head_id": rows_off[0]["event_id"] if rows_off else None,
                 "err": err, "mults": mults_off, "offline": True}
 
-    if dataset_id == "crazy_time":
+    # CRAZY TIME A CAIA NO PARSER DE ROLETA.
+    #
+    # A comparacao era `== "crazy_time"`, entao a segunda mesa do mesmo jogo ia
+    # para `parse_items_roulette` e seus simbolos (CoinFlip, Pachinko...) eram
+    # lidos como numeros de roleta. Mesmo com a API respondendo, os dados
+    # sairiam errados -- e sairiam calados, que e pior.
+    if str(dataset_id).startswith("crazy_time"):
         brutos = parse_items_ct(items)
     else:
         brutos = parse_items_roulette(items)
@@ -453,7 +539,7 @@ def capturar(
     for e in events:
         row = {
             "n": e.get("n"),
-            "sec": e.get("n") if dataset_id == "crazy_time" else e.get("n"),
+            "sec": e.get("n"),
             "settled": e.get("settled"),
             "tags": e.get("tags") or [],
             "event_id": e.get("event_id"),
@@ -511,7 +597,7 @@ def capturar(
             # um valor numérico válido do Crazy Time (1,2,5,10) chegava como
             # int, era marcado "inválido" por QualidadeDados e nunca contava
             # pro histórico (Hist:0 na tela, mesmo com número aparecendo).
-            if dataset_id == "crazy_time":
+            if str(dataset_id).startswith("crazy_time"):
                 n_norm = n_str
             else:
                 n_norm = int(n_str) if n_str.isdigit() else er.get("n")

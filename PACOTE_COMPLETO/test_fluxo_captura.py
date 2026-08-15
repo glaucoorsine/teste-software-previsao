@@ -129,6 +129,43 @@ def test_does_not_wipe_operational_cycle():
     limpar_ciclo_ativo("mega_fire")  # clean sentinel after assert
     print("OK no wipe operational")
 
+def test_crazy_time_a_viva():
+    """Os dois defeitos que deixavam a mesa Crazy Time A morta.
+
+    1. API_ALTERNATIVAS existia no topo do arquivo e NUNCA era consultada -- o
+       codigo usava so o endereco principal, entao se ele nao respondesse a
+       mesa nao abria e nada dizia por que.
+    2. A comparacao era `dataset_id == "crazy_time"`, entao a segunda mesa do
+       mesmo jogo caia no parser de ROLETA e seus simbolos viravam lixo -- em
+       silencio, que e o pior jeito de errar.
+    """
+    import fluxo_captura as F
+    ends = F.enderecos_para("crazy_time_a")
+    assert len(ends) >= 4, ends
+    assert F.API_BY_GAME["crazy_time_a"] in ends
+    assert any("trackpotapi" in u for u in ends), ends
+    assert F.enderecos_para("mesa_inexistente") == []
+
+    itens = [{"data": {"result": {"outcome": {
+        "wheelResult": {"wheelSector": "CoinFlip"},
+        "topSlot": {"sector": "5", "multiplier": 20}}},
+        "settledAt": "2026-08-15T10:00:00Z"}}]
+    r = F.parse_items_ct(itens)
+    assert r and r[0]["n"] == "CoinFlip", r
+    assert not F.parse_items_roulette(itens), "roleta nao le simbolo"
+
+    import tempfile, pathlib as _pl
+    guardado = F.FONTES_OK
+    try:
+        F.FONTES_OK = _pl.Path(tempfile.mkdtemp()) / "fontes.json"
+        F._lembrar_fonte("crazy_time_a", "https://exemplo/funciona")
+        assert F.fonte_lembrada("crazy_time_a") == "https://exemplo/funciona"
+        assert F.enderecos_para("crazy_time_a")[0] == "https://exemplo/funciona"
+    finally:
+        F.FONTES_OK = guardado
+    print("  ok   crazy time A: enderecos, parser e memoria da fonte")
+
+
 if __name__ == "__main__":
     test_parser_legacy_and_lists()
     test_zero_purge()
@@ -139,4 +176,5 @@ if __name__ == "__main__":
     test_nova_janela_all_modules()
     test_idle_returns_no_put()
     test_does_not_wipe_operational_cycle()
+    test_crazy_time_a_viva()
     print("FLUXO_TESTES_OK")
