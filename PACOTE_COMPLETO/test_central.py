@@ -703,6 +703,39 @@ checa("🔥" in m9._texto_fogo() and "9" in m9._texto_fogo(),
 m9.marcados = []
 checa(m9._texto_fogo() == "", "sem marcados, nao inventa linha")
 
+print("\n[25] quem aponta meia mesa nao manda sozinho")
+# Visto na TELA DELE: a sugestao saiu 1,2,3...,20. Nao era consenso -- era a
+# fonte alto/baixo votando no grupo BAIXO inteiro (1 a 18). Com 20 vagas, o
+# grupo coube todo e virou "a aposta".
+from ia_modulos import Critico
+_c = Critico()
+_grupao = [str(n) for n in range(1, 19)]        # o grupo BAIXO, 18 numeros
+_especifico = ["7", "21", "33"]                 # tres numeros
+_aprovados, _probs, _f, _score, _sig, _p0 = _c.consenso(
+    [{"nome": "ALTO_BAIXO", "nums": _grupao, "peso": 2.0},
+     {"nome": "TEORIA_X", "nums": _especifico, "peso": 2.0}],
+    n_classes=37, k_alvos=20)
+print("       primeiros 6 do consenso:", _aprovados[:6])
+checa(all(x in _aprovados[:3] for x in _especifico),
+      "os tres especificos ficam na frente dos dezoito genericos",
+      _aprovados[:5])
+checa(_score["7"] > _score["1"],
+      "e o peso de quem aponta 3 supera o de quem aponta 18",
+      (round(_score["7"], 2), round(_score["1"], 2)))
+
+# o mesmo peso nominal, listas de tamanhos diferentes
+_a2, _p2, _f2, _s2, _sig2, _q2 = _c.consenso(
+    [{"nome": "A", "nums": [str(n) for n in range(1, 25)], "peso": 3.0}],
+    n_classes=37, k_alvos=20)
+_a3, _p3, _f3, _s3, _sig3, _q3 = _c.consenso(
+    [{"nome": "B", "nums": ["5"], "peso": 3.0}],
+    n_classes=37, k_alvos=20)
+checa(_s3["5"] > _s2["1"],
+      "apontar UM vale mais que apontar 24, com o mesmo peso declarado",
+      (round(_s3["5"], 2), round(_s2["1"], 2)))
+checa(_s2["1"] > 0, "mas o generico continua votando -- nao e excluido",
+      _s2["1"])
+
 print()
 if falhas:
     print("FALHAS:", falhas)

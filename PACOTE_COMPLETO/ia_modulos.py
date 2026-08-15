@@ -389,6 +389,30 @@ class Critico:
         score=defaultdict(float); fontes=defaultdict(set); fontes_raw=defaultdict(set)
         for h in hips:
             w=float(h.get("peso",1))
+            # QUEM APONTA MEIA MESA NAO ESTA APONTANDO NADA.
+            #
+            # Visto na tela dele: a sugestao saiu 1,2,3...,20. Nao era consenso
+            # de coisa nenhuma -- era a fonte "alto/baixo" votando no grupo
+            # BAIXO inteiro, que sao os numeros 1 a 18. Com as 20 vagas que a
+            # cobertura larga abriu, o grupo coube todo e virou "a aposta".
+            #
+            # Antes isso ficava escondido: com 7 vagas, um grupo de 18 so
+            # entrava em parte e parecia escolha. O defeito nao nasceu com as
+            # 20 vagas -- elas so o deixaram visivel.
+            #
+            # A correcao e a que os proprios estudos dele exigem: "comparar cada
+            # teoria com selecoes aleatorias do MESMO tamanho". Apontar 3
+            # numeros entre 37 carrega log(37/3) = 2,5 de informacao; apontar 18
+            # carrega log(37/18) = 0,7. Entao o voto vale pela informacao que
+            # traz, e o palpite generico pesa um terco do especifico.
+            #
+            # Ninguem e excluido -- e exatamente o que ele pediu. Quem fala de
+            # meia mesa continua votando, so para de mandar sozinho.
+            _nums_h = h.get("nums") or []
+            if _nums_h:
+                _k = max(1, min(len(_nums_h), n_classes - 1))
+                _info = math.log(max(1.0001, n_classes / _k))
+                w *= _info / math.log(max(1.0001, n_classes / 3.0))
             fam = self._familia(h.get("nome","?"))
             for i,n in enumerate(h.get("nums") or []):
                 chave = str(n).strip()
