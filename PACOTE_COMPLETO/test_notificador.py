@@ -182,14 +182,25 @@ if recebido:
     checa("errou" in (recebido[0]["titulo"] or ""), "e diz que errou",
           recebido[0]["titulo"])
 
-# o antirrepeticao nao pode engolir um desfecho
+# O ANTIRREPETICAO NAO PODE ENGOLIR UM DESFECHO.
+#
+# Cada janela e um evento unico: tres desfechos iguais tem que chegar como
+# tres, e nao virar um so por parecerem iguais. O que se cobra e o CONTEUDO
+# entregue, nao o numero de requisicoes -- a fila pode juntar os tres numa
+# mensagem, e isso e o certo (ver o agrupamento em _juntar). Contar
+# requisicoes fazia este teste falhar de forma intermitente, conforme o
+# momento em que o carteiro passava.
 recebido.clear()
-for _ in range(3):
-    notificador.notificar_resultado("lightning", [1], False, saiu="9", giros=3)
+notificador._ultimo.update({"quando": 0.0, "texto": ""})
+for i in range(3):
+    notificador.notificar_resultado("lightning", [1], False, saiu=f"9{i}",
+                                    giros=3)
 esperar_fila()
-checa(len(recebido) == 3,
+_txt = tudo()
+_chegaram = sum(1 for i in range(3) if f"saiu: 9{i}" in _txt)
+checa(_chegaram == 3,
       "desfecho nunca e engolido pelo antirrepeticao — cada janela e um evento",
-      len(recebido))
+      f"{_chegaram} de 3 em {len(recebido)} mensagens")
 
 print("\n[7] o 429 NAO perde mensagem -- o defeito do log dele")
 # No log de 9h30 da v96: 1.058 falhas, todas 429, e cada uma era uma mensagem
