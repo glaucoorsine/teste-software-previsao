@@ -1312,9 +1312,15 @@ def _familia_completa(x: int) -> list:
 
 class PipelinePerceptivo:
     # Quantas teorias DISTINTAS precisam concordar para o número entrar.
-    # Duas fontes independentes apontando o mesmo número é o piso do que se
-    # pode chamar de cruzamento; uma sozinha é palpite.
-    MIN_TEORIAS_SOZINHO = 2
+    #
+    # Decisão dele, 15/08: "não critique e nem barre". Uma teoria declarada
+    # basta. As regras dele — família de finais e a tabela de transições —
+    # disparam sozinhas, sem precisar que outra fonte concorde antes.
+    #
+    # Quem tiver mais concordância continua vindo na frente, porque o consenso
+    # ordena por peso somado. O que muda é que ninguém fica de fora esperando
+    # companhia.
+    MIN_TEORIAS_SOZINHO = 1
 
     def __init__(self, jogo: str = "mega_fire"):
         self.jogo = jogo
