@@ -265,6 +265,43 @@ notificador.CFG.write_text(_antes)
 checa(abs(notificador._ritmo_do_canal() - 6.0) < 0.1,
       "e volta ao do ntfy quando o canal volta", notificador._ritmo_do_canal())
 
+print("\n[10] o marcador interno NUNCA chega na tela")
+# Na tela dele apareceu "Nao foi: __RITMO__0". Marcador interno vazando para o
+# rosto do software -- ninguem sabe o que isso quer dizer, e parece defeito de
+# configuracao quando e so o servidor pedindo calma.
+checa(notificador.humanizar(notificador.MARCA_RITMO + "30") != "",
+      "o marcador vira frase")
+_h = notificador.humanizar(notificador.MARCA_RITMO + "30")
+print("       " + _h[:100] + "...")
+checa(notificador.MARCA_RITMO not in _h,
+      "e a frase NAO contem o marcador", _h[:60])
+checa("ritmo" in _h.lower() and "fila" in _h.lower(),
+      "diz o que houve e que nada se perde", _h[:80])
+checa(notificador.humanizar("ConnectionError: x") == "ConnectionError: x",
+      "erro de verdade passa intacto -- so o marcador e traduzido")
+checa(notificador.humanizar(None) == "", "sem erro, sem frase")
+
+print("\n[11] o teste insiste quando o servidor pede calma")
+recusar2 = {"n": 2}
+_ok = requests.post
+def post_2x429(url, *a, **k):
+    if recusar2["n"] > 0:
+        recusar2["n"] -= 1
+        class R:
+            status_code = 429
+            headers = {"Retry-After": "0"}
+            def raise_for_status(self): pass
+        return R()
+    return _ok(url, *a, **k)
+requests.post = post_2x429
+recebido.clear()
+_t0 = time.time()
+err = notificador.enviar_teste(tentativas=3)
+requests.post = _ok
+print(f"       duas recusas, depois passou -- levou {time.time()-_t0:.1f}s")
+checa(err is None, "depois de duas recusas, o teste consegue enviar", err)
+checa(recebido, "e a mensagem chegou de verdade no servidor", len(recebido))
+
 srv.shutdown()
 print()
 if falhas:

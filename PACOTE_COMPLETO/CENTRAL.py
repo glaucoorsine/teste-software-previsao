@@ -504,10 +504,11 @@ class TelaConfig(ctk.CTkFrame):
                     msg, cor = ("Faltou preencher algum campo — o canal ficou "
                                 "incompleto.", VERMELHO)
                 else:
-                    err = notificador._enviar(
-                        "Laboratorio - teste",
-                        "Se você está lendo isto no celular, os avisos de "
-                        "entrada vão chegar.")
+                    # insiste sozinho se o servidor pedir calma, e traduz o
+                    # que der errado -- o marcador interno nao pode chegar aqui
+                    err = notificador.enviar_teste()
+                    if err and err.startswith(notificador.MARCA_RITMO):
+                        err = notificador.humanizar(err)
                     if not err:
                         msg, cor = ("Enviado. Olhe o celular agora. Se não "
                                     "chegou, o app não está assinando este "

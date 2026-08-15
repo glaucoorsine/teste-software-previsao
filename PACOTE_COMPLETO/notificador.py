@@ -397,6 +397,53 @@ def notificar_resultado(jogo: str, numeros: List[Any], acertou: bool,
     _enfileirar(titulo, corpo, log_fn)
 
 
+def enviar_teste(tentativas: int = 3) -> Optional[str]:
+    """Envia UMA mensagem de teste, insistindo se o servidor pedir calma.
+
+    O botão "Testar agora" não passa pela fila -- ele é síncrono de propósito,
+    porque o operador está olhando e esperando a resposta. Mas isso deixava o
+    429 chegar cru na tela, e ele chegou: a tela dele mostrou "__RITMO__0", que
+    é um marcador interno meu vazando para o rosto do software.
+
+    Duas coisas mudam aqui. Primeiro, uma mensagem de teste é uma só e vale a
+    pena esperar: se o servidor pediu calma, espera e tenta de novo. Segundo, o
+    marcador nunca sai daqui -- o que sobe para a tela é frase de gente.
+    """
+    espera = 0.0
+    for i in range(max(1, tentativas)):
+        if espera:
+            time.sleep(min(espera, 12.0))
+        err = _enviar("Laboratorio - teste",
+                      "Se você está lendo isto no celular, os avisos de "
+                      "entrada vão chegar.")
+        if not err:
+            return None
+        if not err.startswith(MARCA_RITMO):
+            return err
+        try:
+            pedido = float(err[len(MARCA_RITMO):] or 0)
+        except ValueError:
+            pedido = 0.0
+        espera = max(pedido, 3.0 * (i + 1))
+    return TEXTO_RITMO
+
+
+TEXTO_RITMO = ("O servidor do ntfy está limitando o ritmo agora (é o limite do "
+               "serviço gratuito, não a sua configuração). Isto NÃO impede o "
+               "laboratório: os avisos entram numa fila e saem espaçados, sem "
+               "perder nenhum. Tente o teste de novo em um minuto, ou troque "
+               "para Telegram, que é bem mais folgado.")
+
+
+def humanizar(err: Optional[str]) -> str:
+    """Traduz o erro para algo que se possa ler. Nunca devolve marcador."""
+    if not err:
+        return ""
+    if err.startswith(MARCA_RITMO):
+        return TEXTO_RITMO
+    return err
+
+
 def testar() -> str:
     """Manda um aviso de teste. Devolve mensagem legível do que aconteceu."""
     c = _cfg()
@@ -406,8 +453,9 @@ def testar() -> str:
                 "simples é {\"canal\":\"ntfy\",\"topico\":\"seu-topico-unico\"}")
     if not ativo():
         return f"Canal '{canal}' configurado pela metade — faltam campos."
-    err = _enviar("Teste do laboratório", "Se você recebeu isto, está funcionando.")
-    return "Enviado. Confira o celular." if not err else f"Falhou: {err}"
+    err = enviar_teste()
+    return ("Enviado. Confira o celular." if not err
+            else f"Falhou: {humanizar(err)}")
 
 
 if __name__ == "__main__":
