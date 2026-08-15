@@ -370,12 +370,19 @@ def _ciclo_body(dataset_id: str, historico, settled=None, mults=None) -> Dict[st
             cand_cacadores.extend(str(x) for x in (_rr.get("candidatos") or []))
         except Exception as e:
             msgs.append(f"[Regras do operador] erro: {type(e).__name__}: {e}")
-        # A14 — o catálogo de relações. Roda de vez em quando porque a régua é
-        # cara (6000 embaralhamentos no refino), e o que ela responde não muda
-        # a cada giro: é sobre a forma do histórico, não sobre o último número.
+        # A14 — o GERADOR de relações. Não é um catálogo que eu escrevi: as
+        # relações são montadas cruzando atributos do número (final, dezena,
+        # posição na roda, dúzia, coluna, cor, paridade, soma dos dígitos) com
+        # comparadores (igual, difere de k, perto de k na roda, somam k). Dá
+        # 135 relações, e nelas cabe coisa que não me ocorreria — foi assim que
+        # o teste achou "posição na roda anda 9 casas", que eu nunca escrevi.
+        #
+        # Roda de vez em quando porque a régua é cara e o que ela responde não
+        # muda a cada giro: é sobre a forma do histórico, não sobre o último
+        # número.
         try:
             if _n % RELACOES_A_CADA == 0:
-                from .agentes_relacoes import varrer as _varrer, resumo as _res_rel
+                from .gerador_relacoes import varrer as _varrer, resumo as _res_rel
                 _rel = _varrer(hist)
                 for _l in _res_rel(_rel).split("\n"):
                     msgs.append(_l)
