@@ -254,7 +254,10 @@ class Percepcao:
                 if x==s: last[s]=i; break
         fr = Counter(secs[:35])
         gaps = {s: last[s]/max(CT_CICLO.get(s,8),1) for s in CT_SETORES}
-        return {"last": last, "freq": dict(fr), "gaps_ratio": gaps, "feature_version": FEATURE_VERSION}
+        # a sequencia crua vai junto: sem ela, TODAS as fontes do crazy time
+        # leriam o mesmo `gaps_ratio` -- quatro vozes e uma evidencia so
+        return {"last": last, "freq": dict(fr), "gaps_ratio": gaps,
+                "seq": list(secs[:200]), "feature_version": FEATURE_VERSION}
 
 class ModeloEstatistico:
     def rank_roleta(self, feats, prior_atraso=False, w_isol=1.0):
@@ -358,7 +361,39 @@ class GeradorHipoteses:
         if fnums: hips.append({"nome":"FINAIS","nums":fnums[:10],"peso":1.4})
         return hips
     def ct(self, feats, ranks):
+        """As fontes do Crazy Time eram QUATRO ECOS DA MESMA VOZ.
+
+        Medido no historico real dele (215 giros): GAP_CICLO, ANOMALIA, SETOR e
+        HEURISTICA -- todas derivadas do mesmo `gaps_ratio`. A mesa travou no
+        Pachinko 15 voltas seguidas, do mesmo jeito que antes travava no 5.
+
+        E o mecanismo se alimenta sozinho: o simbolo que nao sai fica com o
+        maior atraso, e escolhido, erra, o atraso CRESCE, e e escolhido de novo.
+        Quanto mais erra, mais favorito fica.
+
+        E a ficha 226 do compendio dele -- "muitas respostas iguais podem ser
+        copias da mesma evidencia". O conserto nao e calar o atraso: e dar ao
+        consenso outra coisa para cruzar. As duas fontes abaixo leem o que o
+        atraso nao ve -- quem esta saindo agora, e o que costuma vir depois do
+        que acabou de sair.
+        """
         hips=[]
+        fr_ct = Counter(feats.get("freq") or {})
+        if fr_ct:
+            quentes = [s for s, _ in fr_ct.most_common(4)]
+            if quentes:
+                hips.append({"nome": "CT_FREQUENTE", "nums": quentes, "peso": 1.8})
+        seq = feats.get("seq") or []
+        if len(seq) >= 40:
+            atual = str(seq[0])
+            segue = Counter()
+            for i in range(1, min(len(seq), 200)):
+                if str(seq[i]) == atual:
+                    segue[str(seq[i - 1])] += 1
+            if segue:
+                hips.append({"nome": "CT_TRANSICAO",
+                             "nums": [s for s, _ in segue.most_common(3)],
+                             "peso": 1.8})
         est,_,_ = ranks["estat"]
         hips.append({"nome":"GAP_CICLO","nums":est[:5],"peso":2.2})
         anom,_ = ranks["anom"]
@@ -479,15 +514,43 @@ class Critico:
             # meia mesa continua votando, so para de mandar sozinho.
             _nums_h = h.get("nums") or []
             if _nums_h:
+                # A REFERENCIA TEM QUE SER DO TAMANHO DA MESA.
+                #
+                # Eu tinha fixado a base em 3 numeros, pensando nos 37 da
+                # roleta. No Crazy Time, que tem 8 simbolos, isso inflava em
+                # 2,12x quem aponta UM simbolo -- e a fonte ANOMALIA aponta
+                # exatamente um. Medido no historico real dele: Pachinko com
+                # score 3,04 contra 1,63 do "1", mesa travada 15 voltas.
+                #
+                # Agora a referencia e um terco da mesa e a curva e raiz em vez
+                # de log: mais suave, sem premiar demais a fonte mais estreita.
                 _k = max(1, min(len(_nums_h), n_classes - 1))
-                _info = math.log(max(1.0001, n_classes / _k))
-                w *= _info / math.log(max(1.0001, n_classes / 3.0))
+                _ref = max(2.0, n_classes / 3.0)
+                w *= math.sqrt(_ref / _k)
             fam = self._familia(h.get("nome","?"))
             for i,n in enumerate(h.get("nums") or []):
                 chave = str(n).strip()
                 score[chave]+=w/(1+i*0.15)
                 fontes[chave].add(fam)
                 fontes_raw[chave].add(h.get("nome","?"))
+        # FICHA 226 ONDE ELA DECIDE: NO PESO, NAO SO NUMA LINHA DA TELA.
+        #
+        # Quatro fontes que leem o mesmo numero nao sao quatro confirmacoes. O
+        # apoio de cada candidato passa a ser dividido pela inflacao das fontes
+        # que o sustentam. Nada e barrado -- o numero fica na lista, so para de
+        # ser inflado por repeticao.
+        try:
+            from academia_autonoma.biblioteca_teorias import n_efetivo as _nef
+            for _n in list(score.keys()):
+                _ap = {h.get("nome", "?"): (h.get("nums") or [])
+                       for h in hips
+                       if _n in [str(x).strip() for x in (h.get("nums") or [])]}
+                if len(_ap) > 1:
+                    _inf = float((_nef(_ap) or {}).get("inflacao", 1.0) or 1.0)
+                    if _inf > 1.0:
+                        score[_n] /= _inf
+        except Exception:
+            pass
         total=sum(score.values()) or 1.0
         probs={k:v/total for k,v in score.items()}
         votos_teoria={n:sum(1 for f in fs if self._eh_teoria(f)) for n,fs in fontes.items()}
