@@ -8,9 +8,18 @@ BARRA DE PROGRESSO DOS TESTES — percentual e tempo restante.
 Justo: uma suíte que fica dez minutos calada não dá para distinguir de uma
 suíte travada, e a única saída é matar o processo e perder tudo.
 
-A conta do tempo restante é honesta com o que sabe: usa o tempo médio das
-etapas JÁ terminadas. Enquanto houver poucas, a estimativa aparece como "~"
-porque é isso que ela é — um chute que melhora sozinho a cada etapa.
+A conta do tempo restante é honesta com o que sabe, de dois jeitos:
+
+    sem pesos    usa o tempo médio das etapas já terminadas
+    com pesos    o chamador declara o custo típico de cada etapa e a conta vai
+                 pelo custo que falta, reajustado pelo ritmo real da máquina
+
+O segundo existe porque o primeiro mente quando as etapas têm tamanhos muito
+diferentes — onze testes de segundos e um de meia hora fazem a média anunciar
+"falta 4s" com quarenta minutos pela frente.
+
+Enquanto há pouca observação a estimativa aparece com "~" na frente, porque é
+isso que ela é — um chute que melhora sozinho a cada etapa.
 """
 from __future__ import annotations
 
@@ -32,7 +41,7 @@ class Progresso:
     """Acompanha N etapas e desenha uma linha que se atualiza no lugar."""
 
     def __init__(self, total: int, titulo: str = "testes", largura: int = 26,
-                 saida=None):
+                 saida=None, pesos=None):
         self.total = max(1, int(total))
         self.titulo = titulo
         self.largura = largura
@@ -41,6 +50,17 @@ class Progresso:
         self.t0 = time.time()
         self.duracoes = []
         self.ultimo_nome = ""
+        # ETAPAS DE TAMANHOS MUITO DIFERENTES.
+        #
+        # Numa suíte em que onze testes levam segundos e um leva meia hora, a
+        # média das etapas terminadas mente feio: depois de onze rápidos ela
+        # anuncia "falta 4s" com meia hora pela frente. Quando o chamador sabe
+        # o custo aproximado de cada etapa, a conta passa a ser por PESO
+        # restante, e a estimativa deixa de ser piada.
+        self.pesos = list(pesos) if pesos else None
+        if self.pesos and len(self.pesos) != self.total:
+            self.pesos = None
+        self.peso_total = float(sum(self.pesos)) if self.pesos else 0.0
 
     # ------------------------------------------------------------ desenho
     def _linha(self, nome: str = "") -> str:
@@ -48,7 +68,19 @@ class Progresso:
         cheio = int(frac * self.largura)
         barra = "█" * cheio + "·" * (self.largura - cheio)
         gasto = time.time() - self.t0
-        if self.duracoes:
+        if self.pesos:
+            falto = sum(self.pesos[self.feito:])
+            gasto_peso = self.peso_total - falto
+            if self.duracoes and gasto_peso > 0:
+                # reajusta a previsão pelo ritmo real desta máquina
+                ritmo = gasto / gasto_peso
+                restante = falto * ritmo
+                certeza = "" if self.feito >= 3 else "~"
+            else:
+                restante = falto
+                certeza = "~"
+            falta = f"falta {certeza}{_mmss(restante)}"
+        elif self.duracoes:
             media = sum(self.duracoes) / len(self.duracoes)
             restante = media * (self.total - self.feito)
             certeza = "" if len(self.duracoes) >= 3 else "~"
@@ -92,6 +124,12 @@ class Progresso:
 
     # ---------------------------------------------------------- estimativa
     def restante_s(self) -> Optional[float]:
+        if self.pesos:
+            falto = sum(self.pesos[self.feito:])
+            gasto_peso = self.peso_total - falto
+            if self.duracoes and gasto_peso > 0:
+                return falto * ((time.time() - self.t0) / gasto_peso)
+            return float(falto)
         if not self.duracoes:
             return None
         media = sum(self.duracoes) / len(self.duracoes)

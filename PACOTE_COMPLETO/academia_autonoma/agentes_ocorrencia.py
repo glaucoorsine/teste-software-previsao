@@ -446,6 +446,41 @@ def O20_rajada(seq: List[int]) -> List[dict]:
 
 
 # ---------------------------------------------------------------- O21
+def _p_alguma_recorrencia(n: int, N: int, q: int) -> float:
+    """P(ALGUM dos N padrões possíveis aparecer >= q vezes em n amostras).
+
+    ESTA CONTA JÁ ESTEVE ERRADA, E O ERRO CUSTAVA CARO
+    --------------------------------------------------
+    Aqui morava um falso positivo de 62% em roleta limpa — os caçadores
+    "achavam" vício em três de cada cinco roletas honestas. O motivo é o
+    paradoxo do aniversário, e ele é traiçoeiro porque a conta antiga PARECIA
+    corrigida: ela pegava P(esta trinca específica sair 2x) e multiplicava
+    pelas ~298 trincas vistas, dando 0,005 — abaixo de qualquer limiar.
+
+    Mas a pergunta certa nunca foi "qual a chance desta trinca repetir". Foi
+    "qual a chance de ALGUMA das 298 repetir", e o que conta aí não são as 298
+    trincas: são os 44.253 PARES delas que poderiam colidir. Em 300 giros isso
+    dá 58% — quase exatamente os 62% que o teste media.
+
+    Uma trinca repetida em 300 giros é o esperado, não a descoberta. Três
+    repetições da mesma trinca (λ cai para 0,0017) é que seria notícia.
+    """
+    from math import exp, lgamma, log
+    if q < 2 or n < q or N < 2:
+        return 1.0
+    try:
+        # esperado de padrões distintos que aparecem >= q vezes:
+        #   λ = N · C(n, q) · (1/N)^q
+        log_comb = lgamma(n + 1) - lgamma(q + 1) - lgamma(n - q + 1)
+        log_lam = log(N) + log_comb - q * log(N)
+        if log_lam > 700:
+            return 1.0
+        lam = exp(log_lam)
+    except ValueError:
+        return 1.0
+    return 1.0 - exp(-lam)
+
+
 def O21_anomalia_recorrente(seq: List[int]) -> List[dict]:
     """
     O ABSURDO QUE VOLTA.
@@ -472,16 +507,11 @@ def O21_anomalia_recorrente(seq: List[int]) -> List[dict]:
     for tr, q in trincas.most_common(3):
         if q < 2:
             continue
-        # P(ver >= q vezes esta trinca especifica), corrigido por termos olhado
-        # todas as trincas possiveis que apareceram
+        # P(ALGUMA trinca repetir q vezes) — não P(esta trinca repetir.
+        # A diferença entre as duas é o falso positivo de 62% documentado em
+        # `_p_alguma_recorrencia`.
         esperado = n_tri * p_tri
-        p_bruto = 1.0
-        try:
-            p_bruto = sum(exp(-esperado + k*log(esperado) - lgamma(k+1))
-                          for k in range(q, q + 12))
-            p_bruto = min(1.0, p_bruto * len(trincas))   # Bonferroni interno
-        except ValueError:
-            pass
+        p_bruto = _p_alguma_recorrencia(n_tri, 37 ** 3, q)
         achados.append({
             "agente": "O21_ANOMALIA", "atributo": f"trinca_{tr[0]}_{tr[1]}_{tr[2]}",
             "descricao": f"a trinca exata {tr} apareceu {q}x",
@@ -503,10 +533,70 @@ def O21_anomalia_recorrente(seq: List[int]) -> List[dict]:
             "descricao": f"a dupla de saltos {par} repetiu {q}x",
             "medida": q / max(esperado, 1e-9), "base": 1.0,
             "n": len(saltos), "alvos": alvos,
+            # mesma correção das trincas: o que interessa é ALGUMA dupla
+            # repetir, e são 1369 duplas possíveis
+            "p_direto": _p_alguma_recorrencia(len(saltos), 37 ** 2, q),
         })
     return achados
 
+# ------------------------------------------------- O02F: as famílias DELE
+# A TEORIA DELE ESTAVA FALTANDO NA VARREDURA.
+#
+# O O02 mede um final de cada vez: depois do final 4, vem final 4? Mas o que ele
+# ensinou não é isso — é FAMÍLIA: 0-1-3-6, 0-2-7-8, 4-5-9. "Veio 16 e logo
+# depois 14", "veio 20 e logo depois o 2", "veio 1 e logo depois 21".
+#
+# A diferença não é de nome, é de potência. Um vício de família espalhado em
+# três dígitos chega ao O02 partido em três, com um terço das ocorrências em
+# cada — e três medições fracas morrem no controle de múltiplos testes, onde uma
+# medição forte sobreviveria. Medido no teste com vício plantado de 55%: o O02
+# sozinho pegava em 8% dos mundos.
+#
+# Este agente pergunta a coisa inteira. É a hipótese dele, escrita como
+# hipótese, entrando na varredura em igualdade com as outras — e passando pela
+# mesma régua de permutação e pelo mesmo FDR que todas.
+FAMILIAS_FINAL = ((0, 1, 3, 6), (0, 2, 7, 8), (4, 5, 9))
+
+
+def _fam_final(n):
+    """A que família de final este número pertence. O zero pertence a duas."""
+    f = _final(n)
+    return tuple(i for i, fam in enumerate(FAMILIAS_FINAL) if f in fam)
+
+
+def O02F_familia_final(seq: List[int]) -> List[dict]:
+    achados = []
+    if len(seq) < 40:
+        return achados
+    for i, fam in enumerate(FAMILIAS_FINAL):
+        nums = [n for n in range(37) if _final(n) in fam]
+        alvo = set(nums)
+        na_fam = [x in alvo for x in seq]
+        q = sum(na_fam)
+        if q < MIN_OCORRENCIAS:
+            continue
+        base = q / len(seq)
+        rotulo = "-".join(str(d) for d in fam)
+        for lag in range(1, JANELA + 1):
+            h = t = 0
+            for j in range(len(seq) - lag):
+                if na_fam[j]:
+                    t += 1
+                    if na_fam[j + lag]:
+                        h += 1
+            if t < MIN_OCORRENCIAS:
+                continue
+            achados.append({
+                "agente": "O02F_FAMILIA_FINAL", "atributo": f"{rotulo}@{lag}",
+                "descricao": f"família de final {rotulo} — {lag} giro(s) depois",
+                "medida": h / t, "base": base,
+                "n": t, "alvos": nums, "lag": lag,
+            })
+    return achados
+
+
 AGENTES: List[Callable[[List[int]], List[dict]]] = [
+    O02F_familia_final,          # as famílias de final que ele ensinou
     O01_sucessor, O02, O03, O04, O05, O06, O07,
     O08_salto, O09_espelho, O10_retorno, O11_par_ordenado, O12_vizinhos,
     O15, O16, O17, O18,          # regiões da roda e agrupamentos de mesa
@@ -517,8 +607,31 @@ AGENTES: List[Callable[[List[int]], List[dict]]] = [
 
 
 # ---------------------------------------------------------------- a régua
+# ACHADOS QUE SÃO "O MAIS EXTREMO DE UMA FAMÍLIA GRANDE".
+#
+# O O21 não testa uma hipótese: ele varre 298 trincas e reporta a que mais
+# repetiu. Isso muda o que a régua tem que perguntar.
+#
+# Comparando pela chave específica — `trinca_11_0_0` — a régua pergunta "nos
+# embaralhamentos, ESTA trinca repete tanto assim?". Quase nunca repete, o p sai
+# 0,005 e o achado passa. Só que em TODO embaralhamento alguma trinca repete;
+# a que foi escolhida no dado real foi escolhida DEPOIS de olhar, e comparar uma
+# escolha posterior contra uma fixa é comparar coisas diferentes.
+#
+# Medido: 62% de falso positivo em roleta limpa — três de cada cinco roletas
+# honestas ganhavam "achado". Agrupando a família, a régua passa a comparar o
+# máximo do dado real contra o MÁXIMO de cada embaralhamento, que é a pergunta
+# certa, e o acaso volta a ser o que é.
+FAMILIA_MAXIMO = {"O21_ANOMALIA"}
+
+
 def _chave(a: dict) -> str:
-    return f"{a['agente']}|{a['atributo']}"
+    ag = a.get("agente")
+    if ag in FAMILIA_MAXIMO:
+        # só o TIPO (trinca / saltos), não o valor sorteado
+        tipo = str(a.get("atributo", "")).split("_")[0]
+        return f"{ag}|{tipo}"
+    return f"{ag}|{a['atributo']}"
 
 
 

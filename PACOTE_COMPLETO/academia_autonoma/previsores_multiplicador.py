@@ -375,20 +375,72 @@ def prever(jogo: str, historico: List[dict],
     }
 
 
-def marcar(jogo: str, escolhidos: List[Any],
-           historico: List[dict]) -> List[Any]:
-    """Dos números já escolhidos, quais as sete apontam para multiplicador.
+def pontuar(jogo: str, escolhidos: List[Any],
+            historico: List[dict]) -> List[tuple]:
+    """Ordena os números JÁ ESCOLHIDOS pelo apoio das sete.
+
+    Devolve [(numero, quantas IAs, peso)] do mais apoiado para o menos.
+
+    Aqui a pergunta é outra e o alvo é outro: não é "quais números do mundo
+    todo vêm com fogo", é "destes que já vão ser apostados, quais têm mais
+    chance". Cruzar a lista das sete com a aposta e mostrar só a interseção
+    dava vazio quase sempre — sete escolhem 6 entre 37, a aposta tem 8, e as
+    duas raramente se encontram. A tela ficava muda tendo o que dizer.
+    """
+    if not tem_multiplicador(jogo) or not escolhidos:
+        return []
+    rds = rodadas(historico, jogo)
+    if not rds:
+        return []
+    alvo = [str(x).strip() for x in escolhidos]
+    votos = defaultdict(float)
+    quantas = defaultdict(int)
+    for nome, fn, _d in ias(jogo):
+        try:
+            peso = fn(rds, jogo) or {}
+        except Exception:
+            continue
+        if not peso:
+            continue
+        # normaliza dentro da IA: senão INTENSIDADE (que soma multiplicadores)
+        # esmagaria QUENTE (que conta ocorrências) só pela escala do número
+        maior = max(peso.values()) or 1.0
+        for n in alvo:
+            v = 0.0
+            for chave, w in peso.items():
+                if str(chave).strip() == n:
+                    v = float(w)
+                    break
+            if v > 0:
+                votos[n] += v / maior
+                quantas[n] += 1
+    if not votos:
+        return []
+    ordem = sorted(votos.items(), key=lambda x: -x[1])
+    return [(n, quantas[n], round(v, 3)) for n, v in ordem]
+
+
+def marcar(jogo: str, escolhidos: List[Any], historico: List[dict],
+           quantos: int = None) -> List[Any]:
+    """Dos números já escolhidos, os mais apontados para multiplicador.
 
     Não muda a aposta — marca. A escolha continua sendo do consenso das
-    teorias; isto responde a outra pergunta, em cima da mesma lista.
+    teorias; isto responde a outra pergunta em cima da mesma lista.
+
+    Duas travas para a marca continuar querendo dizer alguma coisa:
+
+        no máximo METADE da aposta (teto de 3). Marcar 7 de 8 não separa
+        nada — seria pintar a lista inteira de laranja e chamar isso de
+        informação. No Crazy Time, com 3 opções, isso dá 2.
+
+        ao menos DUAS das sete atrás de cada marcado. Uma IA sozinha
+        apontando não é consenso, é palpite.
     """
-    p = prever(jogo, historico)
-    if not p.get("tem"):
-        return []
-    alvo = {str(x).strip() for x in (escolhidos or [])}
-    return [x for x in (escolhidos or [])
-            if str(x).strip() in {str(c).strip() for c in p["consenso"]}
-            and str(x).strip() in alvo]
+    if quantos is None:
+        n = len(escolhidos or [])
+        quantos = min(3, max(1, (n + 1) // 2))
+    p = pontuar(jogo, escolhidos, historico)
+    return [x for x, q, _v in p if q >= 2][:quantos]
 
 
 # -------------------------------------------------------------- medição

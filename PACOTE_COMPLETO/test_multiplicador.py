@@ -172,13 +172,34 @@ print(prog.fim("backtests"))
 checa(not m3.get("suficiente"), "com 10 rodadas, se cala", m3)
 checa("precisa de" in (m3.get("nota") or ""), "e diz quantas faltam", m3.get("nota"))
 
-print("\n[9] marcar so aponta dentro do que ja foi escolhido")
+print("\n[9] marcar ordena DENTRO da aposta, e nao inventa nada fora")
 esc = ["13", "26", "4", "9", "17"]
 marcados = M.marcar("lightning", esc, plantado)
+print("       escolhidos:", esc, "-> fogo:", marcados)
 checa(all(x in esc for x in marcados),
       "nao inventa numero fora da aposta", marcados)
+checa("13" in marcados and "26" in marcados,
+      "os dois plantados como sorteados sao os marcados", marcados)
+checa(len(marcados) <= 3, "marca no maximo tres", marcados)
+checa(len(marcados) <= (len(esc) + 1) // 2,
+      "e nunca mais que metade da aposta -- marcar tudo nao separa nada",
+      (len(marcados), len(esc)))
+# no crazy time, com tres opcoes, o teto cai para duas
+hct = [giro("1", ["CoinFlip"], {"CoinFlip": 50}, jogo="crazy_time")
+       for _ in range(40)]
+mct = M.marcar("crazy_time", ["1", "2", "CoinFlip"], hct)
+checa(len(mct) <= 2, "crazy time marca no maximo 2 das 3 opcoes", mct)
 checa(M.marcar("immersive", esc, plantado) == [],
       "e na immersive nao marca nada")
+pts = M.pontuar("lightning", esc, plantado)
+checa(pts and pts[0][0] in ("13", "26"),
+      "a pontuacao poe o mais apoiado na frente", pts[:2])
+checa(all(q >= 2 for _n, q, _v in [x for x in pts if x[0] in marcados]),
+      "e so marca quem tem ao menos duas das sete atras", pts[:3])
+checa(M.pontuar("lightning", [], plantado) == [],
+      "sem aposta nao ha o que pontuar")
+checa(M.pontuar("lightning", esc, []) == [],
+      "sem historico tambem nao")
 
 print("\n[10] o resumo cabe na tela")
 txt = M.resumo("lightning", plantado)

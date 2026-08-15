@@ -23,21 +23,29 @@ sys.path.insert(0, str(RAIZ))
 
 from progresso_teste import Progresso, _mmss  # noqa: E402
 
-# (arquivo, marca de sucesso no fim da saída, limite de segundos)
+# (arquivo, marca de sucesso no fim da saída, limite em segundos, custo típico)
+#
+# O CUSTO é o que faz a estimativa de tempo prestar. Onze destes levam
+# segundos e o último leva a maior parte de uma hora; sem declarar isso, a
+# barra anunciaria "falta 4s" com quarenta minutos pela frente. O número não
+# precisa ser exato — ele é reajustado pelo ritmo real da máquina dele
+# conforme a suíte anda.
 TESTES = [
-    ("test_central.py", "CENTRAL_TESTES_OK", 300),
-    ("test_base_auditoria.py", "BASE_AUDITORIA_OK", 300),
-    ("test_multiplicador.py", "MULTIPLICADOR_OK", 600),
-    ("test_autopsia.py", "AUTOPSIA_OK", 200),
-    ("test_publico.py", "PUBLICO_OK", 200),
-    ("test_captador.py", "CAPTADOR_OK", 200),
-    ("test_resultado.py", "RESULTADO_OK", 200),
-    ("test_notificador.py", "NTFY_OK", 200),
-    ("test_fluxo_captura.py", "FLUXO_TESTES_OK", 300),
-    ("test_honestidade_gates.py", "HONEST_TESTS_OK", 300),
-    ("test_coletor_sites.py", "COLETOR_OK", 300),
-    ("teste_a6_ruido.py", None, 900),
-    ("teste_ocorrencia.py", None, 2400),
+    ("test_central.py", "CENTRAL_TESTES_OK", 300, 8),
+    ("test_base_auditoria.py", "BASE_AUDITORIA_OK", 300, 6),
+    ("test_multiplicador.py", "MULTIPLICADOR_OK", 900, 60),
+    ("test_autopsia.py", "AUTOPSIA_OK", 200, 3),
+    ("test_publico.py", "PUBLICO_OK", 200, 3),
+    ("test_captador.py", "CAPTADOR_OK", 200, 3),
+    ("test_resultado.py", "RESULTADO_OK", 200, 3),
+    ("test_notificador.py", "NTFY_OK", 200, 5),
+    ("test_fluxo_captura.py", "FLUXO_TESTES_OK", 300, 6),
+    ("test_honestidade_gates.py", "HONEST_TESTS_OK", 300, 6),
+    ("test_coletor_sites.py", "COLETOR_OK", 300, 6),
+    ("teste_a6_ruido.py", None, 900, 20),
+    # o pesado: 25 roletas limpas + 25 viciadas, cada uma com régua de
+    # permutação. Meia hora é o normal dele, não travamento.
+    ("teste_ocorrencia.py", None, 5400, 2100),
 ]
 
 
@@ -59,16 +67,19 @@ def rodar_um(arquivo: str, marca, limite: int):
 
 
 def main() -> int:
-    existem = [(a, m, l) for a, m, l in TESTES if (RAIZ / a).is_file()]
-    faltando = [a for a, _m, _l in TESTES if not (RAIZ / a).is_file()]
+    existem = [x for x in TESTES if (RAIZ / x[0]).is_file()]
+    faltando = [x[0] for x in TESTES if not (RAIZ / x[0]).is_file()]
     print(f"\n  Rodando {len(existem)} testes."
           + (f"  ({len(faltando)} não encontrados: "
              f"{', '.join(faltando)})" if faltando else ""))
-    print("  Cada ponto da barra é um teste inteiro; os dois últimos são os"
-          " demorados.\n")
-    p = Progresso(len(existem), titulo="suíte completa")
+    _tot = sum(x[3] for x in existem)
+    print(f"  O último deles sozinho leva a maior parte do tempo — 25 roletas"
+          f" limpas e 25 viciadas, com régua de permutação.")
+    print(f"  Estimativa total desta suíte: ~{_mmss(_tot)}.\n")
+    p = Progresso(len(existem), titulo="suíte completa",
+                  pesos=[x[3] for x in existem])
     falhas = []
-    for arquivo, marca, limite in existem:
+    for arquivo, marca, limite, _custo in existem:
         p.comecou(arquivo)
         ok, motivo, gasto = rodar_um(arquivo, marca, limite)
         if not ok:
