@@ -31,41 +31,93 @@ from collections import Counter, defaultdict
 from typing import Any, Dict, List, Optional
 
 # ---------------------------------------------------------------- transições
-# "quando vem X, costuma vir Y" — ditado pelo usuário.
-# CONFIRME esta transcrição: foi tirada de áudio e pode ter erro meu.
+# "quando vem X, costuma vir Y" — ditado por ele.
+#
+# SEGUNDA DITADA, 15/08. Ele repassou a tabela inteira e corrigiu a primeira
+# versão. O que mudou, para não se perder de novo:
+#
+#   0    NÃO EXISTIA na tabela antiga.   "quando vem o zero, vem o oito"
+#   12   era [17]                      → [14, 16, 17]
+#   14   era [16, 18, 12]              → [16]
+#   17   era [20, 12]                  → [12, 20, 22]
+#   20   NÃO EXISTIA                   → [17, 20, 22]
+#   21   NÃO EXISTIA                   → igual ao 19
+#   22   era [20, 17]                  → [17, 20, 22]
+#   27   NÃO EXISTIA                   → igual ao 19
+#   28   NÃO EXISTIA                   → [26, 28]
+#   29   era [30]                      → [24, 29]     ← muda o alvo inteiro
+#   30   era todos os 30               → igual ao 19
+#   31   era [33, 30, ...]             → [33]
+#   33   era [31, 30, ...]             → [31]
+#
+# A mudança do 29 é a mais séria: na tabela antiga, `29→30` foi o achado mais
+# forte de toda a investigação (3,52x, p=0,0020 em 3367 giros). Na tabela
+# corrigida essa regra não existe — o 29 aponta para o 24. As duas ficam
+# medidas separadas, porque uma coisa é a regra dele e outra é o que a minha
+# transcrição errada calhou de encontrar.
+#
+# Ele também frisou o vice-versa: "é sempre vice-versa, né?" — 2↔4, 24↔29,
+# 26↔28, 31↔33, 34↔36, 14↔16.
+_G19 = [19, 21, 23, 25, 27, 32]          # "mesma coisa do dezenove"
+_G10 = [10, 11, 13, 15]                  # "dez onze treze quinze"
+_G6 = [6, 8, 18]                         # "seis, oito e dezoito"
+_G20 = [17, 20, 22]                      # "o dezessete, o vinte e o vinte e dois"
+_G30 = [30, 31, 32, 33, 34, 35, 36]      # "são todos os trinta"
+
 TRANSICOES: Dict[int, List[int]] = {
-    1:  [3, 7, 1],
+    0:  [8],
+    1:  [1, 2, 3, 7],
     2:  [4],
-    3:  [1, 2, 3],
+    3:  [1, 2, 3, 7],
     4:  [2],
     5:  [9],
-    6:  [6, 8, 18],
-    7:  [1],
-    8:  [6, 8, 18, 0],
+    6:  list(_G6),
+    7:  [1, 7],
+    8:  [0] + list(_G6),
     9:  [5],
-    10: [10, 11, 13, 15],
-    11: [10, 11, 13, 15],
-    12: [17],
-    13: [10, 11, 13, 15],
-    14: [16, 18, 12],
-    15: [10, 11, 13, 15],
+    10: list(_G10),
+    11: list(_G10),
+    12: [14, 16, 17],
+    13: list(_G10),
+    14: [16],
+    15: list(_G10),
     16: [14],
-    17: [20, 12],
-    18: [6, 8, 18],
-    19: [19, 21, 23, 32, 27, 30, 25],
-    22: [20, 17],
-    23: [19, 21, 23, 32, 27, 30, 25],
+    17: [12] + list(_G20),
+    18: list(_G6),
+    19: list(_G19),
+    20: list(_G20),
+    21: list(_G19),
+    22: list(_G20),
+    23: list(_G19),
     24: [29],
-    25: [19, 21, 23, 32, 27, 30, 25],
+    25: list(_G19),
     26: [28],
-    29: [30],
-    30: [30, 31, 32, 33, 34, 35, 36],
-    31: [33, 30, 32, 34, 35, 36],
-    32: [19, 21, 23, 32, 27, 30, 25],
-    33: [31, 30, 32, 34, 35, 36],
+    27: list(_G19),
+    28: [26],
+    29: [24],
+    30: list(_G19),
+    31: [33],
+    32: list(_G19),
+    33: [31],
     34: [36],
-    35: [30, 31, 32, 33, 34, 35, 36],
+    35: list(_G30),
     36: [34],
+}
+
+# A primeira transcrição, guardada para comparação. `29→30` saiu daqui e foi
+# o achado mais forte da investigação; se ele estiver certo e eu tiver ouvido
+# errado, foi sorte minha — e vale saber disso.
+TRANSICOES_PRIMEIRA_DITADA: Dict[int, List[int]] = {
+    1: [3, 7, 1], 2: [4], 3: [1, 2, 3], 4: [2], 5: [9], 6: [6, 8, 18],
+    7: [1], 8: [6, 8, 18, 0], 9: [5], 10: [10, 11, 13, 15],
+    11: [10, 11, 13, 15], 12: [17], 13: [10, 11, 13, 15], 14: [16, 18, 12],
+    15: [10, 11, 13, 15], 16: [14], 17: [20, 12], 18: [6, 8, 18],
+    19: [19, 21, 23, 32, 27, 30, 25], 22: [20, 17],
+    23: [19, 21, 23, 32, 27, 30, 25], 24: [29],
+    25: [19, 21, 23, 32, 27, 30, 25], 26: [28], 29: [30],
+    30: [30, 31, 32, 33, 34, 35, 36], 31: [33, 30, 32, 34, 35, 36],
+    32: [19, 21, 23, 32, 27, 30, 25], 33: [31, 30, 32, 34, 35, 36],
+    34: [36], 35: [30, 31, 32, 33, 34, 35, 36], 36: [34],
 }
 
 # ---------------------------------------------------------------- finais
