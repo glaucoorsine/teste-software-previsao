@@ -532,9 +532,30 @@ class Critico:
                 _ref = max(2.0, n_classes / 3.0)
                 w *= math.sqrt(_ref / _k)
             fam = self._familia(h.get("nome","?"))
-            for i,n in enumerate(h.get("nums") or []):
+            # O DECAIMENTO POR POSICAO SO VALE QUANDO A ORDEM SIGNIFICA ALGO.
+            #
+            # ESTA E A RAIZ DO "1,2,3...,12" QUE ELE VIU NA TELA DUAS VEZES.
+            #
+            # O decaimento existe para respeitar a preferencia de uma fonte: o
+            # primeiro nome da lista dela pesa mais que o quinto. Isso e certo
+            # para uma fonte que RANQUEIA.
+            #
+            # Mas varias fontes devolvem um GRUPO, nao um ranking: alto/baixo
+            # devolve [1..18], duzia devolve [1..12], cor devolve os vermelhos.
+            # A ordem ali e acidental -- e a ordem do `range`, nao uma opiniao.
+            # Com o decaimento, o "1" ganhava o peso cheio, o "2" um pouco
+            # menos, o "3" menos ainda... e a lista final saia em ordem
+            # numerica. A tela mostrava 1,2,3,...,12 e parecia que ninguem
+            # tinha decidido nada -- porque, de fato, ninguem tinha.
+            #
+            # Agora: lista grande e tratada como GRUPO (todos com o mesmo peso)
+            # e quem desempata sao as outras fontes. Lista curta continua sendo
+            # ranking, e a preferencia dela e respeitada.
+            _nums_ord = h.get("nums") or []
+            _e_grupo = len(_nums_ord) > max(6, n_classes // 6)
+            for i,n in enumerate(_nums_ord):
                 chave = str(n).strip()
-                score[chave]+=w/(1+i*0.15)
+                score[chave]+= w if _e_grupo else w/(1+i*0.15)
                 fontes[chave].add(fam)
                 fontes_raw[chave].add(h.get("nome","?"))
         # FICHA 226 ONDE ELA DECIDE: NO PESO, NAO SO NUMA LINHA DA TELA.

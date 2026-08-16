@@ -71,6 +71,12 @@ FONTES = {
 }
 
 
+# Fontes que devolvem um GRUPO inteiro (metade da mesa, uma dúzia, uma cor).
+# Estar dentro de um grupo desses não é ter sido escolhido -- e a tela precisa
+# dizer isso, senão preenchimento passa por decisão.
+GENERICAS = {"SETOR", "FINAIS", "ANTI_12", "REGRA_FAMILIA_QUENTE", "FAMILIA"}
+
+
 def frase_da_fonte(nome: str) -> str:
     """A frase desta fonte. Nomes de teoria da academia viram texto genérico."""
     n = str(nome or "").strip()
@@ -98,7 +104,15 @@ def explicar(escolhidos: List[Any], fontes_por_numero: Dict[str, List[str]],
         chave = str(n).strip()
         quem = [f for f in (fontes_por_numero or {}).get(chave, []) if f]
         if not quem:
-            L.append(f"   {chave:<4} entrou pelo peso somado das fontes")
+            L.append(f"   {chave:<4} COMPLETANDO a lista — nenhuma fonte "
+                     f"apontou este número")
+            continue
+        if len(quem) == 1 and quem[0] in GENERICAS:
+            # entrou dentro de um grupo grande (cor, dúzia, metade), sem
+            # ninguém apontar ELE. Dizer "uma fonte concordou" aqui seria
+            # vender preenchimento como escolha.
+            L.append(f"   {chave:<4} COMPLETANDO — só está dentro de um grupo "
+                     f"grande ({frase_da_fonte(quem[0])})")
             continue
         L.append(f"   {chave:<4} {len(quem)} "
                  + ("fonte concordou" if len(quem) == 1 else "fontes concordaram"))

@@ -871,6 +871,42 @@ checa(CT_OBJETIVO == "atraso",
       "e o padrao e o criterio DELE: 'so o que ta muito tempo sem vir'",
       CT_OBJETIVO)
 
+print("\n[29] a lista NAO pode sair em ordem numerica -- foi o bug que ele viu")
+from ia_modulos import Critico as _Cr
+_c2 = _Cr()
+_ap, _p, _f, _s, _sg, _p0 = _c2.consenso(
+    [{"nome": "ALTO_BAIXO", "nums": [str(n) for n in range(1, 19)], "peso": 2.0},
+     {"nome": "DUZIA", "nums": [str(n) for n in range(1, 13)], "peso": 2.0},
+     {"nome": "TEORIA_X", "nums": ["7", "21", "33"], "peso": 2.0},
+     {"nome": "TEORIA_Y", "nums": ["7", "33", "9"], "peso": 2.0}],
+    n_classes=37, k_alvos=12)
+print("       lista:", _ap[:12])
+checa(_ap[:12] != [str(i) for i in range(1, 13)],
+      "a sugestao nao sai como 1,2,3...,12", _ap[:6])
+checa(_ap[0] == "7",
+      "quem tem apoio de DUAS teorias vem na frente do grupo", _ap[:3])
+checa(all(x in _ap[:4] for x in ("7", "33")),
+      "os apontados por teorias especificas ficam no topo", _ap[:5])
+
+# a causa: decaimento por posicao aplicado a GRUPO
+_ap2, _p2, _f2, _s2, _sg2, _q2 = _c2.consenso(
+    [{"nome": "GRUPO", "nums": [str(n) for n in range(1, 19)], "peso": 2.0},
+     {"nome": "OUTRA", "nums": [str(n) for n in range(1, 19)], "peso": 2.0}],
+    n_classes=37, k_alvos=5)
+_scores = [round(_s2[x], 4) for x in ("1", "9", "18")]
+checa(len(set(_scores)) == 1,
+      "dentro de um grupo, todos pesam igual -- a ordem do range nao e opiniao",
+      _scores)
+
+# e uma fonte que RANQUEIA continua tendo a preferencia respeitada
+_ap3, _p3, _f3, _s3, _sg3, _q3 = _c2.consenso(
+    [{"nome": "RANK_A", "nums": ["5", "9", "13"], "peso": 2.0},
+     {"nome": "RANK_B", "nums": ["5", "9", "13"], "peso": 2.0}],
+    n_classes=37, k_alvos=3)
+checa(_s3["5"] > _s3["9"] > _s3["13"],
+      "lista curta continua sendo ranking: o primeiro pesa mais",
+      [round(_s3[x], 3) for x in ("5", "9", "13")])
+
 print()
 if falhas:
     print("FALHAS:", falhas)

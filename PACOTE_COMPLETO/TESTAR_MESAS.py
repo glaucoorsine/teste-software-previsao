@@ -33,6 +33,13 @@ BASE_TRACK = "https://api.trackpotapi.com/api/trackersino/"
 
 # As grafias que valem tentar. Ordem: as mais parecidas com as que funcionam
 # nas outras mesas vêm primeiro.
+# O PADRAO DOS NOMES, confirmado olhando as mesas que funcionam:
+# a pagina /casinoscores/crazy-time/ corresponde ao endpoint /api/crazytime --
+# ou seja, tira os hifens. Por isso "crazytimea" era a aposta obvia, e ela deu
+# 404. Entao o provedor OU usa outro nome, OU nao publica esta mesa separada e
+# os dados dela vem junto com os do Crazy Time, com um campo dizendo a mesa.
+#
+# A segunda hipotese e testada em `procurar_campo_de_mesa()`, abaixo.
 NOMES_CASINO = [
     "crazytimea", "crazytime-a", "crazytimeA", "crazy-time-a", "crazytime2",
     "crazytimeatable", "crazytimeaevolution", "crazy-timea", "crazytime_a",
@@ -125,6 +132,60 @@ def testar_todas(requests) -> int:
     return 0 if not ruins else 1
 
 
+def procurar_campo_de_mesa(requests) -> None:
+    """E se o Crazy Time A vier junto com o Crazy Time, marcado por um campo?
+
+    A pagina do provedor separa as duas mesas, mas isso nao obriga a API a ter
+    dois enderecos. Se a resposta do /crazytime trouxer algo como "tableId" ou
+    "table": "A", entao a mesa A ja esta chegando aqui -- misturada -- e o
+    conserto e filtrar, nao procurar endereco.
+    """
+    from fluxo_captura import API_BY_GAME, HEADERS
+    print("\n" + "=" * 66)
+    print("  E SE AS DUAS MESAS VIEREM NO MESMO ENDERECO?")
+    print("=" * 66)
+    try:
+        r = requests.get(API_BY_GAME["crazy_time"], headers=HEADERS,
+                         params={"size": 20, "page": 0}, timeout=20)
+        if r.status_code != 200:
+            print(f"  o endereco do Crazy Time respondeu HTTP {r.status_code}")
+            return
+        d = json.loads(r.text)
+    except Exception as e:
+        print(f"  nao deu para conferir: {type(e).__name__}")
+        return
+    itens = d if isinstance(d, list) else (d.get("data") or d.get("items") or [])
+    if not itens:
+        print("  respondeu sem itens dentro")
+        return
+    # procura qualquer chave que cheire a identificacao de mesa
+    achadas = {}
+
+    def varrer(o, prof=0):
+        if prof > 4 or not isinstance(o, dict):
+            return
+        for k, v in o.items():
+            if any(p in k.lower() for p in ("table", "mesa", "studio", "room")):
+                achadas.setdefault(k, set()).add(str(v)[:30])
+            if isinstance(v, dict):
+                varrer(v, prof + 1)
+
+    for it in itens[:20]:
+        varrer(it if isinstance(it, dict) else {})
+    if not achadas:
+        print("  Nenhum campo de mesa na resposta. As duas mesas sao mesmo")
+        print("  separadas, e o que falta e o endereco certo da segunda.")
+    else:
+        print("  ACHEI campos que identificam mesa:")
+        for k, vs in achadas.items():
+            print(f"     {k} = {sorted(vs)[:6]}")
+        print()
+        print("  Se aparecer mais de um valor ai, as duas mesas ja estao")
+        print("  chegando juntas -- e o conserto e filtrar por este campo,")
+        print("  nao procurar endereco. Me mande esta tela.")
+    print("=" * 66)
+
+
 def main() -> int:
     try:
         import requests
@@ -155,7 +216,8 @@ def main() -> int:
 
     print("\n" + "=" * 66)
     if not achados:
-        print("  NENHUM endereço respondeu com dados.")
+        procurar_campo_de_mesa(requests)
+        print("\n  NENHUM endereço respondeu com dados.")
         print()
         print("  Isso quer dizer que o provedor não publica esta mesa por API,")
         print("  ou publica com um nome que não está na minha lista.")
