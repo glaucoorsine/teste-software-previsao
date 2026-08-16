@@ -2303,6 +2303,35 @@ class PipelinePerceptivo:
         except Exception as _e:
             msgs.append(f"[Autópsia→conserto] indisponível: {type(_e).__name__}")
 
+        # AS PRATICAS DE PREVISAO DO COMPENDIO DELE, VOTANDO.
+        #
+        # Cobranca dele, e justa: "e pra ler todos meus dois pdfs, pegar todas
+        # as praticas de previsao que estao ali, ensinar todas as ias dos
+        # softwares, porque voce nao fez isso?".
+        #
+        # Eu tinha extraido as 400 fichas e aplicado CINCO -- e quatro delas
+        # eram regras de metodo (nao seja enganado), nao de previsao. Usei o
+        # compendio como manual de seguranca e ignorei o resto como fonte de
+        # ideia, que e para o que ele escreveu o documento.
+        #
+        # Agora cada conceito que descreve um MECANISMO OBSERVAVEL virou uma IA
+        # com o numero da ficha no nome, votando como qualquer outra fonte:
+        # sobredispersao, subdispersao, autocorrelacao, mudanca de regime,
+        # memoria longa, reversao a media, agrupamento de raridades, renovacao,
+        # periodicidade, informacao mutua e recorrencia dinamica.
+        if not self.is_ct:
+            try:
+                from academia_autonoma.previsores_compendio import (
+                    opinar as _opinar_comp)
+                _oc = _opinar_comp(hist, self.n_classes)
+                for _nome, _nums in _oc.items():
+                    hips.append({"nome": _nome, "nums": _nums, "peso": 1.5})
+                if _oc:
+                    msgs.append(f"[Compêndio→consenso] {len(_oc)} práticas de "
+                                f"previsão dos PDFs dele votando")
+            except Exception as _e:
+                msgs.append(f"[Compêndio→consenso] {type(_e).__name__}")
+
         # AS SETE IAS DE MULTIPLICADOR PASSAM A VOTAR NA ESCOLHA.
         #
         # Ele reparou primeiro: "a teoria de multiplicador no cash hunt esta
@@ -2333,7 +2362,17 @@ class PipelinePerceptivo:
                         _r = (_med.get(_nome) or {}).get("razao")
                         # sem medida ainda: entra com voz normal, nao com voz
                         # de quem ja provou
-                        _peso = 1.6 * (min(1.8, max(0.6, float(_r)))
+                        # OPINIAO FORTE, como ele pediu: "pegar as tecnicas
+                        # dos multiplicadores, deixar como opiniao forte pros
+                        # numeros sugestivos".
+                        #
+                        # 2.6 e o maior peso base da mesa -- acima das teorias
+                        # da academia (2.4) e do gap (2.2). O motivo nao e
+                        # gosto: estas IAs leem o sorteio de lucky/fire/top
+                        # slot, que acontece de 1 a 5 vezes por giro SAINDO OU
+                        # NAO o numero. Elas veem varias vezes mais evidencia
+                        # por hora que qualquer outra fonte daqui.
+                        _peso = 2.6 * (min(1.8, max(0.6, float(_r)))
                                        if _r else 1.0)
                         hips.append({"nome": f"MULT_{_nome}",
                                      "nums": [str(x) for x in _palpite],

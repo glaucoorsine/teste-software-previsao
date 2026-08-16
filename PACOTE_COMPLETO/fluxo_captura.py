@@ -123,6 +123,62 @@ def fonte_lembrada(dataset_id: str):
     return None
 
 
+# OS LINKS QUE ELE MANDOU, COMO FONTE DE CAPTURA -- NAO SO PARA CONTAR GENTE.
+#
+# Ele cobrou, e com razao: "coloque todos os links que te passei como base para
+# captura, api, eu ja te pedi milhares de vezes, e voce diz que faz e nao faz".
+#
+# Ele tinha dito, quando mandou os cinco enderecos: "para saber quantas pessoas
+# tem E PEGAR OS ULTIMOS 200 RESULTADOS para analise rapida". Eu fiz a primeira
+# metade -- o contador de pessoas em publico_mesa.py -- e deixei a segunda de
+# fora. Os resultados estavam la, sendo lidos por `extrair_resultados()`, e
+# nunca chegavam ao fluxo de captura.
+#
+# Agora sao terceira fonte de cada mesa. Ficam DEPOIS das duas de API porque
+# sao pagina HTML (mais fragil, e ja levou 403 de Cloudflare), mas existir como
+# reserva e melhor que a mesa morrer com tres fontes disponiveis.
+FONTES_HTML = {
+    "immersive": "https://gamblingcounting.com/immersive-roulette",
+    "lightning": "https://gamblingcounting.com/lightning-roulette",
+    "mega_fire": "https://gamblingcounting.com/roulette",
+    "crazy_time": "https://gamblingcounting.com/crazy-time",
+    "crazy_time_a": "https://gamblingcounting.com/crazy-time-a",
+}
+
+
+def capturar_html(dataset_id: str) -> List[dict]:
+    """Os ultimos resultados pela pagina do gamblingcounting.
+
+    Devolve no mesmo formato das outras fontes, para o resto do software nao
+    precisar saber de onde veio.
+    """
+    url = FONTES_HTML.get(dataset_id)
+    if not url:
+        return []
+    try:
+        from fonte_gamblingcounting import coletar
+        d = coletar(dataset_id) or {}
+    except Exception:
+        return []
+    if d.get("erro"):
+        return []
+    saida = []
+    for v in (d.get("resultados") or [])[:200]:
+        v = str(v).strip()
+        if not v:
+            continue
+        if str(dataset_id).startswith("crazy_time"):
+            saida.append({"n": v, "sec": v, "settled": None, "tags": []})
+        else:
+            try:
+                n = int(v)
+            except ValueError:
+                continue
+            if 0 <= n <= 36:
+                saida.append({"n": n, "settled": None, "tags": []})
+    return saida
+
+
 def enderecos_para(dataset_id: str):
     """Todos os candidatos desta mesa, com o que ja funcionou na frente."""
     lista = []
@@ -483,6 +539,13 @@ def capturar(
             _lembrar_fonte(dataset_id, _url)
             break
     if err and not items:
+        # TERCEIRA FONTE: a pagina que ele mandou. So chega aqui quando as duas
+        # APIs falharam -- e antes disso a mesa simplesmente morria.
+        _html = capturar_html(dataset_id)
+        if _html:
+            return {"rows": _html, "novo_head": True,
+                    "head_id": None, "err": None, "mults": [],
+                    "fonte": "gamblingcounting"}
         # A API caiu -- mas o historico ja coletado esta salvo em disco.
         # Devolver rows=[] fazia a tela apagar e o motor parar de analisar por
         # causa de um 500 passageiro, jogando fora centenas de giros ja ali.

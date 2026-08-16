@@ -94,6 +94,16 @@ MULT = {
 def frase_da_fonte(nome: str) -> str:
     """A frase desta fonte. Nomes de teoria da academia viram texto genérico."""
     n = str(nome or "").strip()
+    if n.startswith("C0") or n.startswith("C1"):
+        # as praticas de previsao do compendio dele: a frase vem do proprio
+        # modulo, para a tela nao repetir o que o codigo ja sabe dizer
+        try:
+            from academia_autonoma.previsores_compendio import descricao
+            d = descricao(n)
+            if d:
+                return f"(ficha {n[1:4]} do seu compêndio) {d}"
+        except Exception:
+            pass
     if n.startswith("MULT_"):
         # as sete IAs de multiplicador, que agora votam na escolha
         base = n[len("MULT_"):]

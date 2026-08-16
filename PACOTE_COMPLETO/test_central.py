@@ -907,6 +907,38 @@ checa(_s3["5"] > _s3["9"] > _s3["13"],
       "lista curta continua sendo ranking: o primeiro pesa mais",
       [round(_s3[x], 3) for x in ("5", "9", "13")])
 
+print("\n[30] as praticas de previsao dos PDFs dele viraram IA")
+from academia_autonoma import previsores_compendio as _PC
+import random as _rd
+checa(len(_PC.IAS) >= 11, "onze ou mais praticas viraram IA", len(_PC.IAS))
+_nomes = [n for n, _f, _d in _PC.IAS]
+checa(all(n[0] == "C" and n[1:4].isdigit() for n in _nomes),
+      "cada uma carrega o numero da ficha no nome", _nomes[:4])
+checa(all(_PC.descricao(n) for n in _nomes),
+      "e todas sabem dizer o que olham, em portugues")
+
+_rd.seed(4)
+_limpa = [_rd.randint(0, 36) for _ in range(300)]
+_o = _PC.opinar(_limpa)
+checa(len(_o) >= 4, "em roleta honesta varias tem palpite", len(_o))
+checa(all(isinstance(v, list) and v for v in _o.values()),
+      "e nenhuma devolve lista vazia disfarcada de palpite")
+
+# com periodo plantado, quem le intervalo tem que ver
+_plant = []
+for _i in range(300):
+    _plant.append(17 if _i % 10 == 0 else _rd.randint(0, 36))
+_op = _PC.opinar(list(reversed(_plant)))
+_pegou = [n for n, v in _op.items() if "17" in v[:4]]
+print("       com o 17 a cada 10 giros, pegaram:", _pegou)
+checa(_pegou, "alguma pratica pega o padrao plantado", list(_op))
+checa(any("046" in n or "006" in n for n in _pegou),
+      "e sao as que leem intervalo/excesso -- as fichas certas", _pegou)
+
+_curta = _PC.opinar([1, 2, 3])
+checa(_curta == {} or all(v for v in _curta.values()),
+      "com historico curto, calar e resposta", _curta)
+
 print()
 if falhas:
     print("FALHAS:", falhas)

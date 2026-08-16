@@ -167,6 +167,25 @@ def test_parser_aceita_formato_plano():
     print("  ok   o parser le os dois formatos -- plano e aninhado")
 
 
+def test_links_dele_sao_fonte_de_captura():
+    """Ele cobrou: "coloque todos os links que te passei como base para captura".
+
+    Quando mandou os cinco enderecos do gamblingcounting, ele disse: "para
+    saber quantas pessoas tem E PEGAR OS ULTIMOS 200 RESULTADOS". Eu fiz so a
+    primeira metade -- o contador de pessoas -- e os resultados ficaram sendo
+    lidos por extrair_resultados() sem nunca chegar na captura.
+    """
+    import fluxo_captura as F
+    assert len(F.FONTES_HTML) == 5, F.FONTES_HTML
+    for mesa in ("immersive", "lightning", "mega_fire", "crazy_time",
+                 "crazy_time_a"):
+        assert mesa in F.FONTES_HTML, mesa
+        assert "gamblingcounting.com" in F.FONTES_HTML[mesa]
+    # mesa desconhecida nao inventa fonte
+    assert F.capturar_html("mesa_que_nao_existe") == []
+    print("  ok   os cinco links dele sao fonte de captura, nao so contador")
+
+
 def test_crazy_time_a_viva():
     """Os dois defeitos que deixavam a mesa Crazy Time A morta.
 
@@ -216,5 +235,6 @@ if __name__ == "__main__":
     test_does_not_wipe_operational_cycle()
     test_toda_mesa_tem_segunda_fonte()
     test_parser_aceita_formato_plano()
+    test_links_dele_sao_fonte_de_captura()
     test_crazy_time_a_viva()
     print("FLUXO_TESTES_OK")
