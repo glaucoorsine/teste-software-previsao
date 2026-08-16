@@ -108,57 +108,15 @@ NULOS: Dict[str, Callable] = {
 #
 # A pergunta para cada uma é sempre a mesma: o que esta leitura AFIRMA? O nulo
 # tem que destruir aquilo, e só aquilo.
-NULO: Dict[str, tuple] = {
-    # ── afirmam COMPOSIÇÃO: certas classes saem mais que outras ─────────
-    "F07": ("uniforme", "densidade longa é afirmação sobre composição"),
-    "F08": ("uniforme", "alinhamento entre escalas inclui a escala longa"),
-    "F31": ("uniforme", "setor da roda quente é composição, não ordem"),
-    "F19": ("uniforme", "comunidade de proximidade é composição na roda"),
-    "F37": ("uniforme", "quais classes carregam multiplicador é composição"),
-    "F38": ("uniforme", "intensidade por classe é composição"),
-    "F39": ("uniforme", "cauda dos multiplicadores é composição"),
-
-    # ── afirmam TEMPO: a ordem carrega a informação ─────────────────────
-    "F01": ("embaralhado", "atraso só existe se a ordem importa"),
-    "F02": ("embaralhado", "trajetória dos intervalos é pura ordem"),
-    "F03": ("embaralhado", "periodicidade é ritmo, morre no embaralhado"),
-    "F04": ("embaralhado", "risco crescente com a espera é ordem"),
-    "F05": ("embaralhado", "densidade curta afirma recência, não composição"),
-    "F06": ("embaralhado", "suavização exponencial afirma recência"),
-    "F09": ("embaralhado", "motivo é par ordenado"),
-    "F10": ("embaralhado", "motivo extenso é sequência"),
-    "F11": ("embaralhado", "ruptura só existe em sequência"),
-    "F12": ("embaralhado", "retorno parcial de motivo é sequência"),
-    "F13": ("embaralhado", "transição é o que vem depois de quê"),
-    "F14": ("embaralhado", "ordem ampliada é sequência"),
-    "F15": ("embaralhado", "eco após presença é ordem"),
-    "F16": ("embaralhado", "efeito da ausência é ordem"),
-    "F17": ("embaralhado", "par recorrente é ordem"),
-    "F18": ("embaralhado", "tríade contextual é ordem"),
-    "F20": ("embaralhado", "exclusão é sobre o que vem depois"),
-    "F21": ("embaralhado", "rajada é agrupamento no tempo"),
-    "F22": ("embaralhado", "deserto é corrida de ausências, no tempo"),
-    "F23": ("embaralhado", "agrupamento em janela é tempo"),
-    "F24": ("embaralhado", "recorrência de estado é tempo"),
-    "F25": ("embaralhado", "mudança de regime é tempo"),
-    "F26": ("embaralhado", "duração de regime é tempo"),
-    "F27": ("embaralhado", "deriva é tendência no tempo"),
-    "F29": ("embaralhado", "imersão temporal é ordem, pelo nome"),
-    "F33": ("embaralhado", "surpresa compara recente com antigo"),
-    "F41": ("embaralhado", "interferência é medida sobre contexto anterior"),
-    "F42": ("embaralhado", "contextualidade depende do contexto anterior"),
-    "F43": ("embaralhado", "não comutatividade é literalmente sobre ordem"),
-
-    # ── afirmam dependência LONGA além da curta ─────────────────────────
-    "F28": ("bloco", "transporte entre regimes tem que sobreviver ao bloco"),
-    "F34": ("bloco", "resíduo estruturado além do par imediato"),
-}
-
-PADRAO = ("embaralhado", "sem declaração — o mais exigente dos dois comuns")
-
+# O mapa de nulos que eu tinha inventado saiu daqui. Os controles agora são os
+# DELE, 48, um por família, em `controles.py` -- lidos da seção 4 de cada
+# formulação do Tratado. Ele mandou: "você tem que estudar, buscar nos meus
+# PDFs mesmo". Estavam escritos lá desde o começo.
 
 def nulo_de(familia: str) -> tuple:
-    return NULO.get(str(familia), PADRAO)
+    """O controle DELE para esta família, e a instrução original resumida."""
+    from . import controles as C
+    return C.controle_de(familia)
 
 
 def contraditorio_declarado(familia: str, jogo: str) -> str:
@@ -254,8 +212,11 @@ def medir(series: Sequence[List[int]],
 
     `avaliar` recebe as séries e devolve (acertos, tentativas, esperado).
     """
+    from . import controles as C
     tipo, porque = nulo_de(familia)
-    gerar = NULOS[tipo]
+
+    def gerar(ss, rnd, nc):
+        return C.aplicar(familia, ss, rnd, nc)
     a, n, e = avaliar(series)
     r_real = razao(a, n, e)
 
@@ -283,6 +244,59 @@ def medir(series: Sequence[List[int]],
         "p_ingenuo": binom_cauda(a, n, e / n) if n else 1.0,
         "motivo": (f"{a}/{n} = {r_real:.3f}x bruto; nulo {tipo} {mediana:.3f}x; "
                    f"honesto {honesto:.3f}x; p={p_perm:.3f}"),
+    }
+
+
+def mesa_e_justa(series, n_classes: int = 37) -> dict:
+    """A roda é justa? Aderência ao uniforme — e aqui o uniforme É o certo.
+
+    ISTO NÃO É UM CONTROLE NEGATIVO, e a diferença é o que eu vinha errando.
+
+    Os 48 controles dele respondem "esta LEITURA acrescenta alguma coisa além
+    da composição?" — e por isso todos preservam a composição, como manda a
+    F35. Testar viés de roda com um deles é cego por construção: o controle
+    carrega o próprio viés que se quer detectar.
+
+    "esta roda é desigual?" é outra pergunta, e é de ADERÊNCIA: as contagens
+    observadas batem com as de uma roda justa? Aí o uniforme é a referência
+    certa, porque a hipótese nula é literalmente "a roda é justa".
+
+    Duas perguntas, dois nulos. Confundir as duas foi a raiz de tudo:
+
+        viés de roda            aderência ao uniforme      (esta função)
+        a leitura acrescenta?   permutação que preserva    (os controles dele)
+                                composição
+
+    Devolve o qui-quadrado, os graus de liberdade e o p por Monte Carlo — que
+    é o que a ficha 001 do compêndio dele manda usar quando há célula esparsa,
+    e com 37 classes em algumas centenas de giros sempre há.
+    """
+    from collections import Counter
+    todas = [x for s in series for x in s]
+    n = len(todas)
+    if n < 4 * n_classes:
+        return {"justa": None, "n": n,
+                "motivo": f"só {n} giros para {n_classes} classes — sem poder"}
+    esp = n / n_classes
+    c = Counter(todas)
+    q = sum((c.get(x, 0) - esp) ** 2 / esp for x in range(int(n_classes)))
+
+    rnd = random.Random(20260816)
+    piores = 0
+    ENSAIOS = 2000
+    for _ in range(ENSAIOS):
+        c2 = Counter(rnd.randrange(int(n_classes)) for _ in range(n))
+        q2 = sum((c2.get(x, 0) - esp) ** 2 / esp for x in range(int(n_classes)))
+        if q2 >= q:
+            piores += 1
+    p = (piores + 1) / (ENSAIOS + 1)
+    return {
+        "justa": bool(p >= 0.05), "n": n, "qui2": q, "gl": int(n_classes) - 1,
+        "p": p,
+        "motivo": (f"qui-quadrado {q:.1f} em {int(n_classes)-1} gl, "
+                   f"p={p:.4f} por Monte Carlo — "
+                   + ("nada distingue esta roda de uma justa"
+                      if p >= 0.05 else "esta roda NÃO é justa")),
     }
 
 

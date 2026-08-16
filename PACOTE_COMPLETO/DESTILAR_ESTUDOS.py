@@ -44,7 +44,6 @@ sabendo o que executa e de onde veio.
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -57,7 +56,7 @@ SAIDA = PASTA / "indice_estudos_destilado.json"
 # escreva amanhã não vaza para o repositório por esquecimento meu.
 CAMPOS = {
     "formulacao": ("n", "pagina", "mesa", "familia", "ia", "lente",
-                   "titulo", "formula"),
+                   "titulo", "formula", "contraditorio"),
     "dossie": ("n", "pagina", "eixo", "titulo"),
     "auditoria": ("pagina", "secao", "titulo"),
 }
@@ -67,16 +66,31 @@ CAMPOS = {
 # carregar o desenvolvimento dela.
 MAX_TITULO = 90
 
+# O contraditório (seção 4) é a REGRA DE MEDIÇÃO da família: diz qual operação
+# derrubaria aquela leitura. Sem ele o software mede errado -- foi o que
+# aconteceu enquanto eu usava régua minha. Entra cortado na primeira frase, que
+# é onde está a operação; o resto do parágrafo é o raciocínio, e fica no livro.
+MAX_CONTRADITORIO = 150
+
 
 def destilar_unidade(u: Dict[str, Any]) -> Dict[str, Any]:
     tipo = u.get("tipo", "auditoria")
     out = {"tipo": tipo}
+    # a seção 4 vem com nome variável (s4_sombra_contraditorio_e_...)
+    if tipo == "formulacao" and "contraditorio" not in u:
+        for k, v in u.items():
+            if k.startswith("s4_") and v:
+                u = dict(u)
+                u["contraditorio"] = str(v).split(". A ")[0]
+                break
     for c in CAMPOS.get(tipo, CAMPOS["auditoria"]):
         v = u.get(c)
         if v in (None, "", []):
             continue
         if c == "titulo":
             v = str(v)[:MAX_TITULO]
+        elif c == "contraditorio":
+            v = str(v)[:MAX_CONTRADITORIO]
         out[c] = v
     return out
 

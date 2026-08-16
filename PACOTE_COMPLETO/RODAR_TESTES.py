@@ -40,6 +40,7 @@ TESTES = [
     ("test_lint.py", "LINT_OK", 120, 3),
     ("test_nucleo.py", "NUCLEO_OK", 900, 40),
     ("test_canal.py", "CANAL_OK", 600, 25),
+    ("test_controles.py", "CONTROLES_OK", 900, 45),
     ("test_central.py", "CENTRAL_TESTES_OK", 300, 1),
     ("test_base_auditoria.py", "BASE_AUDITORIA_OK", 300, 1),
     ("test_biblioteca.py", "BIBLIOTECA_OK", 300, 1),
