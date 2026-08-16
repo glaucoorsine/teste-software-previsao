@@ -38,6 +38,7 @@ TESTES = [
     # inteiro e leva dois segundos para achar. Falhar aqui vale mais que
     # falhar depois de vinte minutos de suite. Foi o que derrubou a v102.
     ("test_lint.py", "LINT_OK", 120, 3),
+    ("test_nucleo.py", "NUCLEO_OK", 900, 40),
     ("test_central.py", "CENTRAL_TESTES_OK", 300, 1),
     ("test_base_auditoria.py", "BASE_AUDITORIA_OK", 300, 1),
     ("test_biblioteca.py", "BIBLIOTECA_OK", 300, 1),
