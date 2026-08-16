@@ -257,6 +257,10 @@ def prever(historico: List[dict], jogo: str, k: int,
 
     return {
         "numeros": ag["ordem"][:k],
+        # o placar bruto do consenso -- e sobre ele que a entropia da
+        # R04-UNC-04 e medida, para saber se a concentracao e genuina ou se
+        # pegar o topo seria ordenacao arbitraria de empate
+        "placar": ag["placar"],
         "quem": ag["quem"],
         "palpites": palpites,
         "robustez": ag["robustez"],

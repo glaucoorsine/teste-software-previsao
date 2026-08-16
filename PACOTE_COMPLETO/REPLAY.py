@@ -50,6 +50,7 @@ sys.path.insert(0, str(RAIZ))
 import PREVER as P  # noqa: E402
 from NUCLEO import base as B  # noqa: E402
 from NUCLEO import regua as R  # noqa: E402
+from NUCLEO import silencio as S  # noqa: E402
 from NUCLEO import veto as V  # noqa: E402
 
 
@@ -86,18 +87,31 @@ def carregar() -> Dict[str, List[List[dict]]]:
 
 
 def replay(cronologico: List[dict], jogo: str, k: int,
-           minimo: int) -> P.Placar:
-    """Anda do passado para o futuro. Cada previsão vê só o passado dela."""
+           minimo: int):
+    """Anda do passado para o futuro. Cada previsão vê só o passado dela.
+
+    Devolve (placar, silencio, sem_silencio) -- o terceiro é a mesma sessão
+    contada como se o núcleo tivesse falado sempre, que é a referência sem a
+    qual o risco seletivo não quer dizer nada.
+    """
     placar = P.Placar(B.classes_de(jogo))
+    sil = S.Silencio()
+    sempre: List[bool] = []
+    falou_lista: List[bool] = []
     for i in range(minimo, len(cronologico)):
         # o que a captura entregaria neste instante: recente-primeiro
         visivel = list(reversed(cronologico[:i]))
         p = P.prever(visivel, jogo, k, placar)
         if not p["numeros"]:
             continue
+        # a_t decidido AQUI, com o giro ainda escondido
+        d = sil.decidir(p.get("placar") or {})
         alvo = str(cronologico[i]["n"])
-        placar.registrar(p["numeros"], alvo, p["palpites"])
-    return placar
+        acertou = placar.registrar(p["numeros"], alvo, p["palpites"])
+        sil.registrar(d["falar"], acertou)
+        sempre.append(acertou)
+        falou_lista.append(d["falar"])
+    return placar, sil, sempre, falou_lista
 
 
 def julgar(placar: P.Placar, nome: str) -> Dict[str, Any]:
@@ -137,13 +151,19 @@ def main() -> int:
         print("═" * 70)
 
         juntos = P.Placar(B.classes_de(jogo))
+        sess_sempre: List[bool] = []
+        sess_falou: List[bool] = []
         for idx, sessao in enumerate(sessoes, 1):
             if len(sessao) <= a.min + 5:
                 print(f"\n  ── sessão {idx}: {len(sessao)} giros — "
                       f"curta demais para {a.min} de aquecimento")
                 continue
-            pl = replay(sessao, jogo, a.k, a.min)
+            pl, sil, sempre, falou = replay(sessao, jogo, a.k, a.min)
             julgar(pl, f"sessão {idx} ({len(sessao)} giros)")
+            cmp = S.comparar(sempre, sempre, falou)
+            print(f"  silêncio (R04-UNC-03): {cmp.get('motivo','')}")
+            sess_sempre.extend(sempre)
+            sess_falou.extend(falou)
             # acumula para o veredito da mesa
             juntos.acertos += pl.acertos
             juntos.rodadas += pl.rodadas
@@ -155,6 +175,8 @@ def main() -> int:
         if juntos.rodadas:
             print(f"\n  ══ {jogo.upper()}, todas as sessões ══")
             print(juntos.linha())
+            cmp = S.comparar(sess_sempre, sess_sempre, sess_falou)
+            print(f"  silêncio (R04-UNC-03): {cmp.get('motivo','')}")
             c = juntos.constituicao()
             geral[jogo] = (juntos, c)
 
