@@ -126,6 +126,30 @@ class Placar:
         r = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
         return (max(0.0, (c - r) / d), min(1.0, (c + r) / d))
 
+    def veredito(self) -> str:
+        """A frase que impede a razão de ser lida como vitória.
+
+        Ele avisou, e com razão: "cuidado com essas suas métricas aí que já
+        atrapalhou antes". Três vezes uma régua minha produziu achado que
+        evaporou depois. O problema não é só a conta — é que "1,20x" na tela
+        PARECE resultado, e quem lê não tem como saber que o intervalo cobre
+        o acaso inteiro.
+
+        Então a tela não mostra só o número. Mostra o que ele significa, e o
+        critério é o intervalo, não a razão: enquanto o IC90 contiver o acaso,
+        não há nada a comemorar, por mais bonita que esteja a razão.
+        """
+        if self.rodadas < 20:
+            return (f"AINDA NÃO DÁ PARA DIZER — {self.rodadas} rodadas. "
+                    f"Antes de 20 a taxa é ruído.")
+        lo, hi = self.intervalo()
+        if lo > self.acaso:
+            return "ACIMA DO ACASO — o intervalo inteiro está acima."
+        if hi < self.acaso:
+            return "ABAIXO DO ACASO — o intervalo inteiro está abaixo."
+        return ("INDISTINGUÍVEL DO ACASO — o intervalo cobre o acaso, "
+                "então a razão acima não é resultado.")
+
     def linha(self) -> str:
         if not self.rodadas:
             return "  placar: primeira rodada ainda não fechou"
@@ -135,7 +159,7 @@ class Placar:
              f"IC90 {lo:.1%}–{hi:.1%}")
         if self.descartadas:
             s += f"  · {self.descartadas} descartadas por carimbo"
-        return s
+        return s + "\n  " + self.veredito()
 
 
 # ═══════════════════════════════════════════════════════ a previsão

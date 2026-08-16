@@ -199,6 +199,47 @@ checa(0.85 <= mh <= 1.15,
 checa(mv > 1.30, "com vício plantado o placar sobe", f"{mv:.3f}x")
 checa(mv > mh * 1.25, "e as duas se separam com folga", (round(mv, 2), round(mh, 2)))
 
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n[6] a tela diz o que o número SIGNIFICA, não só o número")
+
+# Ele avisou: "cuidado com essas suas métricas aí que já atrapalhou antes".
+# O risco não é só a conta errada -- é "1,20x" na tela PARECER resultado
+# quando o intervalo cobre o acaso inteiro. O veredito fecha essa porta.
+
+curto = P.Placar(37)
+for _ in range(10):
+    curto.registrar([str(i) for i in range(10)], "5", {})
+checa("AINDA NÃO" in curto.veredito(),
+      "com menos de 20 rodadas se recusa a concluir", curto.veredito())
+
+# taxa alta mas intervalo cobrindo o acaso: NÃO pode parecer vitória
+morno = P.Placar(37)
+for i in range(30):
+    morno.registrar([str(j) for j in range(10)], "5" if i % 3 == 0 else "30", {})
+print("       " + f"{morno.razao:.2f}x" + " → " + morno.veredito())
+checa(morno.razao > 1.05, "(cenário) a razão parece boa", f"{morno.razao:.2f}x")
+checa("INDISTINGUÍVEL" in morno.veredito(),
+      "mas o veredito avisa que o intervalo cobre o acaso", morno.veredito())
+
+# vantagem real e grande: aí sim pode afirmar
+forte = P.Placar(37)
+for i in range(60):
+    forte.registrar([str(j) for j in range(10)], "5" if i % 2 == 0 else "30", {})
+print("       " + f"{forte.razao:.2f}x" + " → " + forte.veredito())
+checa("ACIMA DO ACASO" in forte.veredito(),
+      "com vantagem larga o veredito confirma", forte.veredito())
+
+# e o veredito aparece na linha que vai para a tela
+checa("INDISTINGUÍVEL" in morno.linha() or "ACIMA" in morno.linha()
+      or "AINDA" in morno.linha(),
+      "o veredito vai junto do placar na tela")
+
+# nas sessões honestas de verdade, o veredito não pode afirmar vantagem
+afirmou = [p for p in honestas if "ACIMA DO ACASO" in p.veredito()]
+checa(not afirmou,
+      "e em mesa honesta nenhuma sessão afirma vantagem",
+      [p.linha() for p in afirmou][:1])
+
 print()
 if falhas:
     print("FALHAS:", falhas)
