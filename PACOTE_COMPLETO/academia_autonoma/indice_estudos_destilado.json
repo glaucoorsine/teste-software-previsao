@@ -1,5 +1,1530 @@
 {
  "estudos": {
+  "dados_a_regua_da_capacidade_de_previsao_quantica_300_p": {
+   "paginas": 300,
+   "unidades": [
+    {
+     "tipo": "auditoria",
+     "pagina": 1,
+     "secao": "DADO",
+     "titulo": "NULO FDR CAL SOMBRA VETO VOLUME AUTORAL DE GLAUCO ORSINE TRAVAGLIA A RÉGUA DA CAPACIDADE D"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 2,
+     "secao": "FRONTISPÍCIO",
+     "titulo": "A Régua controla o direito de uma teoria"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 3,
+     "secao": "ESCOPO"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 4,
+     "secao": "CARTA DO AUTOR"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 5,
+     "secao": "PROBLEMA"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 6,
+     "secao": "CONSTITUIÇÃO"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 7,
+     "secao": "VOCABULÁRIO",
+     "titulo": "Familiaridade não é frequência quente ou"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 8,
+     "secao": "FRONTEIRA"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 9,
+     "secao": "TAXONOMIA"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 10,
+     "secao": "VETOR"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 11,
+     "secao": "EQUAÇÃO"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 12,
+     "secao": "PORTAS",
+     "titulo": "Veto e não compensabilidade"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 13,
+     "secao": "MEMÓRIA"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 14,
+     "secao": "CICLO"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 15,
+     "secao": "LABORATÓRIO"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 16,
+     "secao": "CONSELHO"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 17,
+     "secao": "ESCALONAMENTO"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 18,
+     "secao": "FONTES"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 19,
+     "secao": "NOTAÇÃO"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 20,
+     "secao": "NAVEGAÇÃO"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 21,
+     "titulo": "Régua de Brier Decomposta"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 22,
+     "titulo": "Régua de Brier Decomposta"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 23,
+     "titulo": "Régua de Brier Decomposta"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 24,
+     "titulo": "Régua de Brier Decomposta"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 25,
+     "titulo": "Régua de Surpresa Logarítmica"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 26,
+     "titulo": "Régua de Surpresa Logarítmica"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 27,
+     "titulo": "Régua de Surpresa Logarítmica"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 28,
+     "titulo": "Régua de Surpresa Logarítmica"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 29,
+     "titulo": "Régua de Inclinação e Intercepto"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 30,
+     "titulo": "Régua de Inclinação e Intercepto"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 31,
+     "titulo": "Régua de Inclinação e Intercepto"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 32,
+     "titulo": "Régua de Inclinação e Intercepto"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 33,
+     "titulo": "Régua de Calibração Local Adaptativa"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 34,
+     "titulo": "Régua de Calibração Local Adaptativa"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 35,
+     "titulo": "Régua de Calibração Local Adaptativa"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 36,
+     "titulo": "Régua de Calibração Local Adaptativa"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 37,
+     "titulo": "Régua de Recalibração sem Reescrita"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 38,
+     "titulo": "Régua de Recalibração sem Reescrita"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 39,
+     "titulo": "Régua de Recalibração sem Reescrita"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 40,
+     "titulo": "Régua de Recalibração sem Reescrita"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 41,
+     "titulo": "Régua da Dívida de Família"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 42,
+     "titulo": "Régua da Dívida de Família"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 43,
+     "titulo": "Régua da Dívida de Família"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 44,
+     "titulo": "Régua da Dívida de Família"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 45,
+     "titulo": "Régua de Descobertas Falsas Ordenadas"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 46,
+     "titulo": "Régua de Descobertas Falsas Ordenadas"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 47,
+     "titulo": "Régua de Descobertas Falsas Ordenadas"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 48,
+     "titulo": "Régua de Descobertas Falsas Ordenadas"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 49,
+     "titulo": "Régua de Falso Descobrimento Local"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 50,
+     "titulo": "Régua de Falso Descobrimento Local"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 51,
+     "titulo": "Régua de Falso Descobrimento Local"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 52,
+     "titulo": "Régua de Falso Descobrimento Local"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 53,
+     "titulo": "Régua de Riqueza Alfa Sequencial"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 54,
+     "titulo": "Régua de Riqueza Alfa Sequencial"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 55,
+     "titulo": "Régua de Riqueza Alfa Sequencial"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 56,
+     "titulo": "Régua de Riqueza Alfa Sequencial"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 57,
+     "titulo": "Régua do Máximo sob Nulo Estruturado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 58,
+     "titulo": "Régua do Máximo sob Nulo Estruturado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 59,
+     "titulo": "Régua do Máximo sob Nulo Estruturado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 60,
+     "titulo": "Régua do Máximo sob Nulo Estruturado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 61,
+     "titulo": "Régua da Razão de Verossimilhanças"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 62,
+     "titulo": "Régua da Razão de Verossimilhanças"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 63,
+     "titulo": "Régua da Razão de Verossimilhanças"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 64,
+     "titulo": "Régua da Razão de Verossimilhanças"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 65,
+     "titulo": "Régua de Evidência a Qualquer Tempo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 66,
+     "titulo": "Régua de Evidência a Qualquer Tempo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 67,
+     "titulo": "Régua de Evidência a Qualquer Tempo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 68,
+     "titulo": "Régua de Evidência a Qualquer Tempo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 69,
+     "titulo": "Régua de Sequência de Confiança"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 70,
+     "titulo": "Régua de Sequência de Confiança"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 71,
+     "titulo": "Régua de Sequência de Confiança"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 72,
+     "titulo": "Régua de Sequência de Confiança"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 73,
+     "titulo": "Régua da Parada Opcional"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 74,
+     "titulo": "Régua da Parada Opcional"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 75,
+     "titulo": "Régua da Parada Opcional"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 76,
+     "titulo": "Régua da Parada Opcional"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 77,
+     "titulo": "Régua de Acúmulo com Esquecimento"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 78,
+     "titulo": "Régua de Acúmulo com Esquecimento"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 79,
+     "titulo": "Régua de Acúmulo com Esquecimento"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 80,
+     "titulo": "Régua de Acúmulo com Esquecimento"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 81,
+     "titulo": "Régua de Cobertura Conformal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 82,
+     "titulo": "Régua de Cobertura Conformal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 83,
+     "titulo": "Régua de Cobertura Conformal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 84,
+     "titulo": "Régua de Cobertura Conformal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 85,
+     "titulo": "Régua Conformal Adaptativa à Deriva"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 86,
+     "titulo": "Régua Conformal Adaptativa à Deriva"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 87,
+     "titulo": "Régua Conformal Adaptativa à Deriva"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 88,
+     "titulo": "Régua Conformal Adaptativa à Deriva"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 89,
+     "titulo": "Régua do Direito de Silêncio"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 90,
+     "titulo": "Régua do Direito de Silêncio"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 91,
+     "titulo": "Régua do Direito de Silêncio"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 92,
+     "titulo": "Régua do Direito de Silêncio"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 93,
+     "titulo": "Régua de Entropia e Margem"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 94,
+     "titulo": "Régua de Entropia e Margem"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 95,
+     "titulo": "Régua de Entropia e Margem"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 96,
+     "titulo": "Régua de Entropia e Margem"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 97,
+     "titulo": "Régua de Incerteza Epistêmica e"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 98,
+     "titulo": "Régua de Incerteza Epistêmica e"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 99,
+     "titulo": "Régua de Incerteza Epistêmica e"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 100,
+     "titulo": "Régua de Incerteza Epistêmica e"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 101,
+     "titulo": "Régua de Estabilidade por Blocos"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 102,
+     "titulo": "Régua de Estabilidade por Blocos"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 103,
+     "titulo": "Régua de Estabilidade por Blocos"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 104,
+     "titulo": "Régua de Estabilidade por Blocos"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 105,
+     "titulo": "Régua de Caminhada Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 106,
+     "titulo": "Régua de Caminhada Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 107,
+     "titulo": "Régua de Caminhada Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 108,
+     "titulo": "Régua de Caminhada Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 109,
+     "titulo": "Régua Deixe-Uma-Captura-Fora"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 110,
+     "titulo": "Régua Deixe-Uma-Captura-Fora"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 111,
+     "titulo": "Régua Deixe-Uma-Captura-Fora"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 112,
+     "titulo": "Régua Deixe-Uma-Captura-Fora"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 113,
+     "titulo": "Régua do Pior Bloco"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 114,
+     "titulo": "Régua do Pior Bloco"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 115,
+     "titulo": "Régua do Pior Bloco"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 116,
+     "titulo": "Régua do Pior Bloco"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 117,
+     "titulo": "Régua de Transporte entre Fontes"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 118,
+     "titulo": "Régua de Transporte entre Fontes"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 119,
+     "titulo": "Régua de Transporte entre Fontes"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 120,
+     "titulo": "Régua de Transporte entre Fontes"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 121,
+     "titulo": "Régua Sentinela de Vazamento"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 122,
+     "titulo": "Régua Sentinela de Vazamento"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 123,
+     "titulo": "Régua Sentinela de Vazamento"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 124,
+     "titulo": "Régua Sentinela de Vazamento"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 125,
+     "titulo": "Régua de Influência de Duplicatas"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 126,
+     "titulo": "Régua de Influência de Duplicatas"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 127,
+     "titulo": "Régua de Influência de Duplicatas"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 128,
+     "titulo": "Régua de Influência de Duplicatas"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 129,
+     "titulo": "Régua de Perturbação Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 130,
+     "titulo": "Régua de Perturbação Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 131,
+     "titulo": "Régua de Perturbação Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 132,
+     "titulo": "Régua de Perturbação Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 133,
+     "titulo": "Régua de Sensibilidade ao Rótulo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 134,
+     "titulo": "Régua de Sensibilidade ao Rótulo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 135,
+     "titulo": "Régua de Sensibilidade ao Rótulo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 136,
+     "titulo": "Régua de Sensibilidade ao Rótulo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 137,
+     "titulo": "Régua do Envelope de Ausência"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 138,
+     "titulo": "Régua do Envelope de Ausência"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 139,
+     "titulo": "Régua do Envelope de Ausência"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 140,
+     "titulo": "Régua do Envelope de Ausência"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 141,
+     "titulo": "Régua do Alvo Embaralhado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 142,
+     "titulo": "Régua do Alvo Embaralhado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 143,
+     "titulo": "Régua do Alvo Embaralhado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 144,
+     "titulo": "Régua do Alvo Embaralhado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 145,
+     "titulo": "Régua do Horizonte Placebo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 146,
+     "titulo": "Régua do Horizonte Placebo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 147,
+     "titulo": "Régua do Horizonte Placebo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 148,
+     "titulo": "Régua do Horizonte Placebo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 149,
+     "titulo": "Régua do Atributo Irrelevante"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 150,
+     "titulo": "Régua do Atributo Irrelevante"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 151,
+     "titulo": "Régua do Atributo Irrelevante"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 152,
+     "titulo": "Régua do Atributo Irrelevante"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 153,
+     "titulo": "Régua do Surrogate Estruturado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 154,
+     "titulo": "Régua do Surrogate Estruturado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 155,
+     "titulo": "Régua do Surrogate Estruturado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 156,
+     "titulo": "Régua do Surrogate Estruturado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 157,
+     "titulo": "Régua de Reversão Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 158,
+     "titulo": "Régua de Reversão Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 159,
+     "titulo": "Régua de Reversão Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 160,
+     "titulo": "Régua de Reversão Temporal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 161,
+     "titulo": "Régua de Correlação dos Erros"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 162,
+     "titulo": "Régua de Correlação dos Erros"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 163,
+     "titulo": "Régua de Correlação dos Erros"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 164,
+     "titulo": "Régua de Correlação dos Erros"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 165,
+     "titulo": "Régua do Número Efetivo de IAs"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 166,
+     "titulo": "Régua do Número Efetivo de IAs"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 167,
+     "titulo": "Régua do Número Efetivo de IAs"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 168,
+     "titulo": "Régua do Número Efetivo de IAs"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 169,
+     "titulo": "Régua de Diversidade Útil"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 170,
+     "titulo": "Régua de Diversidade Útil"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 171,
+     "titulo": "Régua de Diversidade Útil"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 172,
+     "titulo": "Régua de Diversidade Útil"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 173,
+     "titulo": "Régua de Contribuição Marginal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 174,
+     "titulo": "Régua de Contribuição Marginal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 175,
+     "titulo": "Régua de Contribuição Marginal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 176,
+     "titulo": "Régua de Contribuição Marginal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 177,
+     "titulo": "Régua Deixe-Uma-IA-Fora"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 178,
+     "titulo": "Régua Deixe-Uma-IA-Fora"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 179,
+     "titulo": "Régua Deixe-Uma-IA-Fora"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 180,
+     "titulo": "Régua Deixe-Uma-IA-Fora"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 181,
+     "titulo": "Régua de Alarme Acumulado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 182,
+     "titulo": "Régua de Alarme Acumulado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 183,
+     "titulo": "Régua de Alarme Acumulado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 184,
+     "titulo": "Régua de Alarme Acumulado"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 185,
+     "titulo": "Régua Bayesiana de Comprimento de"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 186,
+     "titulo": "Régua Bayesiana de Comprimento de"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 187,
+     "titulo": "Régua Bayesiana de Comprimento de"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 188,
+     "titulo": "Régua Bayesiana de Comprimento de"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 189,
+     "titulo": "Régua de Distância entre Distribuições"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 190,
+     "titulo": "Régua de Distância entre Distribuições"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 191,
+     "titulo": "Régua de Distância entre Distribuições"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 192,
+     "titulo": "Régua de Distância entre Distribuições"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 193,
+     "titulo": "Régua da Idade de Calibração"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 194,
+     "titulo": "Régua da Idade de Calibração"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 195,
+     "titulo": "Régua da Idade de Calibração"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 196,
+     "titulo": "Régua da Idade de Calibração"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 197,
+     "titulo": "Régua de Recorrência Contextual"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 198,
+     "titulo": "Régua de Recorrência Contextual"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 199,
+     "titulo": "Régua de Recorrência Contextual"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 200,
+     "titulo": "Régua de Recorrência Contextual"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 201,
+     "titulo": "Régua do Comprimento Mínimo de"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 202,
+     "titulo": "Régua do Comprimento Mínimo de"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 203,
+     "titulo": "Régua do Comprimento Mínimo de"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 204,
+     "titulo": "Régua do Comprimento Mínimo de"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 205,
+     "titulo": "Régua de Critério Informacional Finito"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 206,
+     "titulo": "Régua de Critério Informacional Finito"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 207,
+     "titulo": "Régua de Critério Informacional Finito"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 208,
+     "titulo": "Régua de Critério Informacional Finito"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 209,
+     "titulo": "Régua da Curva de Especificações"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 210,
+     "titulo": "Régua da Curva de Especificações"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 211,
+     "titulo": "Régua da Curva de Especificações"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 212,
+     "titulo": "Régua da Curva de Especificações"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 213,
+     "titulo": "Régua de Validação Temporal Aninhada"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 214,
+     "titulo": "Régua de Validação Temporal Aninhada"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 215,
+     "titulo": "Régua de Validação Temporal Aninhada"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 216,
+     "titulo": "Régua de Validação Temporal Aninhada"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 217,
+     "titulo": "Régua de Sobreajuste da Seleção"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 218,
+     "titulo": "Régua de Sobreajuste da Seleção"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 219,
+     "titulo": "Régua de Sobreajuste da Seleção"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 220,
+     "titulo": "Régua de Sobreajuste da Seleção"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 221,
+     "titulo": "Régua do Livro-Razão de Sombra"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 222,
+     "titulo": "Régua do Livro-Razão de Sombra"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 223,
+     "titulo": "Régua do Livro-Razão de Sombra"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 224,
+     "titulo": "Régua do Livro-Razão de Sombra"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 225,
+     "titulo": "Régua de Dormência Justificada"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 226,
+     "titulo": "Régua de Dormência Justificada"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 227,
+     "titulo": "Régua de Dormência Justificada"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 228,
+     "titulo": "Régua de Dormência Justificada"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 229,
+     "titulo": "Régua da Dívida de Reativação"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 230,
+     "titulo": "Régua da Dívida de Reativação"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 231,
+     "titulo": "Régua da Dívida de Reativação"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 232,
+     "titulo": "Régua da Dívida de Reativação"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 233,
+     "titulo": "Régua de Linhagem de Versões"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 234,
+     "titulo": "Régua de Linhagem de Versões"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 235,
+     "titulo": "Régua de Linhagem de Versões"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 236,
+     "titulo": "Régua de Linhagem de Versões"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 237,
+     "titulo": "Régua da Meia-Vida da Teoria"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 238,
+     "titulo": "Régua da Meia-Vida da Teoria"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 239,
+     "titulo": "Régua da Meia-Vida da Teoria"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 240,
+     "titulo": "Régua da Meia-Vida da Teoria"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 241,
+     "titulo": "Régua da Porta de Integridade Fatal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 242,
+     "titulo": "Régua da Porta de Integridade Fatal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 243,
+     "titulo": "Régua da Porta de Integridade Fatal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 244,
+     "titulo": "Régua da Porta de Integridade Fatal"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 245,
+     "titulo": "Régua do Tamanho Efetivo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 246,
+     "titulo": "Régua do Tamanho Efetivo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 247,
+     "titulo": "Régua do Tamanho Efetivo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 248,
+     "titulo": "Régua do Tamanho Efetivo"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 249,
+     "titulo": "Régua do Controle Negativo Obrigatório"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 250,
+     "titulo": "Régua do Controle Negativo Obrigatório"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 251,
+     "titulo": "Régua do Controle Negativo Obrigatório"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 252,
+     "titulo": "Régua do Controle Negativo Obrigatório"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 253,
+     "titulo": "Régua da Contradição Irredutível"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 254,
+     "titulo": "Régua da Contradição Irredutível"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 255,
+     "titulo": "Régua da Contradição Irredutível"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 256,
+     "titulo": "Régua da Contradição Irredutível"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 257,
+     "titulo": "Régua Constitucional do Não Concluir"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 258,
+     "titulo": "Régua Constitucional do Não Concluir"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 259,
+     "titulo": "Régua Constitucional do Não Concluir"
+    },
+    {
+     "tipo": "regua",
+     "pagina": 260,
+     "titulo": "Régua Constitucional do Não Concluir"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 261,
+     "secao": "CONSTITUIÇÃO"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 262,
+     "secao": "ESCALA SIMÉTRICA",
+     "titulo": "Descoberta e veto precisam crescer"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 263,
+     "secao": "CONSELHO"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 264,
+     "secao": "CARTÕES DE AUTORIDADE",
+     "titulo": "R01–R02: Sentinela Mega Fire e Sentinela"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 265,
+     "secao": "CARTÕES DE AUTORIDADE",
+     "titulo": "R03–R04: Sentinela Crazy Time e"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 266,
+     "secao": "CARTÕES DE AUTORIDADE",
+     "titulo": "R05–R06: Sentinela Immersive e"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 267,
+     "secao": "CARTÕES DE AUTORIDADE",
+     "titulo": "R07–R08: Cronologia e Vazamento e"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 268,
+     "secao": "CARTÕES DE AUTORIDADE",
+     "titulo": "R09–R10: Multiplicidade e Descobertas e"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 269,
+     "secao": "CARTÕES DE AUTORIDADE",
+     "titulo": "R11–R12: Incerteza e Abstenção e"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 270,
+     "secao": "CARTÕES DE AUTORIDADE",
+     "titulo": "R13–R14: Regimes e Deriva e"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 271,
+     "secao": "CARTÕES DE AUTORIDADE",
+     "titulo": "R15–R16: Complexidade e Sobreajuste e"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 272,
+     "secao": "CARTÕES DE AUTORIDADE",
+     "titulo": "R17–R18: IA do Contraditório e Firewall"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 273,
+     "secao": "CARTÕES DE AUTORIDADE",
+     "titulo": "R19–R20: IA Constitucional de Veto e IA"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 274,
+     "secao": "HANDOFFS"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 275,
+     "secao": "ESTADOS"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 276,
+     "secao": "DISCORDÂNCIA"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 277,
+     "secao": "INDEPENDÊNCIA"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 278,
+     "secao": "REPRODUTIBILIDADE"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 279,
+     "secao": "CINCO FONTES"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 280,
+     "secao": "IMMERSIVE"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 281,
+     "secao": "CASO A"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 282,
+     "secao": "CASO A"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 283,
+     "secao": "CASO A"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 284,
+     "secao": "CASO B"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 285,
+     "secao": "CASO B"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 286,
+     "secao": "CASO C",
+     "titulo": "Sessenta teorias e uma coincidência"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 287,
+     "secao": "CASO C"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 288,
+     "secao": "CASO D"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 289,
+     "secao": "CASO D"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 290,
+     "secao": "SÍNTESE DE CASOS",
+     "titulo": "Resultado correto, calibração, evidência"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 291,
+     "secao": "ATLAS I"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 292,
+     "secao": "ATLAS II"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 293,
+     "secao": "ATLAS III"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 294,
+     "secao": "ATLAS IV"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 295,
+     "secao": "ATLAS IV",
+     "titulo": "GLOSSÁRIO A–M"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 296,
+     "secao": "ATLAS IV",
+     "titulo": "GLOSSÁRIO N–Z"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 297,
+     "secao": "REFERÊNCIAS I",
+     "titulo": "Pontuação, calibração, multiplicidade e"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 298,
+     "secao": "REFERÊNCIAS II"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 299,
+     "secao": "INTEGRIDADE"
+    },
+    {
+     "tipo": "auditoria",
+     "pagina": 300,
+     "secao": "FECHO"
+    }
+   ]
+  },
   "dados_compendio_400_teorias_aleatoriedade_previsibilid": {
    "paginas": 412,
    "unidades": [

@@ -81,6 +81,19 @@ CAB_FORMULACAO = re.compile(
     r"^\s*([A-ZÁÂÃÀÉÊÍÓÔÕÚÇ][A-ZÁÂÃÀÉÊÍÓÔÕÚÇ ]+?)\s*\|\s*F(\d{1,3})\s*\|\s*"
     r"IA(\d{1,2})\s*\|\s*FORMULA[ÇC][ÃA]O\s*(\d{1,4})\s*$", re.I)
 
+# O quarto desenho -- o da Régua. Um volume inteiro sobre a métrica:
+#
+#     TEORIA 06/60 • R02-MUL-01 • LENTE 1/4
+#
+# 60 teorias em 4 lentes, agrupadas em seis famílias: DADO, NULO, FDR, CAL,
+# SOMBRA e VETO. É o estudo que responde diretamente ao que ele cobrou --
+# "essa régua que você queria" -- e traz as PORTAS FATAIS, que impedem uma
+# média boa de esconder falha de integridade.
+CAB_REGUA = re.compile(
+    r"^\s*TEORIA\s+(\d{1,3})\s*/\s*(\d{1,3})\s*[•·]\s*"
+    r"([A-Z0-9]{2,4}-[A-Z]{2,4}-\d{1,3})\s*[•·]\s*"
+    r"LENTE\s+(\d)\s*/\s*(\d)\s*$", re.I)
+
 # As seções vêm numeradas: "1. Ideia central e familiaridade".
 SECAO_NUM = re.compile(r"^\s*(\d{1,2})\.\s+([A-ZÁÂÃÀÉÊÍÓÔÕÚÇa-z].{3,70})$")
 
@@ -203,6 +216,47 @@ def formulacao(linhas: List[str], cab, pagina: int) -> Dict[str, Any]:
     return reg
 
 
+def teoria_regua(linhas: List[str], cab, pagina: int) -> Dict[str, Any]:
+    """Uma teoria da Régua: código, lente, família e a fórmula da métrica."""
+    n, total, codigo, lente, n_lentes = cab.groups()
+    corpo = linhas[1:]
+    inicio = next((i for i, ln in enumerate(corpo) if SECAO_NUM.match(ln)),
+                  len(corpo))
+    cabecalho = [ln for ln in corpo[:inicio] if not ln.isdigit()]
+    titulo = (cabecalho[0] if cabecalho else "").strip(" —-•")
+    # a linha seguinte costuma nomear a família: "Família 2: Multiplicidade..."
+    familia = ""
+    for ln in cabecalho[1:4]:
+        m = re.match(r"^Fam[íi]lia\s+(\d+)\s*:\s*(.+?)\s*[•·]", ln)
+        if m:
+            familia = f"{m.group(1)}:{m.group(2).strip()}"
+            break
+
+    secoes: Dict[str, List[str]] = {}
+    atual = None
+    for ln in corpo[inicio:]:
+        m = SECAO_NUM.match(ln)
+        if m:
+            atual = f"s{int(m.group(1))}_{chave(m.group(2))}"
+            secoes.setdefault(atual, [])
+        elif atual:
+            secoes[atual].append(ln)
+    txt = {k: " ".join(v).strip() for k, v in secoes.items() if v}
+
+    reg: Dict[str, Any] = {
+        "n": int(n), "de": int(total), "pagina": pagina, "tipo": "regua",
+        "codigo": codigo.upper(), "lente": f"{lente}/{n_lentes}",
+        "familia": familia, "titulo": titulo,
+    }
+    reg.update(txt)
+    # a fórmula da métrica está na seção 2
+    for k, v in txt.items():
+        if k.startswith("s2_") and v:
+            reg["formula"] = re.sub(r"\s+", " ", v)[:300]
+            break
+    return reg
+
+
 def ler_paginas(caminho: Path) -> List[str]:
     try:
         from pypdf import PdfReader
@@ -236,6 +290,11 @@ def absorver(caminho: Path) -> Dict:
         linhas = limpar(bruto)
         if not linhas:
             continue
+        cab_r = CAB_REGUA.match(linhas[0])
+        if cab_r:
+            unidades.append(teoria_regua(linhas, cab_r, i + 1))
+            continue
+
         cab_f = CAB_FORMULACAO.match(linhas[0])
         if cab_f:
             unidades.append(formulacao(linhas, cab_f, i + 1))
@@ -269,6 +328,23 @@ def absorver(caminho: Path) -> Dict:
     forms = [u for u in unidades if u["tipo"] == "formulacao"]
     print(f"      {len(dossies)} dossiês numerados, {len(forms)} formulações, "
           f"{len(audit)} páginas de auditoria")
+
+    reguas = [u for u in unidades if u["tipo"] == "regua"]
+    if reguas:
+        ns = sorted(u["n"] for u in reguas)
+        falta = sorted(set(range(min(ns), max(ns) + 1)) - set(ns))
+        fam = {}
+        lentes = {}
+        for u in reguas:
+            f = (u.get("familia") or "?").split(":")[0]
+            fam[f] = fam.get(f, 0) + 1
+            lentes[u.get("lente", "?")] = lentes.get(u.get("lente", "?"), 0) + 1
+        print(f"      {len(reguas)} fichas de régua, teorias {min(ns)}-{max(ns)}"
+              + (f" — {len(falta)} pulados" if falta else " — nenhuma pulada"))
+        print(f"      {len(set(u['codigo'] for u in reguas))} códigos distintos, "
+              f"{len(lentes)} lentes, {len(fam)} famílias")
+        print(f"      {sum(1 for u in reguas if u.get('formula'))} trazem "
+              f"fórmula da métrica")
 
     if forms:
         ns = [u["n"] for u in forms]

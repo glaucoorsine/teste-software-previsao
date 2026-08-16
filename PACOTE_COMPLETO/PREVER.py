@@ -59,6 +59,7 @@ from NUCLEO import agregacao as A  # noqa: E402
 from NUCLEO import base as B  # noqa: E402
 from NUCLEO import canal_anunciado as C  # noqa: E402
 from NUCLEO import leituras as L  # noqa: E402
+from NUCLEO import veto as V  # noqa: E402
 
 MESAS = ("mega_fire", "lightning", "immersive", "crazy_time", "crazy_time_a")
 DIARIO = RAIZ / "Logs" / "nucleo_previsoes.jsonl"
@@ -75,6 +76,9 @@ class Placar:
         self.rodadas = 0
         self.esperado = 0.0
         self.descartadas = 0
+        self.previsoes: List[List[str]] = []
+        self.emitiu: List[bool] = []
+        self.certos: List[bool] = []
         self.perdas: Dict[str, float] = defaultdict(float)
         self.vigilia: Dict[str, int] = defaultdict(int)
         self.memoria: Dict[str, float] = {}
@@ -90,6 +94,9 @@ class Placar:
         self.rodadas += 1
         self.esperado += len(set(previsao)) / self.n_classes
         acertou = str(alvo) in previsao
+        self.previsoes.append(list(previsao))
+        self.emitiu.append(bool(previsao))
+        self.certos.append(acertou)
         if acertou:
             self.acertos += 1
         # a perda de cada família, só nos giros em que ela falou (F46)
@@ -126,6 +133,45 @@ class Placar:
         r = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
         return (max(0.0, (c - r) / d), min(1.0, (c + r) / d))
 
+    def constituicao(self) -> Dict[str, Any]:
+        """A família 12 da Régua dele, aplicada ao placar desta sessão.
+
+        R12-VET-05 decide; as outras quatro alimentam a decisão. É a trava que
+        me faltava: eu vinha concluindo a partir do placar, e o placar sozinho
+        não tem direito de concluir.
+        """
+        pe = V.previsoes_efetivas(self.previsoes)
+        # o suporte efetivo é o MENOR entre rodadas independentes e previsões
+        # distintas: 200 rodadas de uma previsão só não são 200 testes
+        ne_acertos = V.tamanho_efetivo([1.0 if c else 0.0 for c in self.certos])
+        ne = {"n_eff": min(ne_acertos["n_eff"], pe["n_eff"]),
+              "motivo": pe["motivo"] + " · " + ne_acertos["motivo"]}
+
+        portas = {
+            "sem rodada descartada em excesso":
+                self.descartadas <= max(2, self.rodadas // 10),
+            "previsões não são uma só":
+                pe["distintas"] >= 3 or self.rodadas < 5,
+        }
+        integr = V.porta_de_integridade(portas)
+
+        # o controle obrigatório da R12-VET-03: o envelope é o próprio acaso
+        # binomial do tamanho apostado, simulado
+        env = []
+        if self.rodadas >= 5:
+            import random as _r
+            rnd = _r.Random(20260816)
+            p_acaso = self.acaso
+            for _ in range(200):
+                h = sum(1 for _ in range(self.rodadas) if rnd.random() < p_acaso)
+                env.append((h / self.rodadas) / p_acaso if p_acaso else 0.0)
+        ctrl = V.controle_negativo_obrigatorio(self.razao, env)
+
+        sil = V.direito_de_silencio(self.certos, self.emitiu)
+        d = V.decisao(integr, ctrl, ne, n_eff_minimo=30.0)
+        return {"decisao": d, "integridade": integr, "controle": ctrl,
+                "suporte": ne, "previsoes": pe, "silencio": sil}
+
     def veredito(self) -> str:
         """A frase que impede a razão de ser lida como vitória.
 
@@ -150,6 +196,15 @@ class Placar:
         return ("INDISTINGUÍVEL DO ACASO — o intervalo cobre o acaso, "
                 "então a razão acima não é resultado.")
 
+    def linha_constitucional(self) -> str:
+        """O veredito da família 12 dele, que manda mais que o intervalo."""
+        if self.rodadas < 5:
+            return ""
+        c = self.constituicao()
+        d = c["decisao"]
+        return (f"  régua (R12-VET-05): {d['decisao']} — {d['porque'][:76]}\n"
+                f"  suporte efetivo: {c['previsoes']['motivo'][:74]}")
+
     def linha(self) -> str:
         if not self.rodadas:
             return "  placar: primeira rodada ainda não fechou"
@@ -159,7 +214,8 @@ class Placar:
              f"IC90 {lo:.1%}–{hi:.1%}")
         if self.descartadas:
             s += f"  · {self.descartadas} descartadas por carimbo"
-        return s + "\n  " + self.veredito()
+        extra = self.linha_constitucional()
+        return s + "\n  " + self.veredito() + (("\n" + extra) if extra else "")
 
 
 # ═══════════════════════════════════════════════════════ a previsão
