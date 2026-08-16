@@ -140,6 +140,8 @@ class MesaFalsa(CENTRAL.PainelMesa):
         self.lendo_academia = False
         self.fontes_da_janela = {}
         self.marcados = []
+        self._n_repetiu = 0
+        self._t_primeira = 0.0
         self.jogadores = None
         self.mesa_cheia = None
         self.ultimo_publico = 9e18      # nunca consulta no teste
@@ -714,12 +716,15 @@ from ia_modulos import Critico
 _c = Critico()
 _grupao = [str(n) for n in range(1, 19)]        # o grupo BAIXO, 18 numeros
 _especifico = ["7", "21", "33"]                 # tres numeros
+# duas fontes apoiam os especificos: com uma so, o consenso nao abre mais
+# (ver MIN_VOZES_INDEPENDENTES) e o teste mediria outra coisa
 _aprovados, _probs, _f, _score, _sig, _p0 = _c.consenso(
     [{"nome": "ALTO_BAIXO", "nums": _grupao, "peso": 2.0},
-     {"nome": "TEORIA_X", "nums": _especifico, "peso": 2.0}],
+     {"nome": "TEORIA_X", "nums": _especifico, "peso": 2.0},
+     {"nome": "TEORIA_Y", "nums": ["7", "21", "9"], "peso": 2.0}],
     n_classes=37, k_alvos=20)
 print("       primeiros 6 do consenso:", _aprovados[:6])
-checa(all(x in _aprovados[:3] for x in _especifico),
+checa(all(x in _aprovados[:4] for x in _especifico),
       "os tres especificos ficam na frente dos dezoito genericos",
       _aprovados[:5])
 checa(_score["7"] > _score["1"],
@@ -825,7 +830,8 @@ checa("é resposta, não falha" in explicar_vazio(),
 print("\n[27] o objetivo do Crazy Time e escolha, e os dois caminhos funcionam")
 import ia_modulos as _IM
 from ia_modulos import CT_OBJETIVO, CT_PESO_ATRASO, CT_FATIAS
-checa(CT_OBJETIVO in ("acerto", "bonus"), "o objetivo esta declarado", CT_OBJETIVO)
+checa(CT_OBJETIVO in CT_PESO_ATRASO,
+      "o objetivo esta declarado e tem peso", CT_OBJETIVO)
 checa(CT_PESO_ATRASO["acerto"] < CT_PESO_ATRASO["bonus"],
       "em 'acerto' o atraso pesa menos que em 'bonus'", CT_PESO_ATRASO)
 
@@ -848,19 +854,22 @@ def _top(objetivo):
     finally:
         _IM.CT_OBJETIVO = velho
 
-_ac = _top("acerto"); _bo = _top("bonus")
+_ac = _top("acerto"); _bo = _top("atraso")
 print("       acerto ->", [n for n, _ in _ac[:3]])
-print("       bonus  ->", [n for n, _ in _bo[:3]])
+print("       atraso ->", [n for n, _ in _bo[:3]])
 _raros = ("Pachinko", "CrazyBonus", "CashHunt")
 _pos_ac = next((i for i, (n, _) in enumerate(_ac) if n in _raros), 99)
 _pos_bo = next((i for i, (n, _) in enumerate(_bo) if n in _raros), 99)
 checa(_pos_bo <= _pos_ac,
-      "em 'bonus' o simbolo raro fica igual ou mais na frente que em 'acerto'",
+      "em 'atraso' o simbolo raro fica igual ou mais na frente que em 'acerto'",
       (_pos_ac, _pos_bo))
 checa(dict(_ac).get("1", 0) > 0 and dict(_ac).get("2", 0) > 0,
       "e em 'acerto' o 1 e o 2 tem apoio de verdade -- nao ficam zerados",
       {k: round(v, 2) for k, v in _ac[:4]})
 checa(all(v > 0 for _n, v in _bo), "em nenhum dos dois alguem e zerado")
+checa(CT_OBJETIVO == "atraso",
+      "e o padrao e o criterio DELE: 'so o que ta muito tempo sem vir'",
+      CT_OBJETIVO)
 
 print()
 if falhas:

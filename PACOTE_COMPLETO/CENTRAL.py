@@ -562,6 +562,11 @@ class PainelMesa(ctk.CTkFrame):
         self.fontes_da_janela = {}
         # quais dos escolhidos as sete IAs apontam para multiplicador
         self.marcados = []
+        # quantas voltas seguidas a mesma aposta se repetiu (ver MESMA_APOSTA).
+        # Inicializado aqui de proposito: o dublê do teste responde qualquer
+        # nome com uma funcao, entao getattr com padrao nao serve.
+        self._n_repetiu = 0
+        self._t_primeira = 0.0
         # as ultimas linhas cruas da captura, COM as tags de multiplicador.
         # A fila que leva ao cerebro carrega so os numeros; quem quiser saber
         # de lucky/fire/top slot precisa das linhas inteiras, e e daqui que
@@ -956,14 +961,34 @@ class PainelMesa(ctk.CTkFrame):
                               "active_selection": list(self.escolhas),
                               "head_id": cap.get("head_id")})
             if self.primeira:
-                self._estado("preparando o cérebro (primeira volta)", ROXO)
+                # "PREPARANDO O CEREBRO" SEM RELOGIO PARECE TRAVADO.
+                #
+                # Ele mandou o print do Immersive parado nesta frase e disse
+                # que a mesa "nao funciona". Nao era captura: era a primeira
+                # volta, que carrega LSTM e academia e demora. Sem mostrar
+                # quanto tempo faz, uma espera legitima e um travamento sao a
+                # mesma tela -- e ai ele nao tem como saber se espera ou fecha.
+                if not getattr(self, "_t_primeira", 0):
+                    self._t_primeira = time.time()
+                    registrar(f"{self.jogo} PRIMEIRA_VOLTA comecou "
+                              f"(carrega modelo e academia; pode levar minutos)")
+                _faz = int(time.time() - self._t_primeira)
+                self._estado(f"preparando o cérebro — {_faz}s de até "
+                             f"{ESPERA_1A_S}s", ROXO)
             try:
                 sug = self.saida.get(
                     timeout=ESPERA_1A_S if self.primeira else ESPERA_S)
             except _queue.Empty:
                 # Não apaga o resultado pendente: a próxima volta reenvia,
                 # senão o cérebro perde o retorno daquele giro para sempre.
-                self._estado("cérebro sem resposta", AMARELO)
+                if self.primeira:
+                    _faz = int(time.time() - getattr(self, "_t_primeira", 0))
+                    self._estado(f"cérebro não respondeu em {_faz}s — "
+                                 f"tentando de novo", AMARELO)
+                    registrar(f"{self.jogo} PRIMEIRA_VOLTA sem resposta em "
+                              f"{_faz}s — vai tentar de novo na proxima volta")
+                else:
+                    self._estado("cérebro sem resposta", AMARELO)
                 return
             if self.primeira:
                 self.primeira = False
@@ -1062,6 +1087,28 @@ class PainelMesa(ctk.CTkFrame):
             # nao o numero -- e apontam, DENTRO da lista ja escolhida, quais
             # tem chance de vir multiplicados. Nao mexe na aposta; marca.
             self.marcados = self._marcar_fogo(rows)
+            # MESMA APOSTA DE NOVO NAO E DECISAO NOVA.
+            #
+            # Ele relatou o Crazy Time "travado no CashHunt ha 15 minutos". Pelo
+            # criterio dele -- "sinal e o que ta muito tempo sem vir" -- insistir
+            # no atrasado esta CERTO: enquanto nao vier, ele segue devendo.
+            #
+            # O que estava errado era a contabilidade. Cada volta reabria uma
+            # janela nova com a mesma aposta, entao 15 minutos viravam 20 janelas
+            # perdidas no placar em vez de uma espera. O placar mentia para baixo
+            # e a tela parecia travada em vez de aguardando.
+            #
+            # Agora aposta repetida ESTENDE a janela em vez de abrir outra: conta
+            # como um evento, que e o que ela e.
+            if (self.ultimas_escolhas
+                    and set(self.escolhas) == set(self.ultimas_escolhas)
+                    and self._n_repetiu < 6):
+                self._n_repetiu += 1
+                registrar(f"{self.jogo} MESMA_APOSTA {self.escolhas} "
+                          f"(x{self._n_repetiu}) — estendendo a espera, "
+                          f"nao abrindo janela nova")
+            else:
+                self._n_repetiu = 0
             self._salvar()
             registrar(f"{self.jogo} NOVA_JANELA {self.escolhas} {modo}")
             try:

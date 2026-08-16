@@ -570,7 +570,41 @@ class Critico:
             #
             # Baixar o mínimo para 1 fazia cada teoria disparar por conta
             # própria, que é o contrário do consenso — foi o que ele corrigiu.
+            # CONSENSO PURO NAO PODE VIRAR SEMPRE-SIM.
+            #
+            # Ele relatou: "as roletas estao dando numeros toda hora". Medido
+            # no log dele: uma janela nova a cada 3,5 giros, com janelas de 3 a
+            # 4 giros -- ou seja, a mesa NUNCA ficava sem aposta. Assim que uma
+            # fechava, outra abria.
+            #
+            # A causa estava aqui: `aprovados = ordenados` aceitava qualquer
+            # numero que tivesse recebido voto, mesmo de uma fonte so. Bastava
+            # alguem falar para a janela abrir, e sempre tem alguem falando.
+            #
+            # O criterio que faz isso virar consenso de verdade e o DELE: "a IA
+            # tem que fazer o consenso", e a ficha 226 do compendio -- o numero
+            # precisa de vozes INDEPENDENTES, nao de repeticoes da mesma
+            # evidencia. Se o mais votado e sustentado por menos de duas vozes
+            # independentes, nao houve cruzamento: houve uma fonte falando.
+            #
+            # Isso nao e regua estatistica minha barrando teoria. E a definicao
+            # de consenso aplicada a si mesma. Quando nao ha, a tela diz
+            # AGUARDANDO -- que e resposta, nao falha.
             aprovados = ordenados
+            try:
+                from academia_autonoma.biblioteca_teorias import (
+                    n_efetivo as _nef_ap)
+                if ordenados:
+                    _topo_n = ordenados[0]
+                    _ap_topo = {h.get("nome", "?"): (h.get("nums") or [])
+                                for h in hips
+                                if _topo_n in [str(x).strip()
+                                               for x in (h.get("nums") or [])]}
+                    _vozes = float((_nef_ap(_ap_topo) or {}).get("efetivo", 0))
+                    if _vozes < MIN_VOZES_INDEPENDENTES:
+                        aprovados = []
+            except Exception:
+                pass
         else:
             aprovados=[
                 n for n in ordenados
@@ -1478,6 +1512,17 @@ class MetaSupervisora:
 # RESULTADO.bat antes e depois para comparar as duas com o mesmo critério.
 CONSENSO_PURO = True
 
+# QUANTAS VOZES INDEPENDENTES ABREM UMA JANELA.
+#
+# Nao e quantas fontes falaram -- e quantas OPINIOES DIFERENTES existem entre
+# elas (ficha 226 do compendio dele). Quatro fontes que leem o mesmo atraso
+# valem uma voz, e uma voz nao e consenso.
+#
+# Com 2.0, a mesa passa a ficar em AGUARDANDO quando so ha eco. Foi o que
+# faltava: medido no log dele, o software abria janela a cada 3,5 giros com
+# janelas de 3 a 4 -- nunca parava de apostar.
+MIN_VOZES_INDEPENDENTES = 2.0
+
 # Teto da janela de apostas. Era 3, fixo no meio do código; ele pediu 5.
 JANELA_MAX = 5
 
@@ -1542,8 +1587,15 @@ ALVO_ACERTO_JANELA = 0.53
 #
 # Nenhum dos dois e "certo". O que estava errado era eu decidir isso por fora
 # sem dizer que estava decidindo.
-CT_OBJETIVO = "acerto"          # "acerto" ou "bonus"
-CT_PESO_ATRASO = {"acerto": 0.55, "bonus": 1.0}
+# ELE DISSE, E E ELE QUEM SABE:
+#
+#     "sinal para o crazy time e somente o que ta muito tempo sem vir"
+#
+# Entao o atraso MANDA nesta mesa, e para de ser discussao. Eu tinha deixado
+# em "acerto" achando que fazia sentido porque o placar mede acerto -- mas o
+# criterio de quem olha a mesa vale mais que a coerencia do meu placar.
+CT_OBJETIVO = "atraso"
+CT_PESO_ATRASO = {"acerto": 0.55, "atraso": 1.0, "bonus": 1.0}
 
 # O PISO DE ACERTO DE NÚMERO, TAMBÉM EM 53% — ele reafirmou o pedido.
 #

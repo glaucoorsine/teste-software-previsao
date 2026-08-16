@@ -77,12 +77,63 @@ def _tentar(url, requests):
     return True, f"OK — {n} resultados, {len(txt)} bytes"
 
 
+def testar_todas(requests) -> int:
+    """Diz, mesa por mesa, se a fonte responde AGORA.
+
+    Ele relatou "crazy time a e immersive nao funcionam" -- e mesa que nao
+    funciona pode ser tres coisas muito diferentes: endereco errado, fonte fora
+    do ar, ou internet. A tela dele mostra as tres do mesmo jeito ("sem dados"),
+    e sem separar isso eu volto a adivinhar.
+    """
+    from fluxo_captura import enderecos_para, HEADERS
+    mesas = ("mega_fire", "lightning", "immersive", "crazy_time", "crazy_time_a")
+    print("\n" + "=" * 66)
+    print("  AS CINCO MESAS, AGORA")
+    print("=" * 66)
+    ruins = 0
+    for m in mesas:
+        urls = enderecos_para(m) or []
+        print(f"\n  {m}")
+        if not urls:
+            print("     sem endereco cadastrado"); ruins += 1; continue
+        achou = False
+        for u in urls[:6]:
+            try:
+                r = requests.get(u, headers=HEADERS,
+                                 params={"size": 5, "page": 0}, timeout=15)
+                cod = r.status_code
+                tam = len(r.text or "")
+            except Exception as e:
+                print(f"     {type(e).__name__:<22} {u[-42:]}")
+                continue
+            marca = "OK  " if (cod == 200 and tam > 40) else "    "
+            print(f"     {marca}HTTP {cod}  {tam:>7} bytes  {u[-42:]}")
+            if cod == 200 and tam > 40:
+                achou = True
+                break
+        if not achou:
+            ruins += 1
+    print("\n" + "=" * 66)
+    if ruins:
+        print(f"  {ruins} mesa(s) sem fonte respondendo.")
+        print("  Me mande esta tela: com ela eu sei se e endereco errado,")
+        print("  fonte fora do ar ou a sua internet -- sao consertos diferentes.")
+    else:
+        print("  Todas as cinco responderam. Se alguma nao aparece na tela,")
+        print("  o problema esta depois da captura, e o log vai dizer onde.")
+    print("=" * 66 + "\n")
+    return 0 if not ruins else 1
+
+
 def main() -> int:
     try:
         import requests
     except ImportError:
         print("\n  Falta a biblioteca requests. Rode 0_INSTALAR_DEPENDENCIAS.bat\n")
         return 1
+
+    # primeiro o retrato geral: qual mesa responde e qual nao
+    testar_todas(requests)
 
     print("\n" + "=" * 66)
     print("  PROCURANDO O ENDEREÇO DO CRAZY TIME A")
