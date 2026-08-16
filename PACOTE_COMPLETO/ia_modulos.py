@@ -2334,6 +2334,35 @@ class PipelinePerceptivo:
             except Exception as _e:
                 msgs.append(f"[Especialistas] {type(_e).__name__}")
 
+        # AS DOZE INTELIGENCIAS DO TRATADO DELE.
+        #
+        #     "agora, que todas as ias do software trabalham minhas teorias dos
+        #      3 pdfs para entregar previsoes atraves de consenso"
+        #
+        # O terceiro estudo nao e catalogo, e ESPECIFICACAO: 960 formulacoes,
+        # 12 inteligencias x 48 familias x 5 mesas, formula auditavel em todas.
+        # Aqui as onze que LEEM a mesa entram no consenso. A decima segunda --
+        # a agregacao por perda acumulada, w ∝ exp(-eta*Loss) -- e o proprio
+        # consenso, e vive em `consenso_ia12`.
+        #
+        # Estas votam com peso ALTO (2.4). Nao e favoritismo meu: sao as unicas
+        # cuja matematica ele publicou fechada, com contraditorio escrito na
+        # propria ficha. As minhas heuristicas eu inventei; estas ele derivou.
+        try:
+            from academia_autonoma.inteligencias_livro import (
+                consultar as _tratado, formula_de as _formula)
+            _ctx_t = {"mults": mults, "jogo": self.jogo}
+            _rt = _tratado(hist, self.n_classes, _ctx_t)
+            for _nome, _nums in (_rt.get("palpites") or {}).items():
+                hips.append({"nome": _nome, "nums": _nums, "peso": 2.4})
+            msgs.append(f"[Tratado] {_rt.get('opinaram')} das "
+                        f"{_rt.get('total')} inteligências leram a mesa")
+            for _n, _fala in (_rt.get("falas") or {}).items():
+                if _n not in (_rt.get("palpites") or {}) and _fala:
+                    msgs.append(f"   {_n} ({_formula(_n)[:28]}): {_fala[:72]}")
+        except Exception as _e:
+            msgs.append(f"[Tratado] {type(_e).__name__}: {_e}")
+
         # AS PRATICAS DE PREVISAO DO COMPENDIO DELE, VOTANDO.
         #
         # Cobranca dele, e justa: "e pra ler todos meus dois pdfs, pegar todas
