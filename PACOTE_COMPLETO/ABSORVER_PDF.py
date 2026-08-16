@@ -16,15 +16,22 @@ Ele cobrou isso, e a cobrança estava certa: "porque nao aplicou tudo que eu
 coloquei la?". Transcrever à mão não escala e perde conteúdo em silêncio. Daqui
 para frente o PDF entra inteiro, ou o programa diz exatamente o que não leu.
 
-OS DOIS FORMATOS QUE ELE USA
+OS TRÊS FORMATOS QUE ELE USA
 ────────────────────────────
-Nenhum é "ficha numerada", que era o que eu tinha suposto. São dois desenhos
-diferentes, ambos com UMA UNIDADE POR PÁGINA:
+Nenhum é "ficha numerada", que era o que eu tinha suposto. São três desenhos
+diferentes, todos com UMA UNIDADE POR PÁGINA:
 
   dossiê numerado   `TEORIA 003 - PROBABILIDADE, ESTATÍSTICA E SÉRIES...`
                     depois o número solto, o título, e onze seções nomeadas
                     (Tese delimitada, Formalização e estimando, Mecanismo em
                     camadas, Predições diagnósticas, ...)
+
+  formulação        `MEGA FIRE  |  F02  |  IA01  |  FORMULAÇÃO 007`
+                    o Tratado. O cabeçalho já diz mesa, família, qual das doze
+                    inteligências responde e o número; o corpo traz seis seções
+                    numeradas e — em todas as 960 — uma FÓRMULA auditável.
+                    É o único dos três que um programa consegue executar
+                    diretamente.
 
   auditoria         `MÉTODO` / `COMPARAÇÃO` / ... em caixa alta, um subtítulo,
                     e blocos rotulados (Vazamento direto, Controle, Regra de
@@ -44,7 +51,7 @@ import re
 import sys
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 RAIZ = Path(__file__).resolve().parent
 PASTA_PDF = RAIZ / "estudos_pdf"
@@ -61,6 +68,28 @@ LIXO = (
 
 CAB_DOSSIE = re.compile(r"^\s*TEORIA\s+(\d{1,4})\s*[-–—]\s*(.+?)\s*$", re.I)
 CAB_SECAO = re.compile(r"^[A-ZÁÂÃÀÉÊÍÓÔÕÚÇ][A-ZÁÂÃÀÉÊÍÓÔÕÚÇ \-]{2,}$")
+
+# O terceiro desenho -- o do Tratado. Cada página é uma formulação, e o
+# cabeçalho já diz mesa, família, qual das doze inteligências é responsável e o
+# número da formulação:
+#
+#     MEGA FIRE  |  F02  |  IA01  |  FORMULAÇÃO 007
+#
+# É o mais acionável dos três estudos dele: traz FÓRMULA auditável em cada
+# página, e o contraditório de cada uma (o teste que a derrubaria).
+CAB_FORMULACAO = re.compile(
+    r"^\s*([A-ZÁÂÃÀÉÊÍÓÔÕÚÇ][A-ZÁÂÃÀÉÊÍÓÔÕÚÇ ]+?)\s*\|\s*F(\d{1,3})\s*\|\s*"
+    r"IA(\d{1,2})\s*\|\s*FORMULA[ÇC][ÃA]O\s*(\d{1,4})\s*$", re.I)
+
+# As seções vêm numeradas: "1. Ideia central e familiaridade".
+SECAO_NUM = re.compile(r"^\s*(\d{1,2})\.\s+([A-ZÁÂÃÀÉÊÍÓÔÕÚÇa-z].{3,70})$")
+
+# A fórmula fica dentro da seção 3, anunciada por "Formulação auditável:".
+FORMULA = re.compile(r"Formula[çc][ãa]o\s+audit[áa]vel\s*:\s*(.+?)(?:\.\s|$)",
+                     re.I | re.S)
+
+# Os números do quadro lateral: eventos da fonte, marcas, lente quântica.
+LENTE = re.compile(r"^L(\d)$")
 
 # Um rótulo de bloco é linha curta, sem ponto final, seguida de prosa.
 MAX_ROTULO = 62
@@ -127,6 +156,53 @@ def rotulos_originais(linhas: List[str]) -> Dict[str, str]:
     return m
 
 
+def formulacao(linhas: List[str], cab, pagina: int) -> Dict[str, Any]:
+    """Uma página do Tratado: mesa, família, inteligência, fórmula e limites."""
+    mesa, fam, ia, num = cab.groups()
+    corpo = linhas[1:]
+
+    # o quadro lateral (eventos / marcas / lente) vem solto entre o título e a
+    # primeira seção numerada; a lente é o único que dá para pegar sem ambiguidade
+    lente = ""
+    for ln in corpo[:24]:
+        m = LENTE.match(ln.strip())
+        if m:
+            lente = f"L{m.group(1)}"
+            break
+
+    # tudo antes de "1. ..." é título e subtítulo
+    inicio = next((i for i, ln in enumerate(corpo) if SECAO_NUM.match(ln)),
+                  len(corpo))
+    cabecalho = [ln for ln in corpo[:inicio]
+                 if not ln.isdigit() and not LENTE.match(ln)]
+    titulo = " ".join(cabecalho[:2]).strip(" —-•")
+
+    secoes: Dict[str, List[str]] = {}
+    atual = None
+    for ln in corpo[inicio:]:
+        m = SECAO_NUM.match(ln)
+        if m:
+            atual = f"s{int(m.group(1))}_{chave(m.group(2))}"
+            secoes.setdefault(atual, [])
+        elif atual:
+            secoes[atual].append(ln)
+    txt = {k: " ".join(v).strip() for k, v in secoes.items() if v}
+
+    reg: Dict[str, Any] = {
+        "n": int(num), "pagina": pagina, "tipo": "formulacao",
+        "mesa": mesa.strip(), "familia": f"F{int(fam):02d}",
+        "ia": f"IA{int(ia):02d}", "lente": lente, "titulo": titulo,
+    }
+    reg.update(txt)
+
+    # a fórmula auditável, que é o que dá para um programa executar
+    todo = " ".join(txt.values())
+    f = FORMULA.search(todo)
+    if f:
+        reg["formula"] = re.sub(r"\s+", " ", f.group(1)).strip()[:400]
+    return reg
+
+
 def ler_paginas(caminho: Path) -> List[str]:
     try:
         from pypdf import PdfReader
@@ -160,6 +236,11 @@ def absorver(caminho: Path) -> Dict:
         linhas = limpar(bruto)
         if not linhas:
             continue
+        cab_f = CAB_FORMULACAO.match(linhas[0])
+        if cab_f:
+            unidades.append(formulacao(linhas, cab_f, i + 1))
+            continue
+
         cab = CAB_DOSSIE.match(linhas[0])
         corpo = blocos(linhas[1:] if cab else linhas)
         titulo = corpo.pop("_titulo", "").strip()
@@ -185,7 +266,37 @@ def absorver(caminho: Path) -> Dict:
 
     dossies = [u for u in unidades if u["tipo"] == "dossie"]
     audit = [u for u in unidades if u["tipo"] == "auditoria"]
-    print(f"      {len(dossies)} dossiês numerados, {len(audit)} páginas de auditoria")
+    forms = [u for u in unidades if u["tipo"] == "formulacao"]
+    print(f"      {len(dossies)} dossiês numerados, {len(forms)} formulações, "
+          f"{len(audit)} páginas de auditoria")
+
+    if forms:
+        ns = [u["n"] for u in forms]
+        falta = sorted(set(range(min(ns), max(ns) + 1)) - set(ns))
+        print(f"      formulações de {min(ns)} a {max(ns)}"
+              + (f" — {len(falta)} pulados: {falta[:12]}" if falta
+                 else " — nenhuma pulada"))
+        mesas: Dict[str, int] = {}
+        ias: Dict[str, int] = {}
+        fams = set()
+        for u in forms:
+            mesas[u["mesa"]] = mesas.get(u["mesa"], 0) + 1
+            ias[u["ia"]] = ias.get(u["ia"], 0) + 1
+            fams.add(u["familia"])
+        print(f"      {len(mesas)} mesas: "
+              + ", ".join(f"{k} {v}" for k, v in sorted(mesas.items())))
+        print(f"      {len(ias)} inteligências ({min(ias)}..{max(ias)}), "
+              f"{len(fams)} famílias")
+        com_f = sum(1 for u in forms if u.get("formula"))
+        print(f"      {com_f} trazem fórmula auditável "
+              f"({100 * com_f // max(1, len(forms))}%)")
+        sec: Dict[str, int] = {}
+        for u in forms:
+            for k in u:
+                if k.startswith("s") and k[1:2].isdigit():
+                    sec[k] = sec.get(k, 0) + 1
+        for k, v in sorted(sec.items())[:8]:
+            print(f"         {k[:44]:<44} {v}")
 
     if dossies:
         ns = [u["n"] for u in dossies]
