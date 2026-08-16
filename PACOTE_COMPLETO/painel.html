@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Painel — Régua</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{
+  --ground:#EDEFF2; --surface:#FFFFFF; --raised:#F7F8FA;
+  --ink:#15181D; --ink-2:#4A525E; --ink-3:#7C8592;
+  --rule:#D5DAE1; --rule-2:#E7EAEF;
+  --ok:#1F6F4A; --warn:#8A6206; --stop:#9B2C2C; --live:#1F6F4A;
+  --shadow:0 1px 2px rgba(20,24,30,.06), 0 8px 24px rgba(20,24,30,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1216; --surface:#171B21; --raised:#1E232B;
+    --ink:#E8ECF1; --ink-2:#A3ADBA; --ink-3:#6E7887;
+    --rule:#2A313A; --rule-2:#222831;
+    --ok:#5FD09A; --warn:#E0B23C; --stop:#F0787E; --live:#5FD09A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1216; --surface:#171B21; --raised:#1E232B;
+  --ink:#E8ECF1; --ink-2:#A3ADBA; --ink-3:#6E7887;
+  --rule:#2A313A; --rule-2:#222831;
+  --ok:#5FD09A; --warn:#E0B23C; --stop:#F0787E; --live:#5FD09A;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0; background:var(--ground); color:var(--ink);
+  font:400 16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",
+       Roboto,system-ui,sans-serif; -webkit-text-size-adjust:100%}
+.mono{font-family:ui-monospace,"SF Mono",SFMono-Regular,"Roboto Mono",Menlo,
+  monospace; font-variant-numeric:tabular-nums}
+.wrap{max-width:560px; margin:0 auto; padding:16px 16px 40px;
+  display:flex; flex-direction:column; gap:16px}
+header{display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding-top:12px}
+h1{margin:0; font-size:19px; font-weight:600; letter-spacing:-.01em}
+.sub{margin:2px 0 0; font-size:12px; color:var(--ink-3)}
+.pulse{display:flex; align-items:center; gap:6px; font-size:11px;
+  color:var(--ink-3); letter-spacing:.04em}
+.pulse i{width:7px; height:7px; border-radius:50%; background:var(--live);
+  animation:bat 2.4s ease-in-out infinite}
+@keyframes bat{0%,100%{opacity:1}50%{opacity:.25}}
+.mesa{background:var(--surface); border:1px solid var(--rule);
+  border-radius:12px; box-shadow:var(--shadow); overflow:hidden}
+.mesa > .hd{display:flex; align-items:baseline; justify-content:space-between;
+  gap:8px; padding:12px 16px; border-bottom:1px solid var(--rule-2)}
+.hd h2{margin:0; font-size:12px; font-weight:600; letter-spacing:.09em;
+  text-transform:uppercase}
+.hd .t{font-size:11px; color:var(--ink-3)}
+.bd{padding:16px; display:flex; flex-direction:column; gap:14px}
+.nums{display:flex; flex-wrap:wrap; gap:7px}
+.nums b{min-width:42px; padding:11px 8px; border-radius:9px;
+  background:var(--raised); border:1px solid var(--rule-2);
+  font:600 17px/1 ui-monospace,Menlo,monospace; text-align:center;
+  font-variant-numeric:tabular-nums}
+.nums b:first-child{background:var(--ink); color:var(--ground);
+  border-color:var(--ink)}
+.linha{font-size:12px; color:var(--ink-2); line-height:1.5}
+.linha em{color:var(--ink-3); font-style:normal}
+.saiu{display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border-radius:9px; background:var(--raised); font-size:13px}
+.saiu b{font:600 16px/1 ui-monospace,Menlo,monospace}
+.tag{font-size:10px; font-weight:700; letter-spacing:.06em; padding:3px 7px;
+  border-radius:4px; text-transform:uppercase}
+.tag.o{background:color-mix(in srgb,var(--ok) 18%,transparent); color:var(--ok)}
+.tag.x{background:color-mix(in srgb,var(--stop) 14%,transparent); color:var(--stop)}
+.stat{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
+  padding-top:12px; border-top:1px solid var(--rule-2)}
+.stat div{display:flex; flex-direction:column; gap:2px}
+.stat b{font-size:20px; font-weight:600; letter-spacing:-.02em}
+.stat span{font-size:10px; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--ink-3)}
+.verd{display:flex; gap:8px; align-items:flex-start}
+.chip{flex:none; font-size:10px; font-weight:700; letter-spacing:.06em;
+  padding:4px 8px; border-radius:5px; text-transform:uppercase}
+.chip.n{background:color-mix(in srgb,var(--ink-3) 15%,transparent); color:var(--ink-2)}
+.chip.o{background:color-mix(in srgb,var(--ok) 18%,transparent); color:var(--ok)}
+.chip.w{background:color-mix(in srgb,var(--warn) 20%,transparent); color:var(--warn)}
+.chip.s{background:color-mix(in srgb,var(--stop) 16%,transparent); color:var(--stop)}
+.verd p{margin:0; font-size:12.5px; color:var(--ink-2); line-height:1.45}
+.espera{padding:18px 16px; text-align:center; color:var(--ink-2); font-size:14px}
+footer{font-size:11px; color:var(--ink-3); line-height:1.55; text-align:center;
+  padding:0 8px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Painel</h1>
+      <p class="sub">o software prevendo sozinho</p>
+    </div>
+    <span class="pulse"><i></i><span id="bat">conectando</span></span>
+  </header>
+  <div id="mesas" style="display:flex;flex-direction:column;gap:16px"></div>
+  <footer>
+    Estudo retrospectivo de assertividade. As previsões são carimbadas antes do
+    giro; o placar conta só o que fechou depois.
+  </footer>
+</div>
+
+<script>
+"use strict";
+const pct = x => (x*100).toFixed(0) + "%";
+const $ = id => document.getElementById(id);
+const NOME = {lightning:"Lightning", mega_fire:"Mega Fire",
+  immersive:"Immersive", crazy_time:"Crazy Time", crazy_time_a:"Crazy Time A"};
+
+function chipDe(v){
+  if (!v) return ["n","aguardando"];
+  if (v.includes("ACIMA")) return ["o","acima do acaso"];
+  if (v.includes("ABAIXO")) return ["w","abaixo do acaso"];
+  if (v.includes("AINDA")) return ["n","aguardando"];
+  return ["n","indistinguível"];
+}
+function chipRegua(r){
+  if (r === "PODE_AFIRMAR") return ["o","pode afirmar"];
+  if (r === "VETADO") return ["s","vetado"];
+  if (r === "DORMENTE") return ["w","dormente"];
+  if (r === "NAO_CONCLUIR") return ["n","não concluir"];
+  return null;
+}
+
+function cartao(id, d){
+  const nome = NOME[id] || id;
+  if (!d || (!d.numeros?.length && d.aguardando !== "")){
+    return `<section class="mesa"><div class="hd"><h2>${nome}</h2>
+      <span class="t">${d?.atualizado || ""}</span></div>
+      <div class="espera">${d?.erro || d?.aguardando || "conectando à mesa…"}</div>
+      </section>`;
+  }
+  const p = d.placar || {}, u = d.ultimo;
+  const [cv, tv] = chipDe(p.veredito);
+  const cr = chipRegua(p.regua);
+  const f = d.fontes || {};
+  const primeiro = d.numeros[0];
+  const onde = f[primeiro]?.onde || "";
+
+  return `<section class="mesa">
+    <div class="hd"><h2>${nome}</h2>
+      <span class="t mono">${d.n_giros} giros · ${d.atualizado || ""}</span></div>
+    <div class="bd">
+      <div class="nums">${d.numeros.map(n => `<b>${n}</b>`).join("")}</div>
+      <p class="linha">${d.roda.falaram}/${d.roda.total} famílias falaram${
+        d.canal.vota ? ` · canal acoplado ${d.canal.acoplamento}×`
+                     : ` · <em>canal fora</em>`}${
+        onde ? `<br><em>${onde}</em>` : ""}</p>
+      ${u ? `<div class="saiu"><b>${u.saiu}</b>
+        <span class="tag ${u.acertou ? "o" : "x"}">${
+          u.acertou ? "acertou" : "errou"}</span>
+        <span style="color:var(--ink-3);font-size:11px">saiu ${u.quando}</span>
+        </div>` : ""}
+      ${p.rodadas ? `<div class="stat">
+        <div><b class="mono">${pct(p.taxa)}</b><span>acerto</span></div>
+        <div><b class="mono">${pct(p.acaso)}</b><span>acaso</span></div>
+        <div><b class="mono">${p.razao.toFixed(2)}×</b><span>razão</span></div>
+      </div>
+      <div class="verd"><span class="chip ${cv}">${tv}</span>
+        <p>${p.acertos} de ${p.rodadas} rodadas · IC90 ${pct(p.lo)}–${pct(p.hi)}${
+          p.descartadas ? ` · ${p.descartadas} descartadas` : ""}</p></div>
+      ${cr ? `<div class="verd"><span class="chip ${cr[0]}">${cr[1]}</span>
+        <p>${p.porque || ""}</p></div>` : ""}` : `
+      <p class="linha"><em>o placar começa quando a primeira previsão fechar</em></p>`}
+    </div></section>`;
+}
+
+let falhas = 0;
+async function puxar(){
+  try {
+    const r = await fetch("/estado", {cache:"no-store"});
+    const e = await r.json();
+    falhas = 0;
+    $("bat").textContent = "ao vivo";
+    const ids = Object.keys(e);
+    $("mesas").innerHTML = ids.length
+      ? ids.map(id => cartao(id, e[id])).join("")
+      : `<section class="mesa"><div class="espera">subindo as mesas…</div></section>`;
+  } catch (err) {
+    falhas++;
+    $("bat").textContent = falhas > 2 ? "sem conexão com o servidor" : "reconectando";
+  }
+}
+puxar();
+setInterval(puxar, 4000);
+</script>
+</body>
+</html>
