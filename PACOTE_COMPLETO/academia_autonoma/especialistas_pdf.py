@@ -591,6 +591,51 @@ ESPECIALISTAS: Tuple = (
 )
 
 
+# A TEORIA que cada especialista está de fato executando.
+#
+# A faixa diz de que assunto ele é dono; isto diz qual dossiê ele põe em
+# prática ao apontar número. Com os 400 dossiês absorvidos, o programa consegue
+# dizer na tela "TEORIA 043 — Agrupamento de raridades" em vez de "fichas
+# 041-050", que é o que ele pediu ao falar em "todo o PDF como base de
+# consulta": ele quer ver a teoria dele nomeada, não uma faixa.
+TEORIA_QUE_EXECUTA = {
+    "E01_FREQUENCIA": 3,        # Uniformidade marginal: teste comparativo
+    "E02_DEPENDENCIA": 18,      # dependência de curto alcance
+    "E03_REGIME": 28,           # mudança de regime
+    "E04_MEMORIA": 33,          # memória longa
+    "E05_RARIDADE": 43,         # Agrupamento de raridades
+    "E06_CICLO": 53,            # periodicidade
+    "E07_BORDA": 68,            # estabilidade sob reamostragem
+    "E08_CALIBRACAO": 88,       # calibração
+    "E09_INFORMACAO": 108,      # entropia
+    "E10_COMPLEXIDADE": 128,    # compressão / MDL
+    "E11_CAUSALIDADE": 143,     # confundidor
+    "E12_DINAMICA": 178,        # Recorrência dinâmica: teste comparativo
+    "E13_MEDICAO": 193,         # Identificabilidade
+    "E16_VIESES": 226,          # Consenso ilusório
+    "E17_FISICA": 342,          # Assimetria geométrica: teste diferencial
+}
+
+
+def teoria_de(nome: str) -> Dict[str, Any]:
+    """O dossiê que este especialista executa — número, título e tese."""
+    n = TEORIA_QUE_EXECUTA.get(nome)
+    if not n:
+        return {}
+    for c in fichas_de(n, n):
+        return {"n": c.get("n"), "titulo": c.get("conceito", ""),
+                "tese": c.get("tese", ""), "eixo": c.get("eixo", "")}
+    return {}
+
+
+def citacao(nome: str) -> str:
+    """Uma linha citando a teoria dele, para caber na tela."""
+    t = teoria_de(nome)
+    if not t or not t.get("titulo"):
+        return ""
+    return f"TEORIA {t['n']:03d} — {t['titulo']}"
+
+
 def quantas_fichas(nome: str) -> int:
     """Quantas FICHAS este especialista tem debaixo do braço.
 
@@ -646,18 +691,24 @@ def consultar(seq, n_classes: int = 37, ctx: Dict[str, Any] = None,
             ranking = sorted(peso.items(), key=lambda x: (-x[1], str(x[0])))
             palpites[nome] = [str(n) for n, v in ranking if v > 0][:k]
     return {"palpites": palpites, "falas": falas,
-            "opinaram": len(palpites), "total": len(ESPECIALISTAS)}
+            "opinaram": len(palpites), "total": len(ESPECIALISTAS),
+            "citacoes": {n: citacao(n) for n, _f, _x, _d in ESPECIALISTAS
+                         if citacao(n)},
+            "integral": compendio_integral()}
 
 
 def resumo(seq, n_classes: int = 37, ctx: Dict[str, Any] = None) -> str:
     r = consultar(seq, n_classes, ctx)
-    L = [f"[Especialistas] {r['opinaram']} dos {r['total']} opinaram "
-         f"(cada um dono de uma faixa dos seus PDFs)"]
+    fonte = ("400 dossiês do PDF" if r.get("integral")
+             else "resumo de 80 conceitos — rode ABSORVER_PDF.py para o PDF inteiro")
+    L = [f"[Especialistas] {r['opinaram']} dos {r['total']} opinaram · {fonte}"]
     for nome, _fn, (a, b), desc in ESPECIALISTAS:
         p = r["palpites"].get(nome)
-        faixa = f"fichas {a:03d}-{b:03d}" if b else "estudo mult."
-        if p:
-            L.append(f"   {nome:<20} {faixa:<16} {' '.join(p[:6])}")
-        else:
-            L.append(f"   {nome:<20} {faixa:<16} — {r['falas'].get(nome, '')[:52]}")
+        faixa = f"{a:03d}-{b:03d}" if b else "mult."
+        # a teoria dele, nomeada -- e o que ele quer ver, nao o numero da faixa
+        cit = r.get("citacoes", {}).get(nome) or desc
+        L.append(f"   {nome:<20} {faixa:<8} {cit[:56]}")
+        L.append(f"   {'':<20} {'':<8} "
+                 + (f"→ {' '.join(p[:8])}" if p
+                    else f"— {r['falas'].get(nome, '')[:66]}"))
     return "\n".join(L)

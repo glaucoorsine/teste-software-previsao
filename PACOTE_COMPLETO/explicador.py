@@ -96,7 +96,14 @@ def frase_da_fonte(nome: str) -> str:
     n = str(nome or "").strip()
     if n.startswith("E") and "_" in n and n[1:3].isdigit():
         try:
-            from academia_autonoma.especialistas_pdf import especialidade
+            from academia_autonoma.especialistas_pdf import (
+                citacao, especialidade)
+            # com os 400 dossiês absorvidos dá para nomear a TEORIA dele; sem
+            # eles, sobra a especialidade. Ele pediu o PDF como base de
+            # consulta -- então a tela cita o PDF, não o apelido da IA.
+            c = citacao(n)
+            if c:
+                return f"seu PDF, {c}"
             d = especialidade(n)
             if d:
                 return f"especialista nos seus PDFs — {d}"

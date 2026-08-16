@@ -254,7 +254,19 @@ print("\n[7] o painel cabe na tela")
 txt = E.resumo(setorial, 37, {"jogo": "lightning"})
 print("       " + txt.replace("\n", "\n       "))
 checa("Especialistas" in txt, "o resumo se identifica")
-checa("fichas" in txt, "e diz de que faixa do PDF cada um fala")
+checa("001-015" in txt, "e diz de que faixa do PDF cada um fala")
+if INTEIRO:
+    # o que ele quer ver na tela e a TEORIA dele nomeada, nao o apelido da IA
+    checa("TEORIA 003" in txt and "TEORIA 226" in txt,
+          "e cita a teoria do PDF que cada um executa")
+    checa(all(E.citacao(n) for n, _f, fx, _d in E.ESPECIALISTAS if fx[1]),
+          "todo especialista de faixa aponta uma teoria real",
+          [n for n, _f, fx, _d in E.ESPECIALISTAS if fx[1] and not E.citacao(n)])
+    # e a teoria citada tem que estar DENTRO da faixa dele
+    fora = [(n, E.teoria_de(n).get("n"), fx)
+            for n, _f, fx, _d in E.ESPECIALISTAS
+            if fx[1] and not (fx[0] <= (E.teoria_de(n).get("n") or 0) <= fx[1])]
+    checa(not fora, "e essa teoria esta dentro da faixa que ele e dono", fora)
 
 print()
 if falhas:
