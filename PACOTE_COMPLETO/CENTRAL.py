@@ -954,6 +954,18 @@ class PainelMesa(ctk.CTkFrame):
                 limpar_ciclo_ativo(self.jogo)
 
             self.entrada.put({"nums": [r.get("n") for r in rows],
+                              # AS LINHAS CRUAS, COM AS TAGS DE MULTIPLICADOR.
+                              #
+                              # Ele reparou que a previsao de multiplicador
+                              # estava acertando o bonus e pediu: "utilize ela
+                              # nao somente nele, mas em todos os jogos".
+                              #
+                              # Ate aqui a fila levava so os numeros, entao as
+                              # sete IAs de multiplicador ficavam fora do
+                              # consenso -- elas so marcavam, depois, quais dos
+                              # escolhidos podiam vir com fogo. Sem o sorteio de
+                              # lucky/fire/top slot elas nao tem o que ler.
+                              "linhas": rows[:200],
                               "settled": [r.get("settled") for r in rows],
                               "mults": cap.get("mults") or [],
                               "ok": self.ok, "err": self.err,

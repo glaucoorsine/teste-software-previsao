@@ -15,6 +15,7 @@ def process_cerebro(in_q, out_q, jogo="mega_fire"):
                 int(dados.get("err") or 0),
                 settled=dados.get("settled"),
                 mults=dados.get("mults"),
+                linhas=dados.get("linhas"),
                 last_result=dados.get("last_result"),
                 active_selection=dados.get("active_selection"),
             )

@@ -77,9 +77,27 @@ FONTES = {
 GENERICAS = {"SETOR", "FINAIS", "ANTI_12", "REGRA_FAMILIA_QUENTE", "FAMILIA"}
 
 
+MULT = {
+    "QUENTE": "vem sendo sorteado para multiplicador ultimamente",
+    "ATRASO": "está há mais tempo sem ser sorteado para multiplicador",
+    "VIZINHOS": "fica ao lado, na roda, dos últimos sorteados para multiplicador",
+    "FAMILIA": "está na família de finais dos últimos multiplicados",
+    "REPETE": "vem repetindo como sorteado em rodadas seguidas",
+    "SETOR": "está no setor da roda onde os multiplicadores se concentram",
+    "INTENSIDADE": "é quem carrega os maiores multiplicadores",
+    "PAGOU": "é onde o top slot casou com a roda e pagou",
+    "PUXA": "é o que este giro costuma puxar para o top slot",
+    "RITMO": "a seca de multiplicador passou do intervalo típico",
+}
+
+
 def frase_da_fonte(nome: str) -> str:
     """A frase desta fonte. Nomes de teoria da academia viram texto genérico."""
     n = str(nome or "").strip()
+    if n.startswith("MULT_"):
+        # as sete IAs de multiplicador, que agora votam na escolha
+        base = n[len("MULT_"):]
+        return "multiplicador — " + MULT.get(base, f"a IA {base} apontou")
     if n in FONTES:
         return FONTES[n]
     if n.startswith("ACADEMIA_") or n.startswith("TEORIA:"):

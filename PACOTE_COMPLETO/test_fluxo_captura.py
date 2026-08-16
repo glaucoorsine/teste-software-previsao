@@ -129,6 +129,44 @@ def test_does_not_wipe_operational_cycle():
     limpar_ciclo_ativo("mega_fire")  # clean sentinel after assert
     print("OK no wipe operational")
 
+def test_toda_mesa_tem_segunda_fonte():
+    """Ele reparou: "possuem dois links de api, porque so esta no casino?"
+
+    Tinha razao, e a prova estava no arquivo dele: fontes_descobertas.json ja
+    trazia o endereco do trackpot para immersive e lightning, descoberto pelo
+    coletor -- e o fluxo de captura nunca consultava, porque so o Crazy Time A
+    tinha alternativa cadastrada. Quando o casino.org falhava, a mesa morria
+    tendo uma segunda fonte ali do lado.
+    """
+    import fluxo_captura as F
+    for mesa in ("immersive", "lightning", "mega_fire", "crazy_time",
+                 "crazy_time_a"):
+        urls = F.enderecos_para(mesa)
+        assert len(urls) >= 2, f"{mesa} so tem {len(urls)} endereco(s)"
+        assert any("casino.org" in u for u in urls), mesa
+        assert any("trackpot" in u for u in urls), f"{mesa} sem a segunda fonte"
+    # a ordem importa: o principal vem primeiro, a alternativa e reserva
+    assert "casino.org" in F.enderecos_para("immersive")[0]
+    print("  ok   as cinco mesas tem duas fontes, nao uma")
+
+
+def test_parser_aceita_formato_plano():
+    """A segunda fonte devolve outro formato -- se responder, tem que ser lida."""
+    import fluxo_captura as F
+    # formato plano, como as fontes alternativas costumam mandar
+    plano = [{"number": 17, "settledAt": "2026-08-15T10:00:00Z"},
+             {"number": 0, "settledAt": "2026-08-15T09:59:00Z"}]
+    r = F.parse_items_roulette(plano)
+    assert len(r) == 2, r
+    assert r[0]["n"] == 17 and r[1]["n"] == 0, r
+    # e o aninhado do casino.org continua funcionando
+    aninhado = [{"data": {"result": {"outcome": {"number": 5}},
+                          "settledAt": "2026-08-15T10:00:00Z"}}]
+    r2 = F.parse_items_roulette(aninhado)
+    assert r2 and r2[0]["n"] == 5, r2
+    print("  ok   o parser le os dois formatos -- plano e aninhado")
+
+
 def test_crazy_time_a_viva():
     """Os dois defeitos que deixavam a mesa Crazy Time A morta.
 
@@ -176,5 +214,7 @@ if __name__ == "__main__":
     test_nova_janela_all_modules()
     test_idle_returns_no_put()
     test_does_not_wipe_operational_cycle()
+    test_toda_mesa_tem_segunda_fonte()
+    test_parser_aceita_formato_plano()
     test_crazy_time_a_viva()
     print("FLUXO_TESTES_OK")

@@ -1761,7 +1761,7 @@ class PipelinePerceptivo:
         self.k_alvos = self.k_max
         self.prefs = {"peso_isol":1.0,"boost_anti":False,"prioritizar_atraso":False,"reduzir_12":False,"janela":None}
 
-    def processar(self, historico, ok, err, settled=None, mults=None, last_result=None, active_selection=None):
+    def processar(self, historico, ok, err, settled=None, mults=None, last_result=None, active_selection=None, linhas=None):
         t0=time.time(); msgs=[]
         # limiar nunca permanece inflado de sessões antigas
         try:
@@ -2302,6 +2302,48 @@ class PipelinePerceptivo:
                                 "cada fonte vem acertando: " + ", ".join(_mexeu[:6]))
         except Exception as _e:
             msgs.append(f"[Autópsia→conserto] indisponível: {type(_e).__name__}")
+
+        # AS SETE IAS DE MULTIPLICADOR PASSAM A VOTAR NA ESCOLHA.
+        #
+        # Ele reparou primeiro: "a teoria de multiplicador no cash hunt esta
+        # prevendo bonus perfeitamente, utilize ela nao somente nele, mas em
+        # todos os jogos".
+        #
+        # Ate aqui elas so MARCAVAM, depois da escolha feita, quais numeros
+        # podiam vir com fogo. Trabalho jogado fora: elas leem o sorteio de
+        # lucky/fire/top slot, que acontece de 1 a 5 vezes por giro, saindo ou
+        # nao o numero -- muito mais observacao por hora do que o outro lado do
+        # problema tem. Nao usar isso na escolha era desperdicio.
+        #
+        # Cada uma entra como fonte propria, com o nome dela, entao a autopsia
+        # e o N efetivo continuam podendo separa-las. E o peso segue a MEDIDA
+        # de cada uma contra o acaso da mesma lista: quem esta acima de 1,00x
+        # fala mais alto, quem esta abaixo fala mais baixo -- ninguem e calado.
+        if linhas:
+            try:
+                from academia_autonoma.previsores_multiplicador import (
+                    prever as _prev_mult, medir as _medir_mult,
+                    tem_multiplicador as _tem_mult)
+                if _tem_mult(self.jogo):
+                    _pm = _prev_mult(self.jogo, linhas)
+                    _med = (_medir_mult(self.jogo, linhas) or {}).get("por_ia") or {}
+                    for _nome, _palpite in (_pm.get("por_ia") or {}).items():
+                        if not _palpite:
+                            continue
+                        _r = (_med.get(_nome) or {}).get("razao")
+                        # sem medida ainda: entra com voz normal, nao com voz
+                        # de quem ja provou
+                        _peso = 1.6 * (min(1.8, max(0.6, float(_r)))
+                                       if _r else 1.0)
+                        hips.append({"nome": f"MULT_{_nome}",
+                                     "nums": [str(x) for x in _palpite],
+                                     "peso": round(_peso, 3)})
+                    if _pm.get("por_ia"):
+                        msgs.append(f"[Multiplicador→consenso] "
+                                    f"{len(_pm['por_ia'])} IAs de multiplicador "
+                                    f"votando na escolha")
+            except Exception as _e:
+                msgs.append(f"[Multiplicador→consenso] {type(_e).__name__}")
 
         aprovados, probs, fontes, score, sig, p0 = self.crit.consenso(hips, self.n_classes, self.k_alvos, minimo=2)
         msgs.append(f"[Hipóteses] {[h['nome'] for h in hips]}")

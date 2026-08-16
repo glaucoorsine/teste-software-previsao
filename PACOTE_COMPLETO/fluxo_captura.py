@@ -47,7 +47,38 @@ API_BY_GAME = {
 #
 # O que responder primeiro fica GRAVADO (ver `_lembrar_fonte`), entao a
 # descoberta acontece uma vez e nunca mais.
+# DUAS FONTES EXISTEM, E EU SO USAVA UMA.
+#
+# Ele reparou: "tanto a immersive quanto a crazy time a possuem dois links de
+# api, porque so esta no casino?". Tinha razao, e a prova estava no proprio
+# arquivo dele: Logs/fontes_descobertas.json ja trazia
+#
+#     "immersive:seq": ".../trackersino/immersive-roulette/history"
+#
+# O coletor descobriu essa fonte sozinho, gravou, e o fluxo de captura NUNCA
+# consultou -- porque so o Crazy Time A tinha alternativas cadastradas aqui.
+# Quando o casino.org falhava, a mesa simplesmente morria tendo uma segunda
+# fonte disponivel e ignorada.
+#
+# Agora TODAS as mesas tem alternativa. Se a primeira nao responder, cai para
+# a outra e grava qual funcionou.
 API_ALTERNATIVAS = {
+    "immersive": [
+        "https://api.trackpotapi.com/api/trackersino/immersive-roulette/history",
+        "https://api.trackpotapi.com/api/trackersino/immersiveroulette/history",
+    ],
+    "lightning": [
+        "https://api.trackpotapi.com/api/trackersino/lightningroulette/history",
+        "https://api.trackpotapi.com/api/trackersino/lightning-roulette/history",
+    ],
+    "mega_fire": [
+        "https://api.trackpotapi.com/api/trackersino/mega-fire-blaze-roulette/history",
+        "https://api.trackpotapi.com/api/trackersino/megafireblazeroulette/history",
+    ],
+    "crazy_time": [
+        "https://api.trackpotapi.com/api/trackersino/crazy-time/history",
+        "https://api.trackpotapi.com/api/trackersino/crazytime/history",
+    ],
     "crazy_time_a": [
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime-a",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimeA",
