@@ -121,12 +121,29 @@ FICHAS_POR_CONCEITO = 5
 
 
 def fichas_de(ini: int, fim: int) -> List[dict]:
-    """As fichas do compêndio dele nesta faixa. Consulta real ao arquivo."""
+    """As fichas do compêndio dele nesta faixa. Consulta real ao arquivo.
+
+    Vem dos 400 dossiês inteiros quando o PDF já passou pelo ABSORVER_PDF --
+    aí a numeração da faixa é a numeração das TEORIAS, direto. Sem o PDF, cai
+    no resumo curado de 80 conceitos, onde cada registro vale cinco fichas.
+    """
     try:
-        from academia_autonoma.biblioteca_teorias import conceitos
+        from academia_autonoma.biblioteca_teorias import conceitos, dossies
+        d = dossies()
+        if d:
+            return [c for c in d if ini <= c.get("n", 0) <= fim]
         return [c for c in conceitos() if ini <= c.get("n", 0) <= fim]
     except Exception:
         return []
+
+
+def compendio_integral() -> bool:
+    """True quando as fichas vêm dos 400 dossiês, não do resumo de 80."""
+    try:
+        from academia_autonoma.biblioteca_teorias import dossies
+        return bool(dossies())
+    except Exception:
+        return False
 
 
 # ═══════════════════════════════════════════════════ os que apontam número
@@ -583,7 +600,12 @@ def quantas_fichas(nome: str) -> int:
     """
     for n, _f, (a, b), _d in ESPECIALISTAS:
         if n == nome:
-            return len(fichas_de(a, b)) * FICHAS_POR_CONCEITO if b else 416
+            if not b:
+                return 416
+            fs = fichas_de(a, b)
+            # com os 400 dossiês, cada registro JÁ é uma ficha; com o resumo
+            # de 80, cada registro representa cinco.
+            return len(fs) if compendio_integral() else len(fs) * FICHAS_POR_CONCEITO
     return 0
 
 

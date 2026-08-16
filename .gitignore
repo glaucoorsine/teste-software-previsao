@@ -19,3 +19,18 @@ PACOTE_COMPLETO/Logs/autopsia_*.jsonl
 PACOTE_COMPLETO/Logs/central_log.txt
 PACOTE_COMPLETO/Logs/*_ciclo_ativo.json
 PACOTE_COMPLETO/Logs/fontes_que_funcionam.json
+
+# OS ESTUDOS DELE — os PDFs do livro e o texto integral extraido.
+#
+# Este repositorio e PUBLICO. Os dois PDFs sao pesquisa inedita do livro dele,
+# com o nome dele na capa, e o JSON extraido carrega 3,4 milhoes de caracteres
+# do mesmo texto. Commitar publicaria o livro antes dele, e historico de git
+# nao se apaga direito.
+#
+# O software le estes arquivos quando eles estao na pasta; sem eles, cai no
+# resumo curado de 80 conceitos (dados_teorias.json), que ja esta versionado.
+# Rode ABSORVER_PDF.py para reconstruir a partir dos PDFs.
+PACOTE_COMPLETO/estudos_pdf/
+PACOTE_COMPLETO/academia_autonoma/dados_compendio_400_*.json
+PACOTE_COMPLETO/academia_autonoma/dados_estudo_capacidade_preditiva_*.json
+PACOTE_COMPLETO/academia_autonoma/INDICE_ESTUDOS.json

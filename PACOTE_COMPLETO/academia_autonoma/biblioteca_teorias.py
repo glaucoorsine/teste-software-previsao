@@ -99,12 +99,87 @@ def _ler(arq: Path, padrao):
 
 
 def conceitos() -> List[dict]:
-    """Os 80 conceitos do compêndio."""
+    """Os 80 conceitos do compêndio -- o resumo curado, um a cada cinco fichas."""
     return _ler(ARQ_TEORIAS, [])
+
+
+# ─────────────────────────── os 400 dossiês inteiros, quando existirem ──────
+#
+# `conceitos()` acima é o que sobrou de eu ter transcrito o compêndio à mão:
+# 80 conceitos, um a cada cinco teorias. O PDF tem 400 dossiês completos, cada
+# um com nove a doze seções próprias -- tese, formalização, mecanismo,
+# predições, competição entre explicações, identificação, controle negativo,
+# condições-limite, leitura das amostras, valor teórico.
+#
+# `ABSORVER_PDF.py` extrai isso inteiro. Quando o arquivo estiver lá, é ELE que
+# vale; o resumo de 80 fica só como rede de segurança para quem clonar o
+# repositório sem os PDFs.
+ARQ_DOSSIES = RAIZ / "dados_compendio_400_teorias_aleatoriedade_previsibilid.json"
+ARQ_MULT_INTEGRAL = RAIZ / "dados_estudo_capacidade_preditiva_multiplicadores_400_.json"
+
+# Do nome comprido do eixo no PDF para o código curto que o software já usa.
+_EIXO_CURTO = {
+    "PROBABILIDADE": "series",
+    "INFORMAÇÃO": "informacao",
+    "IA,": "ia",
+    "FUNDAMENTOS": "fisica",
+}
+
+# Da seção do dossiê para o nome que o resto do programa já consulta.
+_DE_PARA = {
+    "titulo": "conceito",
+    "tese_delimitada": "tese",
+    "formalizacao_e_estimando": "medida",
+    "mecanismo_em_camadas": "mecanismo",
+    "predicoes_diagnosticas": "diagnostico",
+}
+
+
+def _eixo_curto(longo: str) -> str:
+    for prefixo, curto in _EIXO_CURTO.items():
+        if (longo or "").upper().startswith(prefixo):
+            return curto
+    return "series"
+
+
+def dossies() -> List[dict]:
+    """Os 400 dossiês do compêndio, inteiros. Lista vazia se o PDF não passou."""
+    if "dossies" in _cache:
+        return _cache["dossies"]
+    d = _ler(ARQ_DOSSIES, {})
+    saida = []
+    for u in (d.get("unidades") or []):
+        if u.get("tipo") != "dossie":
+            continue
+        reg = {k: v for k, v in u.items()
+               if k not in ("tipo", "rotulos", "pagina")}
+        for de, para in _DE_PARA.items():
+            if de in reg:
+                reg[para] = reg.pop(de)
+        reg["eixo_longo"] = reg.get("eixo", "")
+        reg["eixo"] = _eixo_curto(reg.get("eixo", ""))
+        saida.append(reg)
+    saida.sort(key=lambda r: r.get("n", 0))
+    _cache["dossies"] = saida
+    return saida
+
+
+def fonte_do_compendio() -> str:
+    """De onde as fichas estão saindo agora -- para o programa poder dizer."""
+    return "400 dossiês do PDF" if dossies() else "resumo de 80 conceitos"
 
 
 def estudo_multiplicador() -> dict:
     return _ler(ARQ_MULT, {})
+
+
+def estudo_multiplicador_integral() -> List[dict]:
+    """As 452 páginas do estudo de multiplicadores. Vazio se o PDF não passou."""
+    if "mult_integral" in _cache:
+        return _cache["mult_integral"]
+    d = _ler(ARQ_MULT_INTEGRAL, {})
+    _cache["mult_integral"] = list(d.get("unidades") or [])
+    return _cache["mult_integral"]
 
 
 def buscar(termo: str, limite: int = 5) -> List[dict]:

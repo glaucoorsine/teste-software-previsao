@@ -43,8 +43,15 @@ def checa(cond, nome, detalhe=""):
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n[1] o PDF inteiro tem dono -- nenhum conceito orfao")
 
-cs = B.conceitos()
-TOTAL_FICHAS = len(cs) * E.FICHAS_POR_CONCEITO      # 80 blocos x 5 = 400
+# Com os PDFs absorvidos, `fichas_de` devolve os 400 dossies inteiros; sem
+# eles, o resumo curado de 80 conceitos, onde cada registro vale cinco fichas.
+# O teste tem que passar nos dois casos -- quem clona o repositorio sem os PDFs
+# nao pode ver a suite quebrar.
+INTEIRO = E.compendio_integral()
+cs = B.dossies() if INTEIRO else B.conceitos()
+print(f"       fonte do compendio: {B.fonte_do_compendio()} ({len(cs)} registros)")
+TOTAL_FICHAS = len(cs) if INTEIRO else len(cs) * E.FICHAS_POR_CONCEITO
+
 donos = {}
 for nome, _fn, (a, b), _d in E.ESPECIALISTAS:
     if not b:
@@ -54,24 +61,46 @@ for nome, _fn, (a, b), _d in E.ESPECIALISTAS:
             donos.setdefault(int(c["n"]), []).append(nome)
 
 checa(len(donos) == len(cs),
-      f"os {len(cs)} conceitos tem dono", f"{len(donos)} de {len(cs)}")
+      f"os {len(cs)} registros do compendio tem dono",
+      f"{len(donos)} de {len(cs)}")
 duplos = {k: v for k, v in donos.items() if len(v) > 1}
 checa(not duplos, "e nenhum tem dois donos (faixas nao se pisam)",
       list(duplos.items())[:3])
 
-# a faixa nao pode cortar um bloco ao meio: se E01 vai ate a ficha 015, o
-# bloco que comeca na 011 tem que caber inteiro dentro dela (011-015).
-cortados = [int(c["n"]) for c in cs
-            for _n, _f, (a, b), _d in E.ESPECIALISTAS
-            if b and a <= int(c["n"]) <= b
-            and int(c["n"]) + E.FICHAS_POR_CONCEITO - 1 > b]
-checa(not cortados, "nenhuma faixa corta um bloco de fichas ao meio",
-      cortados[:5])
+if not INTEIRO:
+    # no resumo, a faixa nao pode cortar um bloco de cinco ao meio
+    cortados = [int(c["n"]) for c in cs
+                for _n, _f, (a, b), _d in E.ESPECIALISTAS
+                if b and a <= int(c["n"]) <= b
+                and int(c["n"]) + E.FICHAS_POR_CONCEITO - 1 > b]
+    checa(not cortados, "nenhuma faixa corta um bloco de fichas ao meio",
+          cortados[:5])
 
 fichas_cobertas = sum(E.quantas_fichas(n) for n, _f, _fx, d in E.ESPECIALISTAS
                       if _fx[1])
 checa(fichas_cobertas == TOTAL_FICHAS,
       f"a soma das faixas fecha em {TOTAL_FICHAS} fichas", fichas_cobertas)
+checa(TOTAL_FICHAS == 400, "e o compendio dele tem 400", TOTAL_FICHAS)
+
+if INTEIRO:
+    # cada especialista tem que cair num eixo so -- se uma faixa mistura
+    # eixos, ela foi desenhada contra a estrutura do PDF, nao a favor dela.
+    misturados = []
+    for nome, _fn, (a, b), _d in E.ESPECIALISTAS:
+        if not b:
+            continue
+        eixos = {c.get("eixo") for c in E.fichas_de(a, b)}
+        if len(eixos) > 1:
+            misturados.append((nome, eixos))
+    checa(not misturados, "cada faixa cai num eixo so do PDF", misturados[:3])
+    # e as secoes dos dossies tem que ter vindo mesmo
+    algum = E.fichas_de(1, 15)[0]
+    checa(algum.get("tese") and algum.get("mecanismo"),
+          "o dossie traz tese e mecanismo, nao so o titulo",
+          list(algum.keys()))
+    checa(any(c.get("controle_negativo_e_falsificacao")
+              for c in E.fichas_de(1, 15)),
+          "e traz o controle negativo, que e o que separa achado de ilusao")
 checa(len(E.ESPECIALISTAS) >= 15,
       "sao pelo menos os quinze que ele pediu", len(E.ESPECIALISTAS))
 checa(all(E.especialidade(n) for n, _f, _x, _d in E.ESPECIALISTAS),
