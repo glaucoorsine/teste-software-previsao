@@ -822,6 +822,46 @@ checa(explicar([], {}) == "", "sem numero, sem explicacao inventada")
 checa("é resposta, não falha" in explicar_vazio(),
       "e o AGUARDANDO tambem e explicado")
 
+print("\n[27] o objetivo do Crazy Time e escolha, e os dois caminhos funcionam")
+import ia_modulos as _IM
+from ia_modulos import CT_OBJETIVO, CT_PESO_ATRASO, CT_FATIAS
+checa(CT_OBJETIVO in ("acerto", "bonus"), "o objetivo esta declarado", CT_OBJETIVO)
+checa(CT_PESO_ATRASO["acerto"] < CT_PESO_ATRASO["bonus"],
+      "em 'acerto' o atraso pesa menos que em 'bonus'", CT_PESO_ATRASO)
+
+def _top(objetivo):
+    velho = _IM.CT_OBJETIVO
+    try:
+        _IM.CT_OBJETIVO = objetivo
+        f = {"gaps_ratio": {"Pachinko": 3.4, "CrazyBonus": 1.8, "1": 1.5,
+                            "CoinFlip": 1.0, "5": 0.3, "10": 0.2,
+                            "CashHunt": 0.1, "2": 0.0},
+             "freq": {"1": 40, "2": 24, "5": 13, "10": 7, "CoinFlip": 7},
+             "seq": ["1", "2", "1", "5", "1", "2", "1"] * 8}
+        ranks = {"estat": _IM.ModeloEstatistico().rank_ct(f),
+                 "anom": _IM.ModeloAnomalia().rank_ct(f),
+                 "setor": _IM.ModeloSetor().rank_ct(f)}
+        hips = _IM.GeradorHipoteses().ct(f, ranks)
+        ap, pr, fo, sc, sig, p0 = _IM.Critico().consenso(hips, n_classes=8,
+                                                         k_alvos=3)
+        return sorted(sc.items(), key=lambda x: -x[1])
+    finally:
+        _IM.CT_OBJETIVO = velho
+
+_ac = _top("acerto"); _bo = _top("bonus")
+print("       acerto ->", [n for n, _ in _ac[:3]])
+print("       bonus  ->", [n for n, _ in _bo[:3]])
+_raros = ("Pachinko", "CrazyBonus", "CashHunt")
+_pos_ac = next((i for i, (n, _) in enumerate(_ac) if n in _raros), 99)
+_pos_bo = next((i for i, (n, _) in enumerate(_bo) if n in _raros), 99)
+checa(_pos_bo <= _pos_ac,
+      "em 'bonus' o simbolo raro fica igual ou mais na frente que em 'acerto'",
+      (_pos_ac, _pos_bo))
+checa(dict(_ac).get("1", 0) > 0 and dict(_ac).get("2", 0) > 0,
+      "e em 'acerto' o 1 e o 2 tem apoio de verdade -- nao ficam zerados",
+      {k: round(v, 2) for k, v in _ac[:4]})
+checa(all(v > 0 for _n, v in _bo), "em nenhum dos dois alguem e zerado")
+
 print()
 if falhas:
     print("FALHAS:", falhas)

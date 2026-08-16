@@ -290,7 +290,9 @@ class ModeloEstatistico:
         # para o "1"). A normalizacao pela raridade ja esta feita ali. Somar
         # a chance da fatia por cima era corrigir duas vezes a mesma coisa,
         # e no sentido errado.
-        gap_w = 2.4 if prior_atraso else 2.0
+        # o peso do atraso segue o objetivo escolhido (ver CT_OBJETIVO)
+        gap_w = (2.4 if prior_atraso else 2.0) * CT_PESO_ATRASO.get(
+            CT_OBJETIVO, 1.0)
         for s,g in (feats.get("gaps_ratio") or {}).items():
             sc[s] += float(g) * gap_w * max(1.0, w_isol)
         for s,c in (feats.get("freq") or {}).items():
@@ -394,12 +396,14 @@ class GeradorHipoteses:
                 hips.append({"nome": "CT_TRANSICAO",
                              "nums": [s for s, _ in segue.most_common(3)],
                              "peso": 1.8})
+        # o peso das fontes de ATRASO segue o objetivo escolhido
+        _wa = CT_PESO_ATRASO.get(CT_OBJETIVO, 1.0)
         est,_,_ = ranks["estat"]
-        hips.append({"nome":"GAP_CICLO","nums":est[:5],"peso":2.2})
+        hips.append({"nome":"GAP_CICLO","nums":est[:5],"peso":2.2*_wa})
         anom,_ = ranks["anom"]
-        if anom: hips.append({"nome":"ANOMALIA","nums":anom,"peso":1.8})
+        if anom: hips.append({"nome":"ANOMALIA","nums":anom,"peso":1.8*_wa})
         setor_nums,_,_ = ranks["setor"]
-        if setor_nums: hips.append({"nome":"SETOR","nums":setor_nums,"peso":1.6})
+        if setor_nums: hips.append({"nome":"SETOR","nums":setor_nums,"peso":1.6*_wa})
         # ANTI_12: A FONTE QUE TRAVAVA A MESA.
         #
         # Ela dispara quando o "1" e o "2" aparecem muito -- so que os dois
@@ -1512,6 +1516,34 @@ FRACAO_APOIO = 0.5
 # aposta, não a pontaria. O placar continua mostrando os dois números lado a
 # lado, e é a razão contra o acaso que diz se houve ganho.
 ALVO_ACERTO_JANELA = 0.53
+
+# ─────────────────────────────────────────── o que o Crazy Time deve perseguir
+#
+# MEDIDO NOS LOGS DELE, e os numeros contam a historia toda:
+#
+#     v104   apostou no "5" em 58 de 60 janelas   ->  0,99x
+#     v105   apostou em CoinFlip/Pachinko/CashHunt ->  0,89x
+#
+# Eu consertei o travamento no "5" e a mesa travou nos bonus. Trocou de preso,
+# nao soltou -- porque a causa e a mesma nos dois casos: o eixo do ATRASO
+# domina, e numa roda de 54 fatias desiguais quem tem poucas fatias esta quase
+# sempre "atrasado".
+#
+# Aqui eu paro de escolher por ele. Sao dois objetivos legitimos e diferentes,
+# e a conta de cada um e esta:
+#
+#   "acerto"   o software persegue ACERTAR. O peso do atraso cai e as fontes
+#              que leem o que esta saindo mandam mais. A mesa vai sugerir 1 e 2
+#              com frequencia -- que sao 63% da roda e pagam pouco.
+#
+#   "bonus"    o software persegue os MULTIPLICADORES GRANDES. O atraso manda,
+#              como estava. Vai errar muito -- Pachinko sai 3,7% das vezes --
+#              em troca de estar la quando sair.
+#
+# Nenhum dos dois e "certo". O que estava errado era eu decidir isso por fora
+# sem dizer que estava decidindo.
+CT_OBJETIVO = "acerto"          # "acerto" ou "bonus"
+CT_PESO_ATRASO = {"acerto": 0.55, "bonus": 1.0}
 
 # O PISO DE ACERTO DE NÚMERO, TAMBÉM EM 53% — ele reafirmou o pedido.
 #
