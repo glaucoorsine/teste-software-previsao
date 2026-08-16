@@ -71,6 +71,16 @@ SEQUENCIA = {
         "mega-fire-blaze", "megafireblaze", "fire-blaze-roulette")],
     "crazy_time": [BASE_TRACKPOT.format(s) for s in (
         "crazytime", "crazy-time", "crazytimebonus")],
+    # CRAZY TIME A NAO TINHA ENTRADA AQUI, E ESSE ERA METADE DO PROBLEMA.
+    #
+    # Ele repetiu varias vezes que a mesa nao abre. Eu ficava mexendo na lista
+    # de enderecos do `fluxo_captura`, sem reparar que a FONTE ALTERNATIVA --
+    # este arquivo -- simplesmente nao conhecia a mesa. Quando o casino.org
+    # falhava, nao havia para onde cair: o software tinha duas fontes e usava
+    # zero nessa mesa.
+    "crazy_time_a": [BASE_TRACKPOT.format(s) for s in (
+        "crazytimea", "crazy-time-a", "crazytime-a", "crazy_time_a",
+        "crazytime2", "crazy-time-2")],
 }
 PARAMS_SEQ = {"window": "72h", "limit": 1000}
 
@@ -82,6 +92,9 @@ AGREGADOS = {
                   "https://www.tracksino.com/immersiveroulette"],
     "mega_fire": ["https://www.tracksino.com/mega-fire-blaze-roulette",
                   "https://www.tracksino.com/megafireblazeroulette"],
+    "crazy_time_a": ["https://www.tracksino.com/crazytimea",
+                     "https://www.tracksino.com/crazy-time-a",
+                     "https://www.tracksino.com/crazytime-a"],
 }
 
 MEMORIA = Path(__file__).resolve().parent / "Logs" / "fontes_descobertas.json"

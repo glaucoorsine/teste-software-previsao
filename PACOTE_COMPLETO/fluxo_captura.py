@@ -94,6 +94,9 @@ API_ALTERNATIVAS = {
 # onde fica gravado o endereco que respondeu, por mesa
 FONTES_OK = ROOT / "Logs" / "fontes_que_funcionam.json"
 
+# quando cada mesa procurou endereco pela ultima vez (a procura e cara)
+_ULTIMA_PROCURA: dict = {}
+
 
 def _lembrar_fonte(dataset_id: str, url: str) -> None:
     """Grava o endereco que respondeu, para nao procurar de novo."""
@@ -517,6 +520,21 @@ def capturar(
     """
     fontes_extra: List[str] = []
     candidatos = enderecos_para(dataset_id)
+
+    # A FONTE QUE JA FOI DESCOBERTA VEM NA FRENTE.
+    #
+    # `descobridor_endereco` procura o endereco da mesa gerando as grafias a
+    # partir do nome dela, em vez de eu chutar uma lista a mao -- foi assim
+    # que o Crazy Time A ficou semanas sem abrir. O que ele achou uma vez fica
+    # gravado, entao aqui e so consultar.
+    try:
+        from descobridor_endereco import lembradas as _lembradas_desc
+        _ja = _lembradas_desc().get(str(dataset_id))
+        if _ja:
+            candidatos = [_ja] + [u for u in candidatos if u != _ja]
+    except Exception:
+        pass
+
     if not candidatos:
         return {"rows": [], "novo_head": False, "head_id": None, "err": "dataset desconhecido", "mults": []}
 
@@ -529,15 +547,42 @@ def capturar(
     #
     # Agora percorre os candidatos e GRAVA o que funcionar, para a procura
     # acontecer uma vez so.
-    items, err, api = [], None, candidatos[0]
+    items, err = [], None
     for _url in candidatos:
         items, err = fetch_paginas(
             _url, HEADERS, page_size=page_size, max_pages=max_pages,
             duration=duration)
         if items:
-            api = _url
             _lembrar_fonte(dataset_id, _url)
             break
+    if err and not items:
+        # ULTIMO RECURSO ANTES DE DESISTIR: PROCURAR O ENDERECO.
+        #
+        # Se nenhum endereco conhecido respondeu, o provedor pode ter mudado o
+        # nome da mesa na URL -- foi o que manteve o Crazy Time A fechado por
+        # semanas. Em vez de eu chutar mais uma grafia a cada versao, o
+        # descobridor gera as grafias a partir do nome e testa todas, aceitando
+        # so a que devolver giros reconheciveis. Acha uma vez e grava.
+        #
+        # Roda no maximo uma vez a cada dez minutos por mesa: a procura custa
+        # dezenas de requisicoes e nao pode virar tempestade em cima do
+        # provedor a cada ciclo de captura.
+        try:
+            import time as _t
+            from descobridor_endereco import descobrir as _descobrir
+            _ultima = _ULTIMA_PROCURA.get(dataset_id, 0.0)
+            if _t.time() - _ultima > 600:
+                _ULTIMA_PROCURA[dataset_id] = _t.time()
+                _novo = _descobrir(str(dataset_id))
+                if _novo:
+                    items, err = fetch_paginas(
+                        _novo, HEADERS, page_size=page_size,
+                        max_pages=max_pages, duration=duration)
+                    if items:
+                        _lembrar_fonte(dataset_id, _novo)
+        except Exception:
+            pass
+
     if err and not items:
         # TERCEIRA FONTE: a pagina que ele mandou. So chega aqui quando as duas
         # APIs falharam -- e antes disso a mesa simplesmente morria.
