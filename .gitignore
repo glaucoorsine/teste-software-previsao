@@ -35,3 +35,9 @@ PACOTE_COMPLETO/academia_autonoma/dados_compendio_400_*.json
 PACOTE_COMPLETO/academia_autonoma/dados_estudo_capacidade_preditiva_*.json
 PACOTE_COMPLETO/academia_autonoma/dados_livro_capacidade_*.json
 PACOTE_COMPLETO/academia_autonoma/INDICE_ESTUDOS.json
+#
+# O indice DESTILADO e a excecao, e entra de proposito: numero, mesa, familia,
+# IA, titulo e formula -- o que o programa executa, sem a prosa. Tres vezes o
+# container foi apagado e o software voltou sem saber nada; guardar o indice
+# resolve isso sem republicar o livro dele.
+!PACOTE_COMPLETO/academia_autonoma/indice_estudos_destilado.json

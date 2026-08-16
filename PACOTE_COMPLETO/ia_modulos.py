@@ -2350,13 +2350,19 @@ class PipelinePerceptivo:
         # propria ficha. As minhas heuristicas eu inventei; estas ele derivou.
         try:
             from academia_autonoma.inteligencias_livro import (
-                consultar as _tratado, formula_de as _formula)
+                consultar as _tratado, formula_de as _formula,
+                texto_citacao as _citar)
             _ctx_t = {"mults": mults, "jogo": self.jogo}
             _rt = _tratado(hist, self.n_classes, _ctx_t)
             for _nome, _nums in (_rt.get("palpites") or {}).items():
                 hips.append({"nome": _nome, "nums": _nums, "peso": 2.4})
             msgs.append(f"[Tratado] {_rt.get('opinaram')} das "
                         f"{_rt.get('total')} inteligências leram a mesa")
+            # de onde saiu cada leitura -- previsao sem fonte nao e auditavel
+            for _nome in (_rt.get("palpites") or {}):
+                _c = _citar(_nome, self.jogo)
+                if _c:
+                    msgs.append(f"   {_nome}: {_c[:92]}")
             for _n, _fala in (_rt.get("falas") or {}).items():
                 if _n not in (_rt.get("palpites") or {}) and _fala:
                     msgs.append(f"   {_n} ({_formula(_n)[:28]}): {_fala[:72]}")

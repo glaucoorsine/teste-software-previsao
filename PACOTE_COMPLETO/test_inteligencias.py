@@ -174,6 +174,37 @@ checa(com["quem"].get("22") == ["IA02_RECENCIA"],
       "e o placar diz QUEM votou em cada número", com["quem"])
 
 # ─────────────────────────────────────────────────────────────────────────────
+print("\n[4b] cada leitura diz de qual formulação dele saiu")
+
+# O indice destilado e versionado justamente para isto sobreviver ao container
+# ser apagado -- ja aconteceu tres vezes, e o software voltava sem saber nada.
+falou = 0
+for jogo in ("mega_fire", "lightning", "immersive", "crazy_time", "crazy_time_a"):
+    for ia, _f, _d, _x in T.INTELIGENCIAS:
+        c = T.texto_citacao(ia, jogo)
+        if c:
+            falou += 1
+checa(falou >= 50, "as onze citam formulação nas cinco mesas", falou)
+
+fs = T.citar("IA01_TEMPO", "mega_fire", 3)
+checa(fs and all(u.get("ia") == "IA01" for u in fs),
+      "e a formulação citada é mesmo da IA que a executa", [u.get("ia") for u in fs])
+checa(fs and all(u.get("mesa") == "MEGA FIRE" for u in fs),
+      "e da mesa certa", [u.get("mesa") for u in fs])
+checa(fs and all(u.get("formula") for u in fs),
+      "e traz a fórmula publicada junto", fs and fs[0].get("formula"))
+
+# mesas diferentes tem que citar formulacoes DIFERENTES -- se citassem a mesma,
+# o indice estaria sendo ignorado e a citacao seria enfeite
+n_mf = [u["n"] for u in T.citar("IA01_TEMPO", "mega_fire", 2)]
+n_lt = [u["n"] for u in T.citar("IA01_TEMPO", "lightning", 2)]
+checa(n_mf and n_lt and set(n_mf) != set(n_lt),
+      "cada mesa cita as formulações dela, não as de outra", (n_mf, n_lt))
+
+checa(T.texto_citacao("IA01_TEMPO", "jogo_que_nao_existe") == "",
+      "mesa desconhecida não inventa citação")
+
+# ─────────────────────────────────────────────────────────────────────────────
 print("\n[5] não quebra com pouco dado nem com dado torto")
 
 for seq, nc in (([], 37), ([1], 37), ([1, 2, 3], 37),

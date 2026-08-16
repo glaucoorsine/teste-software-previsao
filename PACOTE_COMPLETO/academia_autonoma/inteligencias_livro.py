@@ -581,6 +581,67 @@ def formula_de(nome: str) -> str:
     return ""
 
 
+# ═════════════════════════════════════════════ de onde cada leitura saiu
+#
+# Uma previsão que não diz de onde veio não é auditável, e o livro dele é
+# inteiro sobre leitura auditável. Aqui cada inteligência recupera as
+# formulações que ELA assina NA MESA em questão -- 16 por mesa por IA.
+#
+# Lê o índice destilado, que fica versionado justamente para sobreviver ao
+# container ser apagado. Sem o índice, a IA continua rodando e só deixa de
+# citar; ela não para.
+
+_INDICE: Optional[Dict[str, List[dict]]] = None
+
+
+def _carregar_indice() -> Dict[str, List[dict]]:
+    """Formulações agrupadas por (MESA, IAxx). Lido uma vez e guardado."""
+    global _INDICE
+    if _INDICE is not None:
+        return _INDICE
+    _INDICE = {}
+    try:
+        import json
+        from pathlib import Path
+        arq = Path(__file__).resolve().parent / "indice_estudos_destilado.json"
+        d = json.loads(arq.read_text(encoding="utf-8"))
+        for _est, corpo in (d.get("estudos") or {}).items():
+            for u in corpo.get("unidades") or []:
+                if u.get("tipo") != "formulacao":
+                    continue
+                chave = f"{u.get('mesa', '')}|{u.get('ia', '')}"
+                _INDICE.setdefault(chave, []).append(u)
+    except Exception:
+        _INDICE = {}
+    return _INDICE
+
+
+def citar(nome_ia: str, jogo: str, quantas: int = 2) -> List[dict]:
+    """As formulações que esta inteligência assina nesta mesa.
+
+    `nome_ia` é o nome interno (IA01_TEMPO); o livro usa IA01. `jogo` é a
+    chave do software (lightning); o livro escreve LIGHTING.
+    """
+    mesa = MESAS.get(str(jogo), "")
+    curto = str(nome_ia).split("_")[0]            # IA01_TEMPO -> IA01
+    achadas = _carregar_indice().get(f"{mesa}|{curto}") or []
+    return sorted(achadas, key=lambda u: u.get("n", 0))[:quantas]
+
+
+def texto_citacao(nome_ia: str, jogo: str) -> str:
+    """Uma linha em português dizendo de onde a leitura saiu."""
+    fs = citar(nome_ia, jogo, 2)
+    if not fs:
+        return ""
+    ns = ", ".join(f"#{u.get('n')}" for u in fs)
+    fam = fs[0].get("familia", "")
+    tit = (fs[0].get("titulo") or "").split("—")[0].strip()
+    total = len(_carregar_indice().get(
+        f"{MESAS.get(str(jogo), '')}|{str(nome_ia).split('_')[0]}") or [])
+    return (f"formulação {ns} de {total}, família {fam}"
+            + (f" — {tit[:52]}" if tit else ""))
+
+
 def especialidade_de(nome: str) -> str:
     for n, _f, d, _form in INTELIGENCIAS:
         if n == nome:
