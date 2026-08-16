@@ -94,6 +94,14 @@ MULT = {
 def frase_da_fonte(nome: str) -> str:
     """A frase desta fonte. Nomes de teoria da academia viram texto genérico."""
     n = str(nome or "").strip()
+    if n.startswith("E") and "_" in n and n[1:3].isdigit():
+        try:
+            from academia_autonoma.especialistas_pdf import especialidade
+            d = especialidade(n)
+            if d:
+                return f"especialista nos seus PDFs — {d}"
+        except Exception:
+            pass
     if n.startswith("C0") or n.startswith("C1"):
         # as praticas de previsao do compendio dele: a frase vem do proprio
         # modulo, para a tela nao repetir o que o codigo ja sabe dizer

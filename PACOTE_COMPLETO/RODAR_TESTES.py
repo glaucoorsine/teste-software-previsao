@@ -42,6 +42,7 @@ TESTES = [
     ("test_base_auditoria.py", "BASE_AUDITORIA_OK", 300, 1),
     ("test_biblioteca.py", "BIBLIOTECA_OK", 300, 1),
     ("test_multiplicador.py", "MULTIPLICADOR_OK", 900, 2),
+    ("test_especialistas.py", "ESPECIALISTAS_OK", 600, 12),
     ("test_autopsia.py", "AUTOPSIA_OK", 200, 1),
     ("test_publico.py", "PUBLICO_OK", 200, 1),
     ("test_captador.py", "CAPTADOR_OK", 200, 1),

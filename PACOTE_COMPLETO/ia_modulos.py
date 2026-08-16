@@ -2303,6 +2303,37 @@ class PipelinePerceptivo:
         except Exception as _e:
             msgs.append(f"[Autópsia→conserto] indisponível: {type(_e).__name__}")
 
+        # OS ESPECIALISTAS NOS PDFS DELE.
+        #
+        #     "coloque 15 IAs especialistas nos meus dois pdfs opinando sobre
+        #      os numeros de previsao com todo o PDF como base de consulta"
+        #
+        # Sao 17 no fim, porque 15 deixavam 40 conceitos orfaos -- os eixos de
+        # IA/validacao e de fisica. Cada um e dono de uma faixa das fichas e
+        # consulta `dados_teorias.json` de verdade, na hora.
+        #
+        # Nem todos apontam numero, e isso e de proposito: borda, calibracao,
+        # complexidade e medicao opinam sobre a CONFIANCA dos outros. Um
+        # especialista que fala sempre e um que nao sabe do que fala.
+        if not self.is_ct:
+            try:
+                from academia_autonoma.especialistas_pdf import consultar as _esp
+                _ctx_e = {"jogo": self.jogo,
+                          "taxa_acerto": locals().get("_taxa_acerto"),
+                          "acaso_k": locals().get("_acaso_k"),
+                          "tem_tempo": bool(settled), "tem_mult": bool(mults)}
+                _r = _esp(hist, self.n_classes, _ctx_e)
+                for _nome, _nums in (_r.get("palpites") or {}).items():
+                    hips.append({"nome": _nome, "nums": _nums, "peso": 1.7})
+                msgs.append(f"[Especialistas] {_r.get('opinaram')} dos "
+                            f"{_r.get('total')} opinaram sobre os números")
+                # os que se calaram tambem informam -- e as vezes mais
+                for _n, _fala in (_r.get("falas") or {}).items():
+                    if _n not in (_r.get("palpites") or {}) and _fala:
+                        msgs.append(f"   {_n}: {_fala[:96]}")
+            except Exception as _e:
+                msgs.append(f"[Especialistas] {type(_e).__name__}")
+
         # AS PRATICAS DE PREVISAO DO COMPENDIO DELE, VOTANDO.
         #
         # Cobranca dele, e justa: "e pra ler todos meus dois pdfs, pegar todas
