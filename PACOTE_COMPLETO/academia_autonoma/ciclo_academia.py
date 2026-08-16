@@ -401,7 +401,7 @@ def _ciclo_body(dataset_id: str, historico, settled=None, mults=None) -> Dict[st
     if _n % CACADORES_A_CADA == 0 and len(hist) >= 60:
         try:
             _roc = cacar_ocorrencias(hist)
-            for _l in resumo_ocorrencias(_roc).split("\n"):
+            for _l in resumo_ocorrencias(_roc, str(dataset_id)).split("\n"):
                 msgs.append(_l)
             cand_cacadores.extend(str(x) for x in (_roc.get("candidatos") or []))
         except Exception as e:

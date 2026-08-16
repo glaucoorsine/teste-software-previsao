@@ -990,7 +990,7 @@ def cacar(historico, n_regua: int = N_REGUA, alpha: float = FDR_ALPHA,
     }
 
 
-def resumo(r: Dict[str, Any]) -> str:
+def resumo(r: Dict[str, Any], jogo: str = "lightning") -> str:
     if r.get("erro"):
         return f"[Ocorrências] {r['erro']}"
     if not r.get("achados"):
@@ -1006,6 +1006,16 @@ def resumo(r: Dict[str, Any]) -> str:
     for a in r["achados"][:6]:
         linhas.append(f"   {a['agente']}: {a['descricao']} — "
                       f"{a['razao']:.2f}x o acaso, q={a['q']:.3f}, n={a['n']}")
+        # de qual teoria DELE este cacador saiu. Sem isto, o achado e uma
+        # afirmacao sem procedencia -- e ele cobrou exatamente isso:
+        # "todas ias devem aprender tudo que eu ditos nestes 3 pdfs".
+        try:
+            from .fonte_cacadores import texto_teoria
+            t = texto_teoria(a["agente"], jogo)
+            if t:
+                linhas.append(f"      ↳ teoria dele: {t[:88]}")
+        except Exception:
+            pass
     if r.get("candidatos"):
         linhas.append(f"   candidatos: {r['candidatos']}")
     return "\n".join(linhas)

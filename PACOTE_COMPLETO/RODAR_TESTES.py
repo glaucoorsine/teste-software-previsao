@@ -43,6 +43,7 @@ TESTES = [
     ("test_biblioteca.py", "BIBLIOTECA_OK", 300, 1),
     ("test_especialistas.py", "ESPECIALISTAS_OK", 600, 30),
     ("test_inteligencias.py", "INTELIGENCIAS_OK", 600, 6),
+    ("test_fonte_cacadores.py", "FONTE_CACADORES_OK", 300, 1),
     ("test_multiplicador.py", "MULTIPLICADOR_OK", 900, 2),
     ("test_autopsia.py", "AUTOPSIA_OK", 200, 1),
     ("test_publico.py", "PUBLICO_OK", 200, 1),
