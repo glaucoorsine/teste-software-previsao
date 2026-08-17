@@ -165,13 +165,38 @@ def fetch_tracksino(jogo: str, per_page: int = 50) -> Tuple[List[dict], Optional
         for it in items:
             if not isinstance(it, dict):
                 continue
-            # formatos possíveis
-            n = it.get("result") or it.get("number") or it.get("slot_result") or it.get("segment")
-            if n is None and isinstance(it.get("raw"), dict):
-                n = it["raw"].get("result") or it["raw"].get("slot_result")
+            # O ZERO DA ROLETA SUMIA NESTA CADEIA DE `or`.
+            #
+            # `it.get("result") or it.get("number") or ...` parece "pega o
+            # primeiro campo que existir", mas não é isso que o `or` faz: ele
+            # pega o primeiro campo VERDADEIRO. E o inteiro `0` é falso em
+            # Python.
+            #
+            # Então todo giro que caiu no zero pulava para o campo seguinte e,
+            # não achando nenhum, era descartado com `continue`. A casa verde
+            # simplesmente não existia nesta fonte — e ela é a única casa da
+            # roleta que não tem cor nem paridade, então some sem deixar
+            # buraco visível na sequência.
+            #
+            # `_primeiro` compara com None, que é a pergunta certa: o campo
+            # está presente?
+            def _primeiro(origem, *chaves):
+                if not isinstance(origem, dict):
+                    return None
+                for c in chaves:
+                    v = origem.get(c)
+                    if v is not None and v != "":
+                        return v
+                return None
+
+            n = _primeiro(it, "result", "number", "slot_result", "segment")
+            if n is None:
+                n = _primeiro(it.get("raw"), "result", "slot_result",
+                              "number", "segment")
             if n is None:
                 continue
-            settled = it.get("finalized_at") or it.get("time") or it.get("created_at") or it.get("settledAt")
+            settled = _primeiro(it, "finalized_at", "time", "created_at",
+                                "settledAt")
             rows.append({"n": n, "settled": settled, "tags": [], "origem": "tracksino"})
         return rows, None
     except Exception as e:

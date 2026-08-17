@@ -957,6 +957,36 @@ def capturar(
         except Exception:
             salvos = []
         if not salvos:
+            # DESISTIR AQUI ERA DESISTIR ANTES DAS FONTES ALTERNATIVAS.
+            #
+            # Este `return` acontece quando as duas APIs falharam, o HTML
+            # falhou e o buffer está vazio. Só que as fontes externas
+            # (`capturar_multi_fonte`: bases_estudo, tracksino, HTML de
+            # terceiros) só são consultadas MUITO mais abaixo nesta função --
+            # e este retorno passa por cima delas.
+            #
+            # O caso em que isso importa é exatamente o pior: mesa NOVA, sem
+            # buffer nenhum. É a situação da Crazy Time A. Enquanto ela não
+            # tivesse um único giro salvo, as fontes alternativas nunca seriam
+            # tentadas -- e sem elas ela nunca teria o primeiro giro. Um nó:
+            # precisa de dado para ir buscar dado.
+            try:
+                from fontes_externas import capturar_multi_fonte
+                _ex = capturar_multi_fonte(dataset_id, max_total=120) or {}
+                _lin = _purge_invalid(list(_ex.get("rows") or []), dataset_id)
+            except Exception as _e:
+                engolido("fluxo_captura/socorro_externo", _e)
+                _lin = []
+            if _lin:
+                _mx = []
+                for _e2 in _lin:
+                    _mx.extend(_mults_do_evento(_e2))
+                merge(buffer_path(dataset_id), dataset_id, _lin,
+                      max_keep=MAX_GIROS_BUFFER)
+                return {"rows": _lin, "novo_head": True,
+                        "head_id": _lin[0].get("event_id"),
+                        "err": err, "mults": _mx, "offline": True,
+                        "fonte": "externa"}
             return {"rows": [], "novo_head": False, "head_id": None,
                     "err": err, "mults": []}
         rows_off, mults_off = [], []

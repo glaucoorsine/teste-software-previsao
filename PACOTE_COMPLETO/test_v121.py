@@ -32,6 +32,7 @@ os.environ.setdefault("LAB_MEMORIA_DIR",
 
 
 import random
+import re
 import sys
 import threading
 from pathlib import Path
@@ -493,6 +494,106 @@ import fluxo_captura as _F2  # noqa: E402
 
 checa("engolido" in (RAIZ / "fluxo_captura.py").read_text(encoding="utf-8"),
       "e o caminho da captura usa isso — era lá que o dado morria calado")
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n[15] os pontos que ele auditou na v120")
+
+# a CENTRAL DAS IAS nao abria: ("Immersive") e string, nao tupla
+_ci = (RAIZ / "central_ias.py").read_text(encoding="utf-8")
+# a checagem tem de olhar o CODIGO, nao o comentario: a explicacao do defeito
+# cita `("Immersive")` de proposito, e procurar a string casaria com ela
+_par = re.search(r"for j, lab in \[(.*?)\]:", _ci, re.S)
+checa(_par is not None, "e o laço das mesas continua lá")
+if _par:
+    _itens = eval("[" + _par.group(1) + "]")          # noqa: S307 (texto nosso)
+    checa(all(isinstance(x, tuple) and len(x) == 2 for x in _itens),
+          "todos os itens são pares (jogo, rótulo)", _itens)
+    checa({x[0] for x in _itens} == {"mega_fire", "lightning", "crazy_time",
+                                     "crazy_time_a"},
+          "e são as quatro mesas que sobraram", _itens)
+
+# a Crazy Time A ganhou janela e o ABRIR_TUDO não chama arquivo apagado
+checa((RAIZ / "crazy_time_a_combo.py").is_file(),
+      "a Crazy Time A tem janela avulsa")
+checa((RAIZ / "7_INICIAR_CRAZY_TIME_A.bat").is_file(), "e atalho próprio")
+_ab = (RAIZ / "ABRIR_TUDO.bat").read_text(encoding="utf-8")
+# so as linhas que EXECUTAM: as `rem` explicam o defeito e citam o nome antigo
+_exec = [l for l in _ab.splitlines()
+         if l.strip().lower().startswith("start ")]
+checa(not any("immersive_combo.py" in l for l in _exec),
+      "ABRIR_TUDO não executa mais o arquivo apagado", _exec)
+checa(any("crazy_time_a_combo.py" in l for l in _exec),
+      "e abre a Crazy Time A", _exec)
+checa(len(_exec) >= 6, "as quatro mesas mais academia e central", len(_exec))
+
+# o número da tela vem do Caçador, não de `alvos` (que sombra, LSTM, piso de
+# 53% e active_selection modificam)
+_ia = (RAIZ / "ia_modulos.py").read_text(encoding="utf-8")
+checa("pad_ui = [str(x) for x in self._cacador_consenso][:self.k_max]" in _ia,
+      "pad_ui lê o consenso do Caçador direto")
+checa("not (CACADOR_DECIDE and getattr(self, \"_cacador_consenso\", None))" in _ia,
+      "e o piso de 53% não completa a lista dele com voto alheio")
+checa("2026.08.17-v121" in _ia,
+      "a versão do pipeline marca a mudança de quem decide")
+
+# o teste não escreve nos arquivos reais
+checa(os.environ.get("LAB_MEMORIA_DIR"),
+      "o teste tem pasta de memória própria", os.environ.get("LAB_MEMORIA_DIR"))
+checa("LAB_MEMORIA_DIR" in _ia, "e o motor respeita essa pasta")
+checa(not list(RAIZ.glob("memoria_*.json")),
+      "nenhuma memória real foi criada por este teste",
+      [p.name for p in RAIZ.glob("memoria_*.json")])
+
+# Crazy Time com `result` escalar não some
+_r5 = F.parse_items_ct([{"data": {"result": "5",
+                                  "settledAt": "2026-08-17T10:00:00Z"}}])
+checa([x["n"] for x in _r5] == ["5"],
+      "result escalar vira giro (antes o AttributeError comia o giro)", _r5)
+_rs = F.parse_items_ct([{"data": {"result": "CoinFlip",
+                                  "settledAt": "2026-08-17T10:01:00Z"}}])
+checa([x["n"] for x in _rs] == ["CoinFlip"], "e o símbolo também", _rs)
+
+# top slot que NÃO bateu não marca multiplicador pago
+_miss = F.parse_items_ct([{"data": {"result": {"outcome": {
+    "wheelResult": {"wheelSector": "1"},
+    "topSlot": {"sector": "CoinFlip", "multiplier": 50}}},
+    "settledAt": "2026-08-17T10:02:00Z"}}])
+_tags_miss = _miss[0]["tags"] if _miss else []
+checa(not any("x" in t and "top" not in t for t in _tags_miss),
+      "top slot que não bateu não vira multiplicador pago", _tags_miss)
+checa(any("top" in t for t in _tags_miss),
+      "mas o sorteio fica registrado", _tags_miss)
+
+# giro não entra duas vezes quando não há envelope `data`
+_dup = F.parse_items_roulette([{"results": [
+    {"number": 7, "settledAt": "2026-08-17T10:00:00Z"},
+    {"number": 12, "settledAt": "2026-08-17T10:01:00Z"}]}])
+checa([x["n"] for x in _dup] == [7, 12],
+      "cada giro entra uma vez só", [x["n"] for x in _dup])
+
+# o Trackpot é a fonte alternativa das Crazy Time e descartava os bônus
+import coletor_sites as CS  # noqa: E402
+
+checa(CS._simbolo_ct({"result": "CoinFlip"}) == "CoinFlip",
+      "o Trackpot lê os símbolos de bônus")
+checa(CS._simbolo_ct({"raw": {"slot_result": "crazy time"}}) == "CrazyBonus",
+      "inclusive por apelido e aninhado")
+checa(CS._num({"result": 0}) == 0, "e o zero da roleta continua entrando")
+
+# o zero perdido pela cadeia de `or` nas fontes externas
+_fe = (RAIZ / "fontes_externas.py").read_text(encoding="utf-8")
+checa('n = it.get("result") or it.get("number")' not in _fe,
+      "fontes_externas não usa mais `or` para escolher campo (o 0 é falso)")
+
+# o fallback offline monta mults pela MESMA regra do caminho online
+checa("_mults_do_evento" in (RAIZ / "fluxo_captura.py").read_text(encoding="utf-8"),
+      "uma regra só para montar o anúncio, usada nos dois caminhos")
+_ev_off = {"n": 20, "tags": [{"x": 500}, {"lucky": [{"n": 20, "x": 500}]},
+                             {"fire_nums": [{"n": 12, "x": 50}]}]}
+_mm = F._mults_do_evento(_ev_off)
+checa(len(_mm) == 2, "sem contar o mesmo prêmio duas vezes", _mm)
+checa(any(m["n"] == 12 for m in _mm),
+      "e o anúncio que não pagou também entra", _mm)
 
 print()
 if falhas:

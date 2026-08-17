@@ -130,6 +130,44 @@ CAMPOS_TEMPO = ("finalized_at", "observed_at", "time_spin_stop", "timestamp",
                 "occured_at", "occurred_at", "created_at", "settled_at")
 
 
+# OS SIMBOLOS DE BONUS DO CRAZY TIME SUMIAM NESTA FONTE.
+#
+# `_num` so aceitava inteiro de 0 a 36. Para a roleta isso esta certo. Mas o
+# trackpotapi e a fonte ALTERNATIVA das duas Crazy Time -- e la o resultado e
+# "CoinFlip", "CashHunt", "Pachinko", "CrazyBonus". `int("CoinFlip")` estoura,
+# o giro e' descartado, e sobram so os setores numericos.
+#
+# O estrago nao e' perder alguns giros: e' perder JUSTAMENTE os bonus, que sao
+# o que ele quer prever. E a sequencia que sobra fica falsa -- parece que a
+# mesa so da 1, 2, 5 e 10, e todo estudo de intervalo e seca em cima disso
+# mede um historico que nunca existiu.
+CT_SIMBOLOS = {"1", "2", "5", "10",
+               "CoinFlip", "CashHunt", "Pachinko", "CrazyBonus"}
+CT_ALIAS = {"coinflip": "CoinFlip", "coin flip": "CoinFlip",
+            "cashhunt": "CashHunt", "cash hunt": "CashHunt",
+            "pachinko": "Pachinko", "crazybonus": "CrazyBonus",
+            "crazy bonus": "CrazyBonus", "crazytime": "CrazyBonus",
+            "crazy time": "CrazyBonus", "bonus": "CrazyBonus"}
+
+
+def _simbolo_ct(row: dict):
+    """O setor do Crazy Time, como TEXTO -- que e o que o motor da mesa espera."""
+    raw = row.get("raw") if isinstance(row.get("raw"), dict) else {}
+    raw2 = raw.get("raw") if isinstance(raw.get("raw"), dict) else {}
+    for fonte in (row, raw, raw2):
+        for c in ("result", "slot_result", "sector", "wheelSector", "segment",
+                  "number", "outcome"):
+            v = fonte.get(c)
+            if v is None or v == "":
+                continue
+            s = str(v).strip()
+            baixo = s.lower().replace("_", " ")
+            s = CT_ALIAS.get(baixo, CT_ALIAS.get(baixo.replace(" ", ""), s))
+            if s in CT_SIMBOLOS:
+                return s
+    return None
+
+
 def _num(row: dict) -> Optional[int]:
     """O número sorteado. A cascata é a mesma que o site usa no getNumber()."""
     raw = row.get("raw") if isinstance(row.get("raw"), dict) else {}
@@ -210,7 +248,7 @@ def buscar_sequencia(jogo: str) -> Tuple[List[dict], Optional[str]]:
         return [], "biblioteca requests ausente"
     tentativas = []
     for url in urls:
-        linhas, aviso = _uma_sequencia(url)
+        linhas, aviso = _uma_sequencia(url, jogo)
         if linhas:
             _lembrar(f"{jogo}:seq", url)
             return linhas, aviso
@@ -218,7 +256,7 @@ def buscar_sequencia(jogo: str) -> Tuple[List[dict], Optional[str]]:
     return [], "nenhum endereço respondeu — " + " | ".join(tentativas[:4])
 
 
-def _uma_sequencia(url: str) -> Tuple[List[dict], Optional[str]]:
+def _uma_sequencia(url: str, jogo: str = "") -> Tuple[List[dict], Optional[str]]:
     try:
         r = requests.get(url, params=PARAMS_SEQ, headers=CABECALHO,
                          timeout=TIMEOUT)
@@ -246,7 +284,8 @@ def _uma_sequencia(url: str) -> Tuple[List[dict], Optional[str]]:
     for it in itens:
         if not isinstance(it, dict):
             continue
-        n = _num(it)
+        # a mesa manda: no Crazy Time o setor e texto e inclui os bonus
+        n = _simbolo_ct(it) if str(jogo).startswith("crazy_time") else _num(it)
         q = _quando(it)
         if n is None:
             continue
