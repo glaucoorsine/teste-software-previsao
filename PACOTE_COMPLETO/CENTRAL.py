@@ -49,15 +49,13 @@ from tela_segura import depois  # after que nao quebra ao fechar a janela
 RAIZ = Path(__file__).resolve().parent
 PASTA = RAIZ / "Logs"
 LOG = PASTA / "central_log.txt"
-JOGOS = [("lightning", "Lightning"), ("mega_fire", "Mega Fire"),
-         ("immersive", "Immersive"), ("crazy_time", "Crazy Time"),
+JOGOS = [("lightning", "Lightning"), ("mega_fire", "Mega Fire"), ("crazy_time", "Crazy Time"),
          ("crazy_time_a", "Crazy Time A")]
 
 # Mesmo arquivo que o combo daquela mesa usa: o placar que ele já acumulou
 # continua de onde parou, em vez de zerar por trocar de janela.
 ESTADO = {"lightning": "lightning_combo_state.json",
           "mega_fire": "mega_fire_combo_state.json",
-          "immersive": "immersive_combo_state.json",
           "crazy_time": "crazy_time_state.json",
           "crazy_time_a": "crazy_time_a_state.json"}
 

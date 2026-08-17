@@ -65,7 +65,6 @@ TIMEOUT = 25
 BASE_TRACKPOT = "https://api.trackpotapi.com/api/trackersino/{}/history"
 SEQUENCIA = {
     "lightning": [BASE_TRACKPOT.format("lightningroulette")],
-    "immersive": [BASE_TRACKPOT.format("immersive-roulette")],
     "mega_fire": [BASE_TRACKPOT.format(s) for s in (
         "mega-fire-blaze-roulette", "megafireblazeroulette",
         "mega-fire-blaze", "megafireblaze", "fire-blaze-roulette")],
@@ -88,8 +87,6 @@ PARAMS_SEQ = {"window": "72h", "limit": 1000}
 AGREGADOS = {
     "lightning": ["https://www.tracksino.com/lightning-roulette"],
     "crazy_time": ["https://www.tracksino.com/crazytime"],
-    "immersive": ["https://www.tracksino.com/immersive-roulette",
-                  "https://www.tracksino.com/immersiveroulette"],
     "mega_fire": ["https://www.tracksino.com/mega-fire-blaze-roulette",
                   "https://www.tracksino.com/megafireblazeroulette"],
     "crazy_time_a": ["https://www.tracksino.com/crazytimea",

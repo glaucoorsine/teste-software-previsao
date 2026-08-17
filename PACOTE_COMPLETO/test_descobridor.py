@@ -63,7 +63,8 @@ checa("immersive" in gr, "tira 'roulette' quando ele some do slug", gr)
 checa("immersive-roulette" in gr, "e mantém a versão com ele", gr)
 checa(D.grafias("") == [], "nome vazio não gera nada")
 
-for jogo, minimo in (("crazy_time_a", 40), ("immersive", 8), ("mega_fire", 20)):
+for jogo, minimo in (("crazy_time_a", 40), ("mega_fire", 20),
+                     ("lightning", 8), ("crazy_time", 8)):
     n = len(D.candidatos(jogo))
     checa(n >= minimo, f"{jogo}: {n} endereços a experimentar", n)
 checa(D.candidatos("mesa_que_nao_existe") == [],
@@ -167,7 +168,7 @@ print("\n[5] o coletor conhece todas as mesas")
 
 # Esta era metade do problema e passou semanas invisível: eu mexia na lista do
 # `fluxo_captura` e não reparava que a FONTE ALTERNATIVA não conhecia a mesa.
-MESAS = ("mega_fire", "lightning", "immersive", "crazy_time", "crazy_time_a")
+MESAS = ("mega_fire", "lightning", "crazy_time", "crazy_time_a")
 for m in MESAS:
     checa(m in C.SEQUENCIA, f"coletor tem sequência para {m}",
           sorted(C.SEQUENCIA))

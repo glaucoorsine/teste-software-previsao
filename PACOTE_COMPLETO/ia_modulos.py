@@ -1572,6 +1572,24 @@ class MetaSupervisora:
 # PARA VOLTAR ATRÁS: troque para False nesta linha e pronto. Nada foi apagado;
 # as guardas continuam escritas logo abaixo e voltam a valer inteiras. Rode o
 # RESULTADO.bat antes e depois para comparar as duas com o mesmo critério.
+# O CACADOR DE MULTIPLICADOR DECIDE SOZINHO, SEM REGUA.
+#
+#     "deixar somente o Cacador de Multiplicador escolhendo os numeros para
+#      todos os jogos, sem regua para ele"
+#
+# Decisao dele, tomada com dado na mao: foi o Cacador que ele viu acertando
+# ("o cacador de multiplicador esta acertando bastante"), e as 18 previsoes
+# reais da maquina dele deram 8 acertos contra acaso de 22,2%.
+#
+# Com isto ligado, os numeros da tela saem DIRETO das sete IAs de
+# multiplicador. Nao passam pelo consenso, nem pelo minimo de vozes
+# independentes, nem pelo corte por apoio, nem por nenhum gate meu. Ele foi
+# explicito: sem regua para ele.
+#
+# O resto continua sendo calculado e aparecendo no log -- as leituras do
+# Tratado, os especialistas, a academia. Elas informam, mas nao mandam mais.
+CACADOR_DECIDE = True
+
 CONSENSO_PURO = True
 
 # QUANTAS VOZES INDEPENDENTES ABREM UMA JANELA.
@@ -1803,6 +1821,11 @@ class PipelinePerceptivo:
         self.prefs = {"peso_isol":1.0,"boost_anti":False,"prioritizar_atraso":False,"reduzir_12":False,"janela":None}
 
     def processar(self, historico, ok, err, settled=None, mults=None, last_result=None, active_selection=None, linhas=None):
+        # zera o palpite do Cacador a cada volta: sem isto ele repetiria o da
+        # volta anterior quando a captura nao trouxesse linhas, e a tela
+        # mostraria numero velho como se fosse novo
+        self._cacador_consenso = []
+        self._cacador_por_ia = {}
         t0=time.time(); msgs=[]
         # limiar nunca permanece inflado de sessões antigas
         try:
@@ -2481,6 +2504,9 @@ class PipelinePerceptivo:
                     tem_multiplicador as _tem_mult)
                 if _tem_mult(self.jogo):
                     _pm = _prev_mult(self.jogo, linhas)
+                    # guardado para a escolha final quando CACADOR_DECIDE
+                    self._cacador_consenso = list(_pm.get("consenso") or [])
+                    self._cacador_por_ia = dict(_pm.get("por_ia") or {})
                     _med = (_medir_mult(self.jogo, linhas) or {}).get("por_ia") or {}
                     for _nome, _palpite in (_pm.get("por_ia") or {}).items():
                         if not _palpite:
@@ -2671,6 +2697,30 @@ class PipelinePerceptivo:
         # Medido no histórico dele: o gatilho ABRIA ("consenso sozinho — 3
         # números com ≥2 teorias concordando") e morria na linha seguinte, em
         # 160 de 160 voltas. Zero sugestões em todo o histórico.
+        # ═══ O CACADOR DECIDE, SEM REGUA ═══════════════════════════════
+        #
+        #     "deixar somente o Cacador de Multiplicador escolhendo os numeros
+        #      para todos os jogos, sem regua para ele"
+        #
+        # Aqui os numeros da tela passam a sair direto das sete IAs de
+        # multiplicador. Nao ha consenso, nem minimo de vozes independentes,
+        # nem corte por apoio, nem gate meu de especie nenhuma -- ele foi
+        # explicito.
+        #
+        # Tudo o mais continua rodando e aparecendo no log. Informa, nao manda.
+        if CACADOR_DECIDE:
+            _cc = list(getattr(self, "_cacador_consenso", []) or [])
+            if _cc:
+                alvos = _cc[:self.k_max]
+                modo = "CACADOR"
+                msgs.append(f"[Caçador decide] {' '.join(str(x) for x in alvos)}"
+                            f"  — sem régua, por ordem dele")
+            elif self.jogo != "immersive":
+                msgs.append("[Caçador decide] sem palpite do Caçador nesta "
+                            "volta — a tela fica sem número em vez de cair "
+                            "para outra fonte")
+                alvos = []
+
         sombra_alvos = list(alvos) if alvos else []
         if (modo == "GATILHO_OK" and conf < self.lstm.limiar
                 and not via_consenso and not CONSENSO_PURO):
@@ -2894,7 +2944,13 @@ class PipelinePerceptivo:
             modo_out = "OPERAR"
             msgs.append(f"[Conservador] OPERAR k={len(alvos)} janela≤{janela_base} conf={conf:.3f}")
         elif pode_sombra:
-            alvos = list(cand_sombra)[:self.k_alvos]
+            # O CACADOR NAO E TROCADO PELA SOMBRA.
+            #
+            # `cand_sombra` e a lista alternativa que o modo de observacao usa.
+            # Com CACADOR_DECIDE ligado, trocar os numeros dele por outra lista
+            # e regua -- e ele mandou que nao houvesse regua para o Cacador.
+            if not (CACADOR_DECIDE and getattr(self, "_cacador_consenso", None)):
+                alvos = list(cand_sombra)[:self.k_alvos]
             modo_out = "SOMBRA"
             status_op = "SOMBRA"
             fase = "aquecimento" if rel_n < MIN_JANELAS_METRICAS else "monitor"
@@ -3064,7 +3120,18 @@ class PipelinePerceptivo:
         # nunca foi o aviso — era o momento certo não chegar nunca, porque
         # nenhuma teoria votava e o caminho do consenso não podia abrir.
         # Conserta-se o gatilho, não a etiqueta.)
-        if _modo_final == "JANELA_ATIVA":
+        if CACADOR_DECIDE and getattr(self, "_cacador_consenso", None):
+            # SEM REGUA: o numero do Cacador vai para a tela em qualquer modo.
+            #
+            # Este bloco e a ultima regua do caminho -- ele segurava a saida
+            # ate o consenso "merecer" aparecer, e era ele que deixava a tela
+            # vazia mesmo com o Cacador tendo palpite. Medido: o Cacador
+            # apontava 16 24 5 20 1 31 e a tela mostrava nada.
+            #
+            # Ele decidiu que o Cacador escolhe sozinho e sem regua. Entao a
+            # unica condicao aqui e ter palpite.
+            pad_ui = list(alvos)[:self.k_max]
+        elif _modo_final == "JANELA_ATIVA":
             pad_ui = list(alvos)
         elif _modo_final == "OPERAR" and _status == "OPERAR":
             pad_ui = list(alvos)

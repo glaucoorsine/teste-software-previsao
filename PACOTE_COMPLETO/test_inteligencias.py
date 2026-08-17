@@ -179,12 +179,12 @@ print("\n[4b] cada leitura diz de qual formulação dele saiu")
 # O indice destilado e versionado justamente para isto sobreviver ao container
 # ser apagado -- ja aconteceu tres vezes, e o software voltava sem saber nada.
 falou = 0
-for jogo in ("mega_fire", "lightning", "immersive", "crazy_time", "crazy_time_a"):
+for jogo in ("mega_fire", "lightning", "crazy_time", "crazy_time_a"):
     for ia, _f, _d, _x in T.INTELIGENCIAS:
         c = T.texto_citacao(ia, jogo)
         if c:
             falou += 1
-checa(falou >= 50, "as onze citam formulação nas cinco mesas", falou)
+checa(falou >= 40, "as onze citam formulação nas quatro mesas", falou)
 
 fs = T.citar("IA01_TEMPO", "mega_fire", 3)
 checa(fs and all(u.get("ia") == "IA01" for u in fs),

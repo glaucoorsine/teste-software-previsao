@@ -24,7 +24,6 @@ SNAP_DIR.mkdir(parents=True, exist_ok=True)
 API_BY_GAME = {
     "mega_fire": "https://api-cs.casino.org/svc-evolution-game-events/api/megafireblazeroulette",
     "lightning": "https://api-cs.casino.org/svc-evolution-game-events/api/lightningroulette",
-    "immersive": "https://api-cs.casino.org/svc-evolution-game-events/api/immersiveroulette",
     "crazy_time": "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime",
     # Crazy Time A e uma segunda mesa do mesmo jogo. O nome no endpoint nao
     # da para adivinhar daqui, entao a lista abaixo e tentada em ordem e a
@@ -63,10 +62,6 @@ API_BY_GAME = {
 # Agora TODAS as mesas tem alternativa. Se a primeira nao responder, cai para
 # a outra e grava qual funcionou.
 API_ALTERNATIVAS = {
-    "immersive": [
-        "https://api.trackpotapi.com/api/trackersino/immersive-roulette/history",
-        "https://api.trackpotapi.com/api/trackersino/immersiveroulette/history",
-    ],
     "lightning": [
         "https://api.trackpotapi.com/api/trackersino/lightningroulette/history",
         "https://api.trackpotapi.com/api/trackersino/lightning-roulette/history",
@@ -145,7 +140,6 @@ def fonte_lembrada(dataset_id: str):
 # sao pagina HTML (mais fragil, e ja levou 403 de Cloudflare), mas existir como
 # reserva e melhor que a mesa morrer com tres fontes disponiveis.
 FONTES_HTML = {
-    "immersive": "https://gamblingcounting.com/immersive-roulette",
     "lightning": "https://gamblingcounting.com/lightning-roulette",
     "mega_fire": "https://gamblingcounting.com/roulette",
     "crazy_time": "https://gamblingcounting.com/crazy-time",

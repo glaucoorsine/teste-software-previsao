@@ -39,7 +39,7 @@ def checa(cond, nome, detalhe=""):
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n[1] o domínio de cada mesa — sem ele o filtro apaga tudo")
 
-MESAS = ("mega_fire", "lightning", "immersive", "crazy_time", "crazy_time_a")
+MESAS = ("mega_fire", "lightning", "crazy_time", "crazy_time_a")
 for m in MESAS:
     checa(m in DOMAIN, f"{m} tem domínio declarado", sorted(DOMAIN))
     checa(bool(DOMAIN.get(m)), f"  e o domínio não é vazio", DOMAIN.get(m))

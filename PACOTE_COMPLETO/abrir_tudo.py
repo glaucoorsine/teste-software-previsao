@@ -13,7 +13,6 @@ MODULOS = [
     ("mega_fire_combo.py", 0.8),
     ("lightning_combo.py", 0.8),
     ("crazy_time_combo.py", 0.8),
-    ("immersive_combo.py", 0.8),
     ("assistente_ia.py", 0.8),
     ("central_ias.py", 0.5),
 ]

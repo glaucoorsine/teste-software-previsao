@@ -25,7 +25,6 @@ CT = {"1", "2", "5", "10", "CoinFlip", "CashHunt", "Pachinko", "CrazyBonus"}
 DOMAIN = {
     "mega_fire": ROULETTE,
     "lightning": ROULETTE,
-    "immersive": ROULETTE,
     "crazy_time": CT,
     "crazy_time_a": CT,
 }

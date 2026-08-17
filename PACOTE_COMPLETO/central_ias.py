@@ -23,7 +23,7 @@ class CentralIAs(ctk.CTk):
         top = ctk.CTkFrame(self); top.pack(fill="x", padx=10, pady=8)
         ctk.CTkLabel(top, text="CENTRAL DAS IAS", font=("Arial", 22, "bold"), text_color="#38bdf8").pack(side="left", padx=8)
         ctk.CTkLabel(top, text=f"Somente leitura — pesquisa pelo academia_servico | {PROTOCOLO}", text_color="#a3a3a3").pack(side="left", padx=8)
-        for j, lab in [("mega_fire","Mega"),("lightning","Lightning"),("crazy_time","Crazy Time"),("immersive","Immersive")]:
+        for j, lab in [("mega_fire","Mega"),("lightning","Lightning"),("crazy_time","Crazy Time"),("Immersive")]:
             ctk.CTkRadioButton(top, text=lab, variable=self.jogo, value=j, command=self.refresh_all).pack(side="left", padx=6)
         ctk.CTkButton(top, text="Atualizar", width=90, command=self.refresh_all).pack(side="right", padx=4)
         ctk.CTkButton(top, text="Rodar tribunal", width=110, fg_color="#b45309",

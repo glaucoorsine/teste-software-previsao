@@ -167,7 +167,7 @@ checa(recebido and "🔥" in recebido[0]["corpo"],
       recebido and recebido[0]["corpo"])
 recebido.clear()
 notificador._ultimo.update({"quando": 0.0, "texto": ""})
-notificador.notificar_sinal("immersive", [4, 9, 17], janela=5,
+notificador.notificar_sinal("lightning", [4, 9, 17], janela=5,
                             multiplicador="")
 esperar_fila()
 checa(recebido and "🔥" not in recebido[0]["corpo"],

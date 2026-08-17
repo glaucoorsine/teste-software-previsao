@@ -46,7 +46,6 @@ RAIZ = Path(__file__).resolve().parent
 TIMEOUT = 20
 
 PAGINAS = {
-    "immersive": "https://gamblingcounting.com/immersive-roulette",
     "lightning": "https://gamblingcounting.com/lightning-roulette",
     "mega_fire": "https://gamblingcounting.com/roulette",
     "crazy_time": "https://gamblingcounting.com/crazy-time",
@@ -58,7 +57,6 @@ PAGINAS = {
 PICO = {
     "mega_fire": 800,
     "lightning": 800,
-    "immersive": 800,
     "crazy_time": 13000,
     "crazy_time_a": 13000,
 }

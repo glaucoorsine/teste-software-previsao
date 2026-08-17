@@ -251,7 +251,7 @@ checa("AGUARDANDO" in m4.faixa.cfg.get("text", ""), "faixa diz AGUARDANDO",
 checa(all(b.cfg.get("text") == "—" for b in m4.caixas), "caixas vazias")
 
 print("\n[7] sinal novo não atropela janela aberta")
-m5 = MesaFalsa("immersive")
+m5 = MesaFalsa("crazy_time_a")
 m5.escolhas, m5.restantes, m5.ultimas_escolhas = [1, 2], 2, [1, 2]
 m5._aplicar({"pad5": [30, 31, 32], "modo": "OPERAR", "janela": 4},
             [{"n": 7, "settled": "w"}])
@@ -286,7 +286,7 @@ checa("acertos 9" in alvo_num and "erros 21" in alvo_num,
 checa("30%" in alvo_num, "e a taxa deles", alvo_num)
 checa(m7.placar.cfg.get("text") != alvo_num,
       "não é o mesmo texto do placar de janelas")
-zerado = MesaFalsa("immersive")
+zerado = MesaFalsa("crazy_time_a")
 zerado.ok_num = zerado.err_num = 0
 checa("acertos 0" in zerado._texto_numeros(),
       "com zero giros ainda aparece, em vez de sumir",
@@ -521,10 +521,10 @@ for nome in ("Fontes", "Progresso"):
 
 print("\n[19] eco de janela já fechada não vira aposta nova")
 # aponta a mesa para o arquivo de teste: sem isso ela carrega o estado REAL
-# do immersive, que pode ter janela aberta, e o teste mede outra coisa
-CENTRAL.ESTADO["immersive"] = "teste_central_state.json"
+# da mesa real, que pode ter janela aberta, e o teste mede outra coisa
+CENTRAL.ESTADO["crazy_time_a"] = "teste_central_state.json"
 alvo.unlink(missing_ok=True)
-me = MesaFalsa("immersive")
+me = MesaFalsa("crazy_time_a")
 me._aplicar({"pad5": ["29", "24"], "modo": "OPERAR", "janela": 3},
             [{"n": 7, "settled": "e0"}])
 checa(me.escolhas == ["29", "24"], "a decisão real abre a janela", me.escolhas)
@@ -574,9 +574,9 @@ checa(not CENTRAL.esta_na_aposta(7, []), "sem aposta, não há acerto")
 checa(not CENTRAL.esta_na_aposta(7, None), "aposta nula não quebra")
 
 print("\n[20b] a janela da roleta agora fecha como acerto")
-CENTRAL.ESTADO["immersive"] = "teste_central_state.json"
+CENTRAL.ESTADO["crazy_time_a"] = "teste_central_state.json"
 alvo.unlink(missing_ok=True)
-mt = MesaFalsa("immersive")
+mt = MesaFalsa("crazy_time_a")
 # exatamente o caso do log: aposta em texto, giro em inteiro
 mt._aplicar({"pad5": ["29", "24"], "modo": "OPERAR", "janela": 3},
             [{"n": 7, "settled": "t0"}])
@@ -697,11 +697,17 @@ checa(k_para_alvo(5, ALVO_ACERTO_JANELA, 37, 10) == 6,
 checa(k_para_alvo(3, ALVO_ACERTO_JANELA, 37, 10) == 9,
       "janela de 3, por ser curta, precisa de 9")
 
-print("\n[24] o fogo do multiplicador -- e a immersive sem ele")
-mi = MesaFalsa("immersive")
+print("\n[24] o fogo do multiplicador")
+# A Immersive era a mesa sem multiplicador, e saiu do software por decisao
+# dele. As quatro que sobraram TEM multiplicador, entao o que se cobra agora e
+# o contrario: marcado o numero, a linha de fogo aparece.
+mi = MesaFalsa("crazy_time_a")
 mi.marcados = ["4", "9"]
-checa(mi._texto_fogo() == "",
-      "immersive nao mostra linha de fogo nem se marcada", mi._texto_fogo())
+checa("4" in mi._texto_fogo() and "9" in mi._texto_fogo(),
+      "mesa com fogo mostra os numeros marcados", mi._texto_fogo())
+mi.marcados = []
+checa(mi._texto_fogo() == "", "e sem marcacao nao mostra nada",
+      mi._texto_fogo())
 m9.marcados = ["9", "21"]
 checa("🔥" in m9._texto_fogo() and "9" in m9._texto_fogo(),
       "mega fire mostra quais podem vir multiplicados", m9._texto_fogo())

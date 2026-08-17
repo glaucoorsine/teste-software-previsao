@@ -108,13 +108,13 @@ def test_concurrent_merge_keeps_both():
     print("OK concurrent both", refs)
 
 def test_nova_janela_all_modules():
-    for name in ["mega_fire_combo.py","lightning_combo.py","immersive_combo.py","crazy_time_combo.py"]:
+    for name in ["mega_fire_combo.py","lightning_combo.py","crazy_time_combo.py"]:
         s = (ROOT/name).read_text()
         assert "salvar_ciclo_ativo(GAME, self.escolhas, self.restantes, False" in s, name
     print("OK nova janela 4/4")
 
 def test_idle_returns_no_put():
-    for name in ["mega_fire_combo.py","lightning_combo.py","immersive_combo.py","crazy_time_combo.py"]:
+    for name in ["mega_fire_combo.py","lightning_combo.py","crazy_time_combo.py"]:
         s = (ROOT/name).read_text()
         assert "sem ciclo: só redesenha" in s or "NÃO consulta motor" in s
     print("OK idle")
@@ -133,20 +133,20 @@ def test_toda_mesa_tem_segunda_fonte():
     """Ele reparou: "possuem dois links de api, porque so esta no casino?"
 
     Tinha razao, e a prova estava no arquivo dele: fontes_descobertas.json ja
-    trazia o endereco do trackpot para immersive e lightning, descoberto pelo
+    trazia o endereco do trackpot para lightning, descoberto pelo
     coletor -- e o fluxo de captura nunca consultava, porque so o Crazy Time A
     tinha alternativa cadastrada. Quando o casino.org falhava, a mesa morria
     tendo uma segunda fonte ali do lado.
     """
     import fluxo_captura as F
-    for mesa in ("immersive", "lightning", "mega_fire", "crazy_time",
+    for mesa in ("lightning", "mega_fire", "crazy_time",
                  "crazy_time_a"):
         urls = F.enderecos_para(mesa)
         assert len(urls) >= 2, f"{mesa} so tem {len(urls)} endereco(s)"
         assert any("casino.org" in u for u in urls), mesa
         assert any("trackpot" in u for u in urls), f"{mesa} sem a segunda fonte"
     # a ordem importa: o principal vem primeiro, a alternativa e reserva
-    assert "casino.org" in F.enderecos_para("immersive")[0]
+    assert "casino.org" in F.enderecos_para("lightning")[0]
     print("  ok   as cinco mesas tem duas fontes, nao uma")
 
 
@@ -176,14 +176,14 @@ def test_links_dele_sao_fonte_de_captura():
     lidos por extrair_resultados() sem nunca chegar na captura.
     """
     import fluxo_captura as F
-    assert len(F.FONTES_HTML) == 5, F.FONTES_HTML
-    for mesa in ("immersive", "lightning", "mega_fire", "crazy_time",
+    assert len(F.FONTES_HTML) == 4, F.FONTES_HTML
+    for mesa in ("lightning", "mega_fire", "crazy_time",
                  "crazy_time_a"):
         assert mesa in F.FONTES_HTML, mesa
         assert "gamblingcounting.com" in F.FONTES_HTML[mesa]
     # mesa desconhecida nao inventa fonte
     assert F.capturar_html("mesa_que_nao_existe") == []
-    print("  ok   os cinco links dele sao fonte de captura, nao so contador")
+    print("  ok   os quatro links dele sao fonte de captura, nao so contador")
 
 
 def test_crazy_time_a_viva():

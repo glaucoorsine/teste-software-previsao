@@ -48,7 +48,6 @@ HISTORICO = RAIZ / "Logs" / "publico_mesa.json"
 ANCORAS: Dict[str, Dict[str, int]] = {
     "lightning":    {"alto": 800, "medio": 300},
     "mega_fire":    {"alto": 800, "medio": 300},
-    "immersive":    {"alto": 800, "medio": 300},
     "crazy_time":   {"alto": 13000, "medio": 6000},
     "crazy_time_a": {"alto": 13000, "medio": 6000},
 }

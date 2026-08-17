@@ -61,7 +61,7 @@ from NUCLEO import canal_anunciado as C  # noqa: E402
 from NUCLEO import leituras as L  # noqa: E402
 from NUCLEO import veto as V  # noqa: E402
 
-MESAS = ("mega_fire", "lightning", "immersive", "crazy_time", "crazy_time_a")
+MESAS = ("mega_fire", "lightning", "crazy_time", "crazy_time_a")
 DIARIO = RAIZ / "Logs" / "nucleo_previsoes.jsonl"
 
 

@@ -64,7 +64,6 @@ NOMES: Dict[str, List[str]] = {
     "mega_fire": ["Mega Fire Blaze Roulette", "Mega Fire Blaze",
                   "Fire Blaze Roulette"],
     "lightning": ["Lightning Roulette"],
-    "immersive": ["Immersive Roulette", "Immersive"],
     "crazy_time": ["Crazy Time"],
     "crazy_time_a": ["Crazy Time A", "Crazy Time 2", "Crazy Time A Live",
                      "Crazy Time Alt", "Crazy TimeA"],
