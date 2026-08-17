@@ -790,7 +790,22 @@ def snap_path(dataset_id: str) -> Path:
 
 # Nenhuma rodada ao vivo fecha em menos que isto: as mesas giram a 40-70s e
 # 20s e' folgado de proposito, para nao descartar giro legitimo em mesa rapida.
-MIN_SEG_RODADA = 20.0
+# QUANTO TEMPO SEPARA "O MESMO GIRO RELATADO DUAS VEZES" DE "O NUMERO REPETIU".
+#
+# Isto era 20 segundos, e 20 segundos come giro de verdade. O site dele mostra
+# quatro "1" seguidos entre 18:21 e 18:23 -- rodadas legitimas, com o mesmo
+# resultado, em menos de um minuto. O software apagava as repetidas e o
+# historico saia menor que o do site, que foi exatamente o que ele apontou.
+#
+# O problema que esta regra existe para resolver e outro e menor: o MESMO
+# evento relatado duas vezes com o carimbo deslocado em 1 segundo. Para isso
+# bastam poucos segundos. Vinte era eu resolvendo um problema de 1 segundo com
+# uma rede que pega tres rodadas.
+#
+# E o pior: repeticao e uma das coisas que o estudo MEDE. Apagar repeticao real
+# nao deixa o historico so mais curto -- deixa a medida de repeticao errada
+# para baixo, em silencio.
+MIN_SEG_RODADA = 5.0
 
 # De quantos em quantos ciclos vale bater nos sites. A fonte principal ja cobre
 # o giro a giro; os sites servem para o historico profundo, que nao muda a cada

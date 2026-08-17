@@ -489,6 +489,64 @@ def test_mega_fire_capta_multiplicador_sem_super_boost():
     print("  ok   mega fire capta multiplicador sem depender do super boost")
 
 
+def test_repeticao_real_nao_e_apagada():
+    """"olha o historico no site e o historico no software tambem".
+
+    O site dele mostra QUATRO "1" seguidos entre 18:21 e 18:23 -- rodadas
+    legitimas, mesmo resultado, em menos de dois minutos. O software apagava as
+    repetidas e o historico saia mais curto que o do site.
+
+    A regra existia para outro problema, menor: o MESMO evento relatado duas
+    vezes com o carimbo deslocado em 1 segundo. Para isso bastam poucos
+    segundos; a janela estava em VINTE, que pega tres rodadas de Crazy Time.
+
+    E o estrago nao e so o historico curto: REPETICAO e uma das coisas que o
+    estudo mede. Apagar repeticao real enviesa a medida para baixo, em silencio.
+    """
+    import fluxo_captura as F
+
+    def ev(sec, ts):
+        return {"n": sec, "valor": sec, "sec": sec, "settled": ts, "tags": []}
+
+    reais = [ev("1", "2026-08-17T18:21:05Z"), ev("1", "2026-08-17T18:22:10Z"),
+             ev("1", "2026-08-17T18:22:50Z"), ev("1", "2026-08-17T18:23:30Z")]
+    r = F._purge_invalid(reais, "crazy_time")
+    assert len(r) == 4, f"o site mostra 4 repeticoes; sobraram {len(r)}"
+
+    # e a duplicata de verdade continua sendo UM giro
+    dup = [ev("1", "2026-08-17T18:21:05Z"), ev("1", "2026-08-17T18:21:06Z")]
+    assert len(F._purge_invalid(dup, "crazy_time")) == 1, \
+        "o mesmo evento com 1s de deslocamento ainda tem que virar um giro so"
+
+    # na roleta tambem: dois 17 seguidos sao dois giros
+    rr = [ev("17", "2026-08-17T18:21:00Z"), ev("17", "2026-08-17T18:21:40Z")]
+    assert len(F._purge_invalid(rr, "lightning")) == 2, \
+        "dois 17 com 40s de diferenca sao dois giros"
+    assert F.MIN_SEG_RODADA <= 8, \
+        "a janela precisa ser curta: ela existe para 1s de deslocamento"
+    print("  ok   repeticao real sobrevive; duplicata de 1s continua sendo uma")
+
+
+def test_sonda_existe_e_nao_muda_nada():
+    """A sonda que acaba com o chute: le a API e grava, sem mexer em nada.
+
+    Eu nunca vi uma resposta destas APIs -- o proxy do meu ambiente nega
+    casino.org por politica. Cada campo que faltou eu ADIVINHEI, e cada palpite
+    virou uma versao com o mesmo defeito de outra cor. Esta sonda roda na
+    maquina dele, onde a API responde, e devolve a forma real.
+    """
+    fonte = (ROOT / "SONDA_MESAS.py").read_text(encoding="utf-8")
+    # nao pode escrever em nada do software em funcionamento
+    for proibido in ("_lembrar_fonte", "merge(", "salvar_ciclo_ativo",
+                     "gravar_json", "FONTES_OK"):
+        assert proibido not in fonte, \
+            f"a sonda nao pode mexer em {proibido} -- ela so le e relata"
+    assert "sonda_mesas.json" in fonte
+    assert "MAX_GIROS = 3" in fonte, "arquivo pequeno: e a FORMA que interessa"
+    assert (ROOT / "SONDA_MESAS.bat").is_file(), "e tem que ter um .bat"
+    print("  ok   a sonda le e relata, sem tocar no que esta rodando")
+
+
 if __name__ == "__main__":
     test_parser_legacy_and_lists()
     test_zero_purge()
@@ -506,4 +564,6 @@ if __name__ == "__main__":
     test_crazy_time_a_volta_depois_de_cair()
     test_identidade_do_endereco()
     test_mega_fire_capta_multiplicador_sem_super_boost()
+    test_repeticao_real_nao_e_apagada()
+    test_sonda_existe_e_nao_muda_nada()
     print("FLUXO_TESTES_OK")
