@@ -72,11 +72,19 @@ def avaliar(situacao: Optional[dict] = None,
             ritmo_agora: Optional[float] = None,
             ritmo_normal: Optional[float] = None,
             ultimas_sugestoes: Optional[Sequence[Sequence[Any]]] = None,
-            placar_recente: Optional[dict] = None) -> Dict[str, Any]:
+            placar_recente: Optional[dict] = None,
+            regime: Optional[dict] = None) -> Dict[str, Any]:
     """A cor do momento, com o porquê de cada coisa.
 
     Nada aqui inventa: cada motivo cita a medida que o sustenta, e o que não tem
     medida entra como observação sem virar razão.
+
+    `regime` é o que `regime_multiplicador.ler()` mediu -- a densidade em 500, o
+    limiar 45 dele, a magnitude recente, a inversão e a seca. Ele chamou a versão
+    anterior deste arquivo de superficial e tinha razão: a cor saía de quatro
+    checagens minhas, e as observações DELE, que têm número e direção, não
+    entravam. Agora entram, e entram sob a mesma regra de todo o resto -- só vira
+    razão o que a própria mesa confirmou.
     """
     medida = (situacao or {}).get("medida_eixos")
     motivos: List[str] = []          # o que PUXA para o verde, com medida
@@ -154,6 +162,9 @@ def avaliar(situacao: Optional[dict] = None,
         contra.append(f"sem momentos parecidos suficientes — "
                       f"{situacao.get('nota') or 'sem base'}")
 
+    # ── as observações DELE, medidas ─────────────────────────────────────
+    _regime_em_motivos(regime, medida, motivos, contra, observacoes)
+
     # ── a repetição da sugestão ──────────────────────────────────────────
     rep = _repeticao(ultimas_sugestoes)
     if rep["repetiu"] >= REPETE_DEMAIS:
@@ -178,6 +189,119 @@ def avaliar(situacao: Optional[dict] = None,
             "observacoes": observacoes, "repeticao": rep,
             "autocritica": critica,
             "avisar": cor == VERDE}
+
+
+def _regime_em_motivos(regime: Optional[dict], medida: Optional[dict],
+                       motivos: List[str], contra: List[str],
+                       observacoes: List[str]) -> None:
+    """As três observações dele viram razão, contra-razão ou observação.
+
+    A REGRA, IGUAL PARA AS TRÊS
+    ───────────────────────────
+    A observação dele diz o QUE olhar. Se ela vira RAZÃO para o verde depende de a
+    própria mesa tê-la confirmado com número -- e `regime_multiplicador` já traz
+    esse veredito junto da medida, com o `n` e o teste de ruído.
+
+    Isto não é desconfiar dele. É o contrário: é o único jeito de a observação
+    dele valer alguma coisa quando confirmar. Se eu deixasse "acima de 45" virar
+    verde sem medir, o verde não distinguiria mesa em que o limiar funciona de
+    mesa em que não funciona -- e ele estaria recebendo aviso no celular pelos dois.
+    """
+    if not regime:
+        return
+
+    # ── 1. a densidade em 500, e o ponto 45 dele ─────────────────────────
+    d = regime.get("densidade") or {}
+    lim = regime.get("limiar") or {}
+    if d:
+        quantos = d.get("quantos", 0)
+        alvo = quantos if d.get("completa") else d.get("projetado_500")
+        marca = "" if d.get("completa") else " (projetado)"
+        acima = bool(d.get("acima_do_limiar"))
+        if lim.get("confirma"):
+            if acima:
+                motivos.append(
+                    f"muito número multiplicado: {alvo} em 500{marca}, acima do "
+                    f"ponto {d.get('limiar_dele')} dele — e NESTA mesa o ponto se "
+                    f"confirma ({lim['taxa_depois_de_acima']:.1%} pagaram depois "
+                    f"de blocos acima contra {lim['taxa_depois_de_abaixo']:.1%}, "
+                    f"{lim.get('razao')}x, n={lim['n_acima']}/{lim['n_abaixo']} "
+                    f"blocos)")
+            else:
+                contra.append(
+                    f"pouco número multiplicado: {alvo} em 500{marca}, abaixo do "
+                    f"ponto {d.get('limiar_dele')} — e aqui o ponto vale "
+                    f"({lim.get('razao')}x)")
+        elif lim.get("mediu"):
+            observacoes.append(
+                f"{alvo} em 500{marca} "
+                f"({'acima' if acima else 'abaixo'} do ponto "
+                f"{d.get('limiar_dele')} dele) — mas nesta mesa o ponto NÃO se "
+                f"confirmou ({lim.get('razao')}x, t={lim.get('t')}), então não "
+                f"conta como razão")
+        else:
+            observacoes.append(
+                f"{alvo} em 500{marca} "
+                f"({'acima' if acima else 'abaixo'} do ponto "
+                f"{d.get('limiar_dele')} dele) — ainda não deu para testar o "
+                f"ponto aqui: {lim.get('nota') or 'sem base'}")
+
+    # ── 2. magnitude recente e a inversão ────────────────────────────────
+    mg = regime.get("magnitude") or {}
+    c = regime.get("ciclo") or {}
+    if mg.get("mediu"):
+        faixa = mg.get("faixa")
+        if c.get("confirma"):
+            if faixa == "baixos":
+                motivos.append(
+                    f"os {mg['n_recentes']} últimos prêmios vieram BAIXOS "
+                    f"(média {mg['media_recente']} contra mediana "
+                    f"{mg['mediana_da_mesa']}) — e nesta mesa a inversão que ele "
+                    f"descreveu se confirma: depois de baixos, "
+                    f"{c['alto_depois_de_baixo']:.0%} vieram altos contra "
+                    f"{c['alto_depois_de_alto']:.0%} depois de altos "
+                    f"(n={c['n_baixo']}/{c['n_alto']}, z={c.get('z')})")
+            elif faixa == "altos":
+                contra.append(
+                    f"os últimos prêmios vieram ALTOS (média "
+                    f"{mg['media_recente']}) e aqui a inversão vale — depois de "
+                    f"altos só {c['alto_depois_de_alto']:.0%} seguem altos")
+        else:
+            observacoes.append(
+                f"os {mg['n_recentes']} últimos prêmios são {faixa} "
+                f"(média {mg['media_recente']}, mediana da mesa "
+                f"{mg['mediana_da_mesa']}) — a inversão "
+                + ("não se confirmou nesta mesa" if c.get("mediu")
+                   else f"ainda não é testável: {c.get('nota') or 'sem base'}")
+                + ", então a faixa não vira razão")
+
+    # ── 3. a seca ────────────────────────────────────────────────────────
+    s = regime.get("seca") or {}
+    d_seca = _forte(medida, "seca_mult")
+    if s.get("mediu"):
+        if d_seca is not None and d_seca >= D_MINIMO:
+            det = (medida.get("detalhe") or {}).get("seca_mult") or {}
+            # a mesa paga depois de seca longa, ou depois de seca curta?
+            paga_com_seca = (det.get("media_pagou") or 0) > (det.get("media_nao") or 0)
+            if s.get("longa") and paga_com_seca:
+                motivos.append(
+                    f"seca longa: {s['agora']} giros sem prêmio, quantil "
+                    f"{s['quantil']:.0%} desta mesa (mediana {s['mediana']}) — e "
+                    f"aqui a seca separa (d={d_seca:.2f}: paga com "
+                    f"{det.get('media_pagou')}, não paga com {det.get('media_nao')})")
+            elif s.get("longa") and not paga_com_seca:
+                contra.append(
+                    f"seca de {s['agora']} giros (quantil {s['quantil']:.0%}) — e "
+                    f"nesta mesa o prêmio vem no ritmo, não depois da seca "
+                    f"(d={d_seca:.2f})")
+        elif s.get("longa"):
+            observacoes.append(
+                f"seca de {s['agora']} giros, quantil {s['quantil']:.0%} desta "
+                f"mesa (mediana {s['mediana']}, maior já vista "
+                f"{s['maior_do_historico']}) — mas a seca ainda não separou "
+                f"acerto de erro aqui"
+                + (f" (d={d_seca:.2f}, fraco)" if d_seca is not None
+                   else " (sem medida ainda)"))
 
 
 def _grave(contra: List[str]) -> bool:
