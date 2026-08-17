@@ -588,10 +588,32 @@ def parse_items_roulette(items: List[dict]) -> List[dict]:
             # anunciado da Mega Fire so era guardado nos giros em que o super
             # boost disparou -- 7 em 132 nos dados dele. As 7 IAs de
             # multiplicador liam 254 rodadas e nao tinham o que dizer.
-            if not _sorteados:
-                _achados = _anunciados_no_giro(res) or _anunciados_no_giro(d)
-                if _achados:
-                    tags.append({"fire_nums": _achados})
+            # UM ANUNCIO POR GIRO, NAO DOIS.
+            #
+            # Havia dois caminhos que acrescentavam `fire_nums`: a busca por
+            # formato (quando o giro nao trouxe sorteados) e a leitura do campo
+            # `fireNumbers` (quando o super boost disparou). Nada impedia os
+            # dois de acontecerem no mesmo giro -- e ai a rodada saia com DUAS
+            # tags `fire_nums`.
+            #
+            # `extrair()` concatena as listas de todas as tags, entao a rodada
+            # ficava com o dobro de premiados. Justamente nos giros de super
+            # boost, que sao os mais informativos. Todo agente que conta
+            # premiacao por rodada media errado exatamente onde mais importa.
+            #
+            # Agora as duas fontes alimentam UMA lista, sem repetir numero.
+            _anuncio: List[dict] = []
+            _ja_anunciado = set()
+
+            def _anunciar(itens):
+                for _it in (itens or []):
+                    if not isinstance(_it, dict):
+                        continue
+                    _k = str(_it.get("n"))
+                    if _k in _ja_anunciado:
+                        continue
+                    _ja_anunciado.add(_k)
+                    _anuncio.append(_it)
 
             if _boost:
                 tags.append({"fire": True})
@@ -610,8 +632,14 @@ def parse_items_roulette(items: List[dict]) -> List[dict]:
                             _lista.append({"n": int(fb), "x": None})
                     except (TypeError, ValueError):
                         pass
-                if _lista:
-                    tags.append({"fire_nums": _lista})
+                # o campo declarado vem primeiro: ele traz o multiplicador
+                _anunciar(_lista)
+
+            if not _sorteados:
+                _anunciar(_anunciados_no_giro(res) or _anunciados_no_giro(d))
+
+            if _anuncio:
+                tags.append({"fire_nums": _anuncio})
             rows.append({"n": n, "settled": settled, "tags": tags})
         except Exception as _e:
             engolido("fluxo_captura/parse_items_roulette", _e)
