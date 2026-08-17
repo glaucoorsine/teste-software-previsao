@@ -28,7 +28,20 @@ from fila_cerebro import (novo_pedido as _novo_pedido,
                           resposta_de as _resposta_de,
                           garantir_cerebro as _garantir_cerebro)
 
-GAME="crazy_time"
+# A MESA VEM DO AMBIENTE -- a Crazy Time A nao tinha janela nenhuma.
+#
+# Existiam tres janelas avulsas (Mega Fire, Lightning, Crazy Time) e a
+# quarta mesa, a Crazy Time A, so aparecia dentro da CENTRAL. Nao havia
+# atalho para ela, e o ABRIR_TUDO nem a iniciava -- ele ainda chamava a
+# Immersive, que foi apagada.
+#
+# Duplicar este arquivo seria manter dois iguais e corrigir sempre nos dois.
+# A mesa passa a vir de LAB_MESA, e `crazy_time_a_combo.py` e um lancador de
+# tres linhas que a define.
+import os as _os
+GAME = _os.environ.get("LAB_MESA") or "crazy_time"
+if not GAME.startswith("crazy_time"):
+    GAME = "crazy_time"
 API="https://api-cs.casino.org/svc-evolution-game-events/api/crazytime"
 HEADERS={"User-Agent":"Mozilla/5.0","Accept":"application/json","Origin":"https://www.casino.org","Referer":"https://www.casino.org/casinoscores/pt-br/crazy-time/"}
 SETORES=["1","2","5","10","CoinFlip","CashHunt","Pachinko","CrazyBonus"]
@@ -260,7 +273,7 @@ class App(ctk.CTk):
             pass
         try:
             from metricas_honestas import texto_placar_acumulado
-            is_ct = (GAME == "crazy_time")
+            is_ct = str(GAME).startswith("crazy_time")   # prefixo: a Crazy Time A tambem e CT
             j_use = int(getattr(self, "_last_janela_size", 0) or 0) or 4
             soma_p = float(getattr(self, "_soma_p_esperado", 0.0) or 0.0)
             # se motor enviou cobertura_acc, prefere

@@ -1,0 +1,14 @@
+# Estado de execução — nunca entra no pacote.
+#
+# Os `memoria_*.json` chegaram na máquina dele com decisões pendentes datadas
+# do dia em que a suíte rodou, apontando números que nenhuma mesa sorteou.
+# Essas decisões seriam avaliadas contra giros reais e entrariam no placar
+# como erro: o teste piorava a taxa de acerto medida do software.
+memoria_*.json
+Logs/
+_dados_ao_vivo/
+__pycache__/
+*.pyc
+*.tmp
+*.lock
+crash_*.txt

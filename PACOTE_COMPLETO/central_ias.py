@@ -27,7 +27,20 @@ class CentralIAs(ctk.CTk):
         top = ctk.CTkFrame(self); top.pack(fill="x", padx=10, pady=8)
         ctk.CTkLabel(top, text="CENTRAL DAS IAS", font=("Arial", 22, "bold"), text_color="#38bdf8").pack(side="left", padx=8)
         ctk.CTkLabel(top, text=f"Somente leitura — pesquisa pelo academia_servico | {PROTOCOLO}", text_color="#a3a3a3").pack(side="left", padx=8)
-        for j, lab in [("mega_fire","Mega"),("lightning","Lightning"),("crazy_time","Crazy Time"),("Immersive")]:
+        # ESTA LINHA IMPEDIA A JANELA DE ABRIR — SEMPRE.
+        #
+        # O último item era `("Immersive")`, que em Python NÃO é uma tupla: os
+        # parênteses ali são só agrupamento, e o valor é a string "Immersive".
+        # O `for j, lab in ...` então tentava desempacotar nove caracteres em
+        # duas variáveis e estourava `ValueError: too many values to unpack`
+        # antes de qualquer widget existir.
+        #
+        # Ou seja: a CENTRAL DAS IAS não abria. Não é que abrisse errado — ela
+        # morria na construção, e o `.bat` fechava junto. Uma vírgula que nunca
+        # foi digitada.
+        for j, lab in [("mega_fire", "Mega"), ("lightning", "Lightning"),
+                       ("crazy_time", "Crazy Time"),
+                       ("crazy_time_a", "Crazy Time A")]:
             ctk.CTkRadioButton(top, text=lab, variable=self.jogo, value=j, command=self.refresh_all).pack(side="left", padx=6)
         ctk.CTkButton(top, text="Atualizar", width=90, command=self.refresh_all).pack(side="right", padx=4)
         ctk.CTkButton(top, text="Rodar tribunal", width=110, fg_color="#b45309",

@@ -17,6 +17,14 @@ qualquer gate meu que volte a segurar o número do Caçador quebra aqui.
 """
 from __future__ import annotations
 
+# Os testes constroem o pipeline direto, com historico sintetico. Sem isto
+# eles gravam decisoes, acertos e calibragem nos MESMOS arquivos que o
+# software usa ao vivo -- e essas decisoes falsas entram no placar real.
+import os, tempfile
+os.environ.setdefault("LAB_MEMORIA_DIR",
+                      tempfile.mkdtemp(prefix="lab_memoria_teste_"))
+
+
 import random
 import sys
 from pathlib import Path

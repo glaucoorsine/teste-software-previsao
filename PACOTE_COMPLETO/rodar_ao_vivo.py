@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 ap = argparse.ArgumentParser()
 ap.add_argument("arquivo", help="txt/json com os giros, do mais antigo ao mais recente")
 ap.add_argument("--jogo", default="lightning",
-                choices=["lightning", "mega_fire", "immersive", "crazy_time"])
+                choices=["lightning", "mega_fire", "crazy_time", "crazy_time_a"])
 ap.add_argument("--raiz", default=".", help="pasta do PACOTE_COMPLETO")
 ap.add_argument("--dados", default=None, help="pasta de dados da academia (isolada)")
 ap.add_argument("--intervalo", type=int, default=45, help="segundos entre giros")
@@ -42,6 +42,16 @@ try:
     if isinstance(d, dict):
         evs = d.get("events") or (d.get("jogos", {}).get(args.jogo, {}) or {}).get("events") or []
         itens = [e.get("valor") if e.get("valor") is not None else e.get("n") for e in evs]
+        # AS TAGS PRECISAM SOBREVIVER — SEM ELAS O CACADOR NAO FALA.
+        #
+        # Este arquivo lia so o numero de cada giro e jogava o resto fora. Com
+        # o Cacador de Multiplicador decidindo, isso e' fatal: ele le o sorteio
+        # de lucky/fire/top slot, que vive nas `tags`. Sem elas ele fica mudo,
+        # e como nao ha regua atras dele, a saida e' vazia em TODOS os giros.
+        #
+        # O relatorio entao dizia 0 acertos -- e 0 acertos por falta de dado
+        # tem exatamente a mesma cara de 0 acertos por o metodo nao funcionar.
+        eventos_crus = list(reversed(evs))
         # arquivos do pacote vem do mais RECENTE pro mais antigo
         itens = list(reversed(itens))
     else:
@@ -49,6 +59,7 @@ try:
 except Exception:
     itens = [x for x in bruto.replace(",", " ").split() if x]
 
+eventos_crus = locals().get("eventos_crus") or []
 giros, descartados = [], []
 for x in itens:
     s = str(x).strip()
@@ -85,10 +96,37 @@ base_ok = base_err = 0
 so_ele = so_base = 0
 linhas = []
 
+# as linhas cruas na mesma ordem do historico (recente primeiro)
+def _linhas_ate(i, quantos):
+    """As linhas COM tags, do giro i para tras, no formato que o motor espera."""
+    if not eventos_crus:
+        return None
+    fatia = list(reversed(eventos_crus[:i + 1]))[:quantos]
+    saida = []
+    for k, e in enumerate(fatia):
+        if not isinstance(e, dict):
+            continue
+        saida.append({"n": e.get("n", e.get("valor")),
+                      "sec": e.get("valor", e.get("n")),
+                      "settled": ts(i - k),
+                      "tags": e.get("tags") or []})
+    return saida or None
+
+
+if not eventos_crus:
+    print()
+    print("  AVISO: este arquivo traz so os numeros, sem o sorteio de")
+    print("  multiplicador de cada giro. Quem escolhe hoje e' o Cacador de")
+    print("  Multiplicador, e ele le esse sorteio -- sem ele nao ha palpite,")
+    print("  e o placar abaixo vai medir zero por falta de dado, nao por")
+    print("  falta de metodo. Use um buffer do pacote (Logs/hist_buffers).")
+    print()
+
 for i in range(INICIO, len(giros) - 1):
     hist = list(reversed(giros[:i+1]))[:300]
     settled = [ts(i-k) for k in range(len(hist))]
-    out = pipe.processar(hist, ok, err, settled=settled)
+    out = pipe.processar(hist, ok, err, settled=settled,
+                         linhas=_linhas_ate(i, 300))
 
     alvos = [str(x) for x in (out.get("pad5") or [])]
     saiu = str(giros[i+1])                       # o software ainda NAO viu isto

@@ -282,7 +282,7 @@ class App(ctk.CTk):
             pass
         try:
             from metricas_honestas import texto_placar_acumulado
-            is_ct = (GAME == "crazy_time")
+            is_ct = str(GAME).startswith("crazy_time")   # prefixo: a Crazy Time A tambem e CT
             j_use = int(getattr(self, "_last_janela_size", 0) or 0) or 4
             soma_p = float(getattr(self, "_soma_p_esperado", 0.0) or 0.0)
             # se motor enviou cobertura_acc, prefere

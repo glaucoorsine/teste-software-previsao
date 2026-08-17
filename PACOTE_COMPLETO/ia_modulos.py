@@ -73,7 +73,17 @@ except Exception:
     ACADEMIA = None
     HAS_ACADEMIA = False
 ORDENS_PATH = ROOT / "ordens_ia.json"
-PIPELINE_VERSION = "2026.08.10-v21-sombra"
+# A VERSAO PRECISA MUDAR QUANDO A DECISAO MUDA.
+#
+# Ficou em "v21-sombra" enquanto quem escolhe o numero passou a ser outro:
+# antes era o consenso sob regua de sombra, agora e o Cacador de
+# Multiplicador sem regua. Toda decisao gravada carrega este rotulo, e a
+# memoria mistura as duas eras como se fossem a mesma coisa.
+#
+# Na pratica isso corrompe a medida: decisoes tomadas por um criterio entram
+# na mesma taxa de acerto de decisoes tomadas por outro, e nao ha como
+# separar depois. O rotulo e o unico lugar onde essa fronteira existe.
+PIPELINE_VERSION = "2026.08.17-v121-cacador"
 EVAL_PROTOCOL = "eval-2026.08.10-v1"  # estável entre patches
 FEATURE_VERSION = "fv4-lab"
 
@@ -816,7 +826,28 @@ def _ts_le(a, b):
 class Memoria:
     def __init__(self, jogo: str):
         self.jogo = jogo
-        self.path = str(ROOT / f"memoria_{jogo}.json")
+        # RODAR O TESTE NAO PODE SUJAR A MEMORIA DE VERDADE.
+        #
+        # Este caminho era fixo em `ROOT`, entao `test_cacador_decide.py` e
+        # `test_v121.py` -- que constroem o pipeline direto, com historico
+        # sintetico -- gravavam decisoes, acertos, erros e calibragem nos
+        # MESMOS arquivos que o software usa ao vivo.
+        #
+        # O resultado ficou no pacote: os `memoria_*.json` chegaram na maquina
+        # dele com decisoes pendentes datadas do dia em que a suite rodou,
+        # apontando numeros que nenhuma mesa sorteou. Essas decisoes vao ser
+        # avaliadas contra giros reais e entrar no placar como erro. Ou seja: o
+        # teste piorava a taxa de acerto medida do software.
+        #
+        # Com LAB_MEMORIA_DIR, o teste escreve numa pasta temporaria e some com
+        # ela. Sem a variavel, nada muda para quem esta rodando ao vivo.
+        _dir = os.environ.get("LAB_MEMORIA_DIR")
+        _base = Path(_dir) if _dir else ROOT
+        try:
+            _base.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            _base = ROOT
+        self.path = str(_base / f"memoria_{jogo}.json")
         self.d = {
             "decisoes_pendentes": [], "avaliadas": [], "novidades": [], "modulos": [], "calib": [],
             "versoes": [], "negativo": {}, "modelo_ativo": True, "modelo_ativo_v": {}, "n_aguardando_total": 0, "ultimo_aguardando_settled": None,
@@ -3225,7 +3256,14 @@ class PipelinePerceptivo:
         #
         # Completa com os proximos mais votados, na ordem do consenso: quem
         # entra para fechar o piso entra por apoio, nao por sorteio.
+        # O PISO NAO PODE TROCAR A FONTE NO MEIO DO CAMINHO.
+        #
+        # Quando o Cacador decide, completar a lista dele com os proximos mais
+        # votados do consenso geral e' entregar numeros de OUTRA fonte sob o
+        # nome dele. O piso de 53% e' uma conta sobre o tamanho da aposta, nao
+        # uma licenca para trocar quem escolheu.
         if (alvos and not self.is_ct and not COBERTURA_LARGA
+                and not (CACADOR_DECIDE and getattr(self, "_cacador_consenso", None))
                 and locals().get("aprovados")):
             _kalvo = k_para_alvo(janela, ALVO_ACERTO_JANELA,
                                  self.n_classes, self.k_max)
@@ -3348,7 +3386,28 @@ class PipelinePerceptivo:
             #
             # Ele decidiu que o Cacador escolhe sozinho e sem regua. Entao a
             # unica condicao aqui e ter palpite.
-            pad_ui = list(alvos)[:self.k_max]
+            #
+            # E A LISTA VEM DO CACADOR, NAO DE `alvos`.
+            #
+            # `alvos` parece a lista dele, mas nao e: entre a decisao do
+            # Cacador e esta linha, ela passa por quatro lugares que a
+            # modificam --
+            #
+            #   . a lista de sombra, montada com fontes que nao sao o Cacador
+            #   . a regua do LSTM, que pode encurtar
+            #   . o "piso de 53%", que COMPLETA a lista com os proximos mais
+            #     votados do consenso geral quando ela e' curta demais
+            #   . `active_selection`, que substitui tudo pela janela aberta
+            #
+            # Ou seja: a tela mostrava numeros do Cacador MISTURADOS com
+            # numeros de outras fontes, sob o rotulo "Cacador decide". Os tres
+            # primeiros costumavam ser dele e o resto nao -- e nao havia como
+            # distinguir olhando.
+            #
+            # Se o Cacador aponta cinco e o piso pede nove, a resposta certa e'
+            # entregar os cinco dele. Completar com voto alheio nao e' cumprir
+            # o piso: e' trocar a fonte no meio do caminho e nao contar.
+            pad_ui = [str(x) for x in self._cacador_consenso][:self.k_max]
         elif _modo_final == "JANELA_ATIVA":
             pad_ui = list(alvos)
         elif _modo_final == "OPERAR" and _status == "OPERAR":

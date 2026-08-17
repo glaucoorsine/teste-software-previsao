@@ -61,9 +61,15 @@ else:
 print("\n[2] a citação é da mesa certa")
 
 for jogo, esperado in (("mega_fire", "MEGA FIRE"), ("lightning", "LIGHTING"),
-                       ("immersive", "IMMERSIVE"), ("crazy_time", "CRAZY TIME"),
+                       ("crazy_time", "CRAZY TIME"),
                        ("crazy_time_a", "CRAZY TIME A")):
     checa(F.mesa_do(jogo) == esperado, f"{jogo} → {esperado}", F.mesa_do(jogo))
+
+# A Immersive saiu do software por decisão dele. Um teste que continua
+# cobrando a citação dela mantém a mesa viva no código só para o teste passar
+# -- e foi assim que ela sobreviveu em 54 arquivos depois de "removida".
+checa(F.mesa_do("immersive") == "",
+      "a Immersive não cita mais mesa nenhuma", F.mesa_do("immersive"))
 
 # O caso que quebraria em silêncio: `crazy_time_a` começa com `crazy_time`.
 # Sem prefixo mais longo, a mesa A citaria a formulação da mesa comum -- e
@@ -81,11 +87,11 @@ checa(F.texto_teoria("O07_SETOR", "mesa_que_nao_existe").startswith("compêndio"
 print("\n[3] cada mesa cita as formulações dela")
 
 ns = {}
-for jogo in ("mega_fire", "lightning", "immersive", "crazy_time", "crazy_time_a"):
+for jogo in ("mega_fire", "lightning", "crazy_time", "crazy_time_a"):
     t = F.teoria_de("O07_SETOR", jogo)
     ns[jogo] = t.get("formulacao")
-checa(len(set(ns.values())) == 5,
-      "as cinco mesas citam formulações distintas", ns)
+checa(len(set(ns.values())) == 4,
+      "as quatro mesas citam formulações distintas", ns)
 checa(all(v for v in ns.values()), "e nenhuma ficou sem citação", ns)
 
 t = F.teoria_de("O10_RETORNO", "mega_fire")

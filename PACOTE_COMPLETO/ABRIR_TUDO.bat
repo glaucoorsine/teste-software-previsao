@@ -39,7 +39,10 @@ start "Lightning"  cmd /c "cd /d "%~dp0" && %CMD% lightning_combo.py"
 timeout /t 1 /nobreak >nul
 start "Crazy Time" cmd /c "cd /d "%~dp0" && %CMD% crazy_time_combo.py"
 timeout /t 1 /nobreak >nul
-start "Immersive"  cmd /c "cd /d "%~dp0" && %CMD% immersive_combo.py"
+rem A Immersive saiu do software por decisao dele, e o arquivo dela foi
+rem apagado -- esta linha chamava immersive_combo.py, que nao existe mais.
+rem No lugar dela entra a mesa que nunca teve janela: a Crazy Time A.
+start "Crazy Time A" cmd /c "cd /d "%~dp0" && %CMD% crazy_time_a_combo.py"
 timeout /t 1 /nobreak >nul
 
 start "Assistente IA" cmd /c "cd /d "%~dp0" && %CMD% assistente_ia.py"

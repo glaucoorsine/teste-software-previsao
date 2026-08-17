@@ -107,6 +107,55 @@ _ids_html: dict = {}
 _seq_html: dict = {}
 
 
+def _mults_do_evento(e: dict) -> List[dict]:
+    """Todo o anúncio de um giro, uma vez cada.
+
+    UMA REGRA, UM LUGAR.
+    --------------------
+    Isto existia duplicado: uma vez no caminho online e outra no fallback
+    offline. As duas cópias divergiram — a de baixo continuou lendo só as tags
+    `x` depois que a de cima aprendeu a ler `lucky`, `fire_nums` e o top slot.
+    Resultado: com a API instável, o Caçador ficava mudo exatamente quando a
+    captura mais precisava dele.
+
+    Também deduplica: um giro premiado costuma trazer a tag solta `{"x": 500}`
+    E a lista `{"lucky": [{"n": 20, "x": 500}]}`. São duas descrições do mesmo
+    sorteio, e quem soma `x` por número contava em dobro.
+    """
+    saida: List[dict] = []
+    visto = set()
+
+    def por(n, x):
+        try:
+            _x = int(float(x))
+        except (TypeError, ValueError):
+            return
+        # sem forçar int no número: no Crazy Time ele é símbolo ("CoinFlip"),
+        # e o int() derrubava o anúncio da mesa inteira
+        _n = n
+        if isinstance(_n, str) and _n.strip().lstrip("-").isdigit():
+            _n = int(_n)
+        chave = (str(_n), _x)
+        if chave in visto:
+            return
+        visto.add(chave)
+        saida.append({"n": _n, "x": _x})
+
+    for t in (e.get("tags") or []):
+        if not isinstance(t, dict):
+            continue
+        if "x" in t and not isinstance(t.get("x"), (dict, list)):
+            por(e.get("n"), t["x"])
+        for canal in ("lucky", "fire_nums"):
+            for it in (t.get(canal) or []):
+                if isinstance(it, dict) and it.get("x"):
+                    por(it.get("n"), it["x"])
+        top = t.get("top")
+        if isinstance(top, dict) and top.get("x"):
+            por(top.get("simbolo", top.get("n")), top["x"])
+    return saida
+
+
 def _gravar_json(destino: Path, dados: dict) -> None:
     """Grava trocando o arquivo pronto pelo antigo, nunca escrevendo por cima.
 
@@ -502,12 +551,30 @@ def parse_items_roulette(items: List[dict]) -> List[dict]:
         if not isinstance(it, dict):
             continue
         d = it.get("data") if isinstance(it.get("data"), dict) else it
+        # O MESMO GIRO ENTRAVA DUAS VEZES.
+        #
+        # Este laço acrescentava `d[k]` E `it[k]` para cada chave. Quando não
+        # há envelope `data`, `d` É `it` -- então a MESMA lista era acrescentada
+        # duas vezes, e todo giro daquela resposta virava dois giros.
+        #
+        # Isso não some no dedupe: o `event_id` é `jogo|valor|settled`, e as
+        # duas cópias têm valor e horário idênticos, então uma sobrescreve a
+        # outra sem erro... mas só depois de passar pelo parser inteiro, e
+        # `mults` já foi montado em dobro no caminho. Onde a resposta traz
+        # `data` E `it` com listas diferentes, as duas de fato entram — e aí a
+        # duplicata sobrevive.
+        #
+        # Comparação por identidade, não por igualdade: duas listas com o mesmo
+        # conteúdo vindas de lugares diferentes são dois relatos, e aí as duas
+        # valem. A mesma lista lida duas vezes, não.
         nested_lists = []
+        vistas = set()
         for k in ("results", "gameResults", "events", "items"):
-            if isinstance(d.get(k), list):
-                nested_lists.append(d[k])
-            if isinstance(it.get(k), list):
-                nested_lists.append(it[k])
+            for fonte in (d, it):
+                lst = fonte.get(k) if isinstance(fonte, dict) else None
+                if isinstance(lst, list) and id(lst) not in vistas:
+                    vistas.add(id(lst))
+                    nested_lists.append(lst)
         if nested_lists:
             for lst in nested_lists:
                 expanded.extend(lst)
@@ -665,9 +732,22 @@ def parse_items_ct(items: List[dict]) -> List[dict]:
     for it in items:
         try:
             d = it.get("data") or it
-            res = d.get("result") or d
-            out = res.get("outcome") or res
-            sec = None
+            # `result` PODE SER O VALOR, NAO O ENVELOPE.
+            #
+            # Isto era `res = d.get("result") or d`. Quando a fonte devolve
+            # `result: "5"` -- que e' o formato de varias delas -- `res` virava
+            # a STRING "5", e a linha seguinte fazia `"5".get("outcome")`.
+            # `AttributeError`, engolido pelo `except` la embaixo, `continue`:
+            # o giro sumia inteiro, sem erro na tela.
+            #
+            # E some justamente nos setores numericos, que sao os mais comuns
+            # da mesa. O "1" sozinho ocupa 21 das 54 casas.
+            _r = d.get("result")
+            res = _r if isinstance(_r, dict) else d
+            _sec_direto = _r if _r is not None and not isinstance(_r, (dict, list)) else None
+            _o = res.get("outcome") if isinstance(res, dict) else None
+            out = _o if isinstance(_o, dict) else res
+            sec = _sec_direto
             # formato atual Evolution / casino.org
             wr = out.get("wheelResult") if isinstance(out, dict) else None
             if isinstance(wr, dict):
@@ -720,7 +800,21 @@ def parse_items_ct(items: List[dict]) -> List[dict]:
                             low, aliases.get(low.replace(" ", ""), simbolo))
                     if mult or simbolo:
                         tags.append({"top": {"simbolo": simbolo, "x": mult}})
-                    if mult:
+                    # O `{"x": ...}` SOLTO SIGNIFICA "ESTE GIRO PAGOU".
+                    #
+                    # Ele era acrescentado sempre que havia multiplicador no
+                    # top slot -- inclusive quando o símbolo sorteado NÃO era o
+                    # que a roda parou. Mas o top slot só paga quando os dois
+                    # coincidem; nos outros giros é "Miss" e o jogador não
+                    # recebe nada.
+                    #
+                    # Quem lê `{"x": ...}` entende que aquele giro pagou. Então
+                    # o Crazy Time saía com multiplicador registrado na maioria
+                    # dos giros — inflando intensidade, magnitude e a coluna da
+                    # tela com prêmio que não existiu. O `top` acima continua
+                    # guardando o sorteio inteiro (símbolo e valor), que é o
+                    # dado honesto: dá para estudar quantas vezes bate.
+                    if mult and simbolo and str(simbolo) == str(s):
                         tags.append({"x": mult})
             except Exception as _e:
                 engolido("fluxo_captura/parse_items_ct", _e)
@@ -871,9 +965,17 @@ def capturar(
                              "settled": e.get("settled"),
                              "tags": e.get("tags") or [],
                              "event_id": e.get("event_id")})
-            for t in e.get("tags") or []:
-                if "x" in t:
-                    mults_off.append({"n": e.get("n"), "x": t["x"]})
+            # O FALLBACK OFFLINE MONTAVA `mults` SÓ DAS TAGS `x`.
+            #
+            # É o mesmo esquecimento do caminho online, que já foi corrigido
+            # lá — e sobreviveu aqui. Quando a API cai e o software segue com
+            # o histórico salvo, o anúncio inteiro (lucky, fire_nums, top slot)
+            # sumia, e o Caçador ficava mudo justamente nas horas em que a
+            # captura está instável.
+            #
+            # Agora os dois caminhos usam a MESMA função. Duas cópias da mesma
+            # regra é como este defeito nasceu.
+            mults_off.extend(_mults_do_evento(e))
         return {"rows": rows_off, "novo_head": False,
                 "head_id": rows_off[0]["event_id"] if rows_off else None,
                 "err": err, "mults": mults_off, "offline": True}
@@ -947,52 +1049,9 @@ def capturar(
             "event_id": e.get("event_id"),
         }
         rows.append(row)
-        # O MESMO PREMIO ENTRAVA DUAS VEZES NO MESMO GIRO.
-        #
-        # Um giro premiado costuma trazer as duas coisas: a tag solta
-        # `{"x": 500}` e a lista `{"lucky": [{"n": 20, "x": 500}]}`. Sao duas
-        # descricoes do MESMO sorteio, e as duas eram acrescentadas.
-        #
-        # Quem consome `mults` soma o `x` por numero (`mult_hits[n] += x`).
-        # Contado duas vezes, o numero premiado sai com o dobro do peso, e o
-        # dobro nao veio de evidencia nenhuma -- veio de a resposta descrever a
-        # mesma coisa em dois lugares. O `visto` abaixo conta uma vez so.
-        _visto = set()
-
-        def _por(n, x):
-            try:
-                _x = int(float(x))
-            except (TypeError, ValueError):
-                return
-            # NAO forcar int no numero: no Crazy Time o "n" e' simbolo
-            # ("CoinFlip", "Pachinko"), e o int() estourava. O anuncio da mesa
-            # inteira caia fora por causa dessa conversao.
-            _n = n
-            if isinstance(_n, str) and _n.strip().lstrip("-").isdigit():
-                _n = int(_n)
-            chave = (str(_n), _x)
-            if chave in _visto:
-                return
-            _visto.add(chave)
-            mults.append({"n": _n, "x": _x})
-
-        for t in e.get("tags") or []:
-            if not isinstance(t, dict):
-                continue
-            if "x" in t and not isinstance(t.get("x"), (dict, list)):
-                _por(e.get("n"), t["x"])
-            # `mults` so era montado das tags "x" -- o anuncio inteiro, que
-            # vive em `lucky` e `fire_nums`, nao chegava a interface nem as
-            # analises. Na Mega Fire isso zerava o canal do multiplicador.
-            for _ch in ("lucky", "fire_nums"):
-                for _it in (t.get(_ch) or []):
-                    if isinstance(_it, dict) and _it.get("x"):
-                        _por(_it.get("n"), _it["x"])
-            # o top slot do Crazy Time tambem e' anuncio: sorteia simbolo e
-            # multiplicador todo giro, pagando ou nao
-            _top = t.get("top")
-            if isinstance(_top, dict) and _top.get("x"):
-                _por(_top.get("simbolo", _top.get("n")), _top["x"])
+        # a MESMA funcao do caminho offline: duas copias da regra e como o
+        # anuncio sumiu do fallback sem ninguem notar
+        mults.extend(_mults_do_evento(e))
 
     head_id = rows[0]["event_id"] if rows else None
 

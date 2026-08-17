@@ -1,6 +1,0 @@
-2026-08-17 02:33:41  teste_v121/rastro  ValueError: defeito de mentira, para o teste
-2026-08-17 02:34:05  teste_v121/rastro  ValueError: defeito de mentira, para o teste
-2026-08-17 02:39:30  teste_v121/rastro  ValueError: defeito de mentira, para o teste
-2026-08-17 02:41:31  teste_v121/rastro  ValueError: defeito de mentira, para o teste
-2026-08-17 03:05:53  teste_v121/rastro  ValueError: defeito de mentira, para o teste
-2026-08-17 03:05:55  teste_v121/rastro  ValueError: defeito de mentira, para o teste
