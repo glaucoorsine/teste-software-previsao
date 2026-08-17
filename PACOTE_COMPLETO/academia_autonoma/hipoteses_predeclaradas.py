@@ -176,9 +176,21 @@ HIPOTESES: List[Dict[str, Any]] = [
      "nome": "família do final DENTRO da faixa quente (regra do operador)",
      "declarada": "2026-08-14", "origem": "regra do operador, forma completa",
      "medida_na_declaracao": "10/34 = 29,4% (1,13x)"},
+    # H4c FICA NO REGISTRO, MAS NÃO RODA MAIS.
+    #
+    # A Immersive saiu do software. A tentação é apagar esta linha — e apagar
+    # uma hipótese PRÉ-DECLARADA depois de saber o resultado dela é exatamente
+    # o que a pré-declaração existe para impedir. É a mesma seleção que ele
+    # cobra em todo lugar: só se conta o que ficou bom.
+    #
+    # Então ela fica, com a medida que tinha na declaração, marcada como
+    # encerrada. `aposentada` faz o avaliador pular sem tirá-la da lista: o
+    # registro continua completo e ninguém tenta rodá-la numa mesa que não
+    # existe mais.
     {"id": "H4c", "jogo": "immersive", "k": 7, "f": H4_familia_na_faixa_quente,
      "nome": "família do final DENTRO da faixa quente (regra do operador)",
      "declarada": "2026-08-14", "origem": "regra do operador, forma completa",
+     "aposentada": "2026-08-17 — a mesa saiu do software",
      "medida_na_declaracao": "18/57 = 31,6% (1,21x)"},
     {"id": "H1", "jogo": "lightning", "k": 5, "f": H1_familia_final,
      "nome": "família do final (4-5-9 etc.) + recência",
@@ -253,7 +265,9 @@ def registrar(jogo: str, hist_cron: List[int],
     é seguro dentro de uma mesma sessão. Com eles, a acumulação atravessa
     noites sem contar o mesmo giro duas vezes, que é o ponto deste módulo.
     """
-    hip = [h for h in HIPOTESES if h["jogo"] == jogo]
+    # hipotese aposentada fica no registro e nao roda (ver H4c)
+    hip = [h for h in HIPOTESES
+           if h["jogo"] == jogo and not h.get("aposentada")]
     if not hip or len(hist_cron) < 61:
         return {}
     store = _carregar(jogo)
@@ -287,7 +301,8 @@ def avaliar(jogo: str) -> List[Dict[str, Any]]:
     """Estado de cada hipótese: quanto já acumulou e o que isso diz."""
     store = _carregar(jogo)
     out = []
-    for h in [x for x in HIPOTESES if x["jogo"] == jogo]:
+    for h in [x for x in HIPOTESES
+              if x["jogo"] == jogo and not x.get("aposentada")]:
         st = store.get(h["id"]) or {}
         n = int(st.get("n", 0))
         hits = int(st.get("hits", 0))
@@ -302,7 +317,8 @@ def avaliar(jogo: str) -> List[Dict[str, Any]]:
         # Em 25 mundos de ruído puro, um deles chegou a 1,21x sozinho.
         # Medido: com esta regra, 2,5% de falso positivo e 100% de detecção
         # de um efeito real de 1,23x.
-        m_teste = max(1, sum(1 for x in HIPOTESES if x["jogo"] == jogo))
+        m_teste = max(1, sum(1 for x in HIPOTESES
+                             if x["jogo"] == jogo and not x.get("aposentada")))
         alpha = 0.05 / m_teste          # e as hipóteses dividem a barra
         if n < alvo:
             veredito = "acumulando"

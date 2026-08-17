@@ -93,7 +93,7 @@ def testar_todas(requests) -> int:
     e sem separar isso eu volto a adivinhar.
     """
     from fluxo_captura import enderecos_para, HEADERS
-    mesas = ("mega_fire", "lightning", "immersive", "crazy_time", "crazy_time_a")
+    mesas = ("mega_fire", "lightning", "crazy_time", "crazy_time_a")
     print("\n" + "=" * 66)
     print("  AS CINCO MESAS, AGORA")
     print("=" * 66)

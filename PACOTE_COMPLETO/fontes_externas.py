@@ -75,10 +75,35 @@ def listar_bases(jogo: Optional[str] = None) -> List[Path]:
     for p in sorted(BASES.glob("*.json")):
         if p.name == "INDICE.json":
             continue
-        if jogo and jogo not in p.name and not _jogo_no_arquivo(p, jogo):
+        if jogo and not _e_desta_mesa(p, jogo):
             continue
         out.append(p)
     return out
+
+
+def _e_desta_mesa(p: Path, jogo: str) -> bool:
+    """O arquivo é DESTA mesa — não de uma cujo nome a contém.
+
+    A comparação era `jogo not in p.name`, substring pura. `"crazy_time"` está
+    dentro de `"crazy_time_a_ultimas500.json"`, então a base da Crazy Time A
+    seria carregada como histórico da Crazy Time — duas mesas diferentes,
+    misturadas, sem aviso.
+
+    É o mesmo erro de prefixo que já apareceu no domínio, no parser e no
+    `_maxk`: o nome da mesa nova começa com o nome da mesa antiga. Aqui a
+    comparação exige que o que vem depois do nome seja um separador, e não
+    mais nome.
+    """
+    nome = p.name
+    if nome.startswith(jogo):
+        resto = nome[len(jogo):]
+        if not resto or resto[0] in "_-." :
+            # `crazy_time_a...` NÃO casa com `crazy_time`, porque o que vem
+            # depois do separador ainda é nome de mesa
+            if not (resto[1:2].isalpha() and jogo == "crazy_time"
+                    and resto.startswith("_a")):
+                return True
+    return _jogo_no_arquivo(p, jogo)
 
 
 def _jogo_no_arquivo(p: Path, jogo: str) -> bool:

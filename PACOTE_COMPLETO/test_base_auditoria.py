@@ -32,7 +32,7 @@ def checa(cond, nome, detalhe=""):
 
 
 print("\n[1] as cinco mesas tem retrato medido")
-for m in ("mega_fire", "lightning", "immersive", "crazy_time", "crazy_time_a"):
+for m in ("mega_fire", "lightning", "crazy_time", "crazy_time_a"):
     r = B.RETRATO.get(m) or {}
     checa(bool(r.get("n")), f"{m} tem n de resultados", r.get("n"))
 checa(B.RETRATO["lightning"]["impar"] == 60
@@ -54,7 +54,7 @@ casos = [
     ("lightning", "a linha da grade influencia o resultado", "H43",
      "CONTROLE_NEGATIVO"),
     ("mega_fire", "os finais 0 1 3 6 andam juntos", "H11", "SEM_EVIDENCIA"),
-    ("immersive", "o vermelho domina blocos inteiros", "H05", "SEM_EVIDENCIA"),
+    ("mega_fire", "o vermelho domina blocos inteiros", "H05", "SEM_EVIDENCIA"),
     ("crazy_time", "depois de muitos giros sem bonus vem o bonus", "H15",
      "EXPLORATORIA"),
     ("crazy_time", "o multiplicador alto vem em grupo", "H39", "PRE_REGISTRO"),

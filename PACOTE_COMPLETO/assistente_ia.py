@@ -122,7 +122,7 @@ class Assistente(ctk.CTk):
     def ver_ordens(self):
         od = LLM.load_ordens()
         txt = (f"Ordens | mega={od.get('mega_fire')} | light={od.get('lightning')} | "
-               f"ct={od.get('crazy_time')} | imm={od.get('immersive')} | atualizado={od.get('atualizado')}")
+               f"ct={od.get('crazy_time')} | cta={od.get('crazy_time_a')} | atualizado={od.get('atualizado')}")
         self.lbl_ordens.configure(text=txt[:500])
 
     def auto_melhorar(self):

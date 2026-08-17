@@ -156,7 +156,7 @@ esperar_fila()
 checa(recebido and "pessoas: 4200 — ruim" in recebido[0]["corpo"],
       "o sinal tambem leva o publico", recebido and recebido[0]["corpo"])
 
-print("\n[6c] o fogo vai no aviso, e a immersive nao recebe linha nenhuma")
+print("\n[6c] o fogo vai no aviso quando ha marcacao, e so entao")
 recebido.clear()
 notificador._ultimo.update({"quando": 0.0, "texto": ""})
 notificador.notificar_sinal("mega_fire", [4, 9, 17, 21, 30], janela=5,
@@ -171,7 +171,7 @@ notificador.notificar_sinal("lightning", [4, 9, 17], janela=5,
                             multiplicador="")
 esperar_fila()
 checa(recebido and "🔥" not in recebido[0]["corpo"],
-      "e a immersive nao ganha linha de fogo -- a mesa nao tem",
+      "sem marcacao nao ha linha de fogo -- nao se inventa 🔥",
       recebido and recebido[0]["corpo"])
 
 recebido.clear()

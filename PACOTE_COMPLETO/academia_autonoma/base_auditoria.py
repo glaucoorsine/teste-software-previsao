@@ -104,6 +104,15 @@ RETRATO: Dict[str, Dict[str, Any]] = {
         "duzias_p": 0.100, "colunas_p": 0.074, "regime_cor_p": 0.964,
         "maior_lag_abs": ("lag 4", 0.146),
     },
+    # A IMMERSIVE SAIU DO SOFTWARE, MAS A MEDIDA DELA FICA.
+    #
+    # Isto não é código: é o retrato de uma coleta que aconteceu — 162 giros,
+    # com entropia, paridade e repetição medidas na época. Apagar seria apagar
+    # observação, e observação não some porque a mesa saiu do menu.
+    #
+    # Nenhum caminho do software consulta esta chave: `crazy_time_a` e as
+    # outras três são buscadas pelo nome. Ela fica como registro, do mesmo
+    # jeito que a hipótese H4c fica aposentada em vez de deletada.
     "immersive": {
         "n": 162, "fonte": "captura 18x9", "entropia_norm": 0.966,
         "p_uniformidade": 0.375, "vermelho": 77, "preto": 80,
