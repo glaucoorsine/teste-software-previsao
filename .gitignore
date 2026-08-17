@@ -41,3 +41,7 @@ PACOTE_COMPLETO/academia_autonoma/INDICE_ESTUDOS.json
 # container foi apagado e o software voltou sem saber nada; guardar o indice
 # resolve isso sem republicar o livro dele.
 !PACOTE_COMPLETO/academia_autonoma/indice_estudos_destilado.json
+
+# Os logs de captura DELE, importados para medicao. Sao dados dele e o
+# repositorio e publico; ficam locais.
+PACOTE_COMPLETO/bases_estudo/*_logs_reais.json

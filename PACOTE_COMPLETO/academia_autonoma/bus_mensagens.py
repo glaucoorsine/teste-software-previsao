@@ -25,7 +25,13 @@ TOPICOS = {
     "modelo.opiniao",
     "meta.decisao",
     "interface.atualizar",
+    # o ack tem topico proprio: nao e conteudo, e contabilidade do bus, e nao
+    # deve aparecer no feed que ele le na tela
+    "bus.ack",
 }
+
+# o que a tela NAO deve mostrar -- e ruido de infraestrutura
+FORA_DO_FEED = {"bus.ack"}
 
 def _path(dataset_id: str) -> Path:
     safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in dataset_id)
@@ -52,8 +58,6 @@ def publicar(
         "tipo": tipo,
         "payload": payload,
         "criada_em": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "processada_em": None,
-        "status": "pendente",
         "erro": None,
     }
     p = _path(dataset_id)
@@ -113,7 +117,8 @@ def _rotacionar(p) -> None:
         pass
 
 
-def ler(dataset_id: str, tipo: str = None, limit: int = 200) -> List[dict]:
+def ler(dataset_id: str, tipo: str = None, limit: int = 200,
+        incluir_infra: bool = False) -> List[dict]:
     p = _path(dataset_id)
     if not p.is_file():
         return []
@@ -127,14 +132,39 @@ def ler(dataset_id: str, tipo: str = None, limit: int = 200) -> List[dict]:
             continue
         if tipo and m.get("tipo") != tipo:
             continue
+        # o ack e contabilidade do bus; na tela dele so entra se for pedido
+        if not incluir_infra and not tipo and m.get("tipo") in FORA_DO_FEED:
+            continue
         out.append(m)
     return out[-limit:]
 
 def marcar_processada(dataset_id: str, message_id: str, erro: str = None):
-    """Append-only: grava evento de ack (não reescreve o log)."""
+    """Registra que uma mensagem foi tratada, sem reescrever o log.
+
+    O QUE ESTAVA ERRADO AQUI, E APARECIA NA TELA DELE
+    ─────────────────────────────────────────────────
+    `publicar()` gravava `"status": "pendente"` em TODA mensagem, e nada no
+    software inteiro atualizava esse campo depois. Resultado: a tela mostrava
+
+        19:54:27  INTERFACE   interface.atualizar   pendente
+        19:54:27  SEQ_MARKOV  modelo.opiniao        pendente
+
+    para sempre, inclusive nas mensagens já processadas. Ele olhou aquilo e
+    concluiu, com toda a razão, que o software tinha travado. Não tinha: o
+    rótulo é que era mentiroso.
+
+    E esta função, que seria a única a corrigir o status, nunca era chamada por
+    ninguém -- e se fosse, publicaria uma mensagem `interface.atualizar` NOVA,
+    ela também "pendente". Reconhecer uma mensagem criaria outra mensagem
+    eternamente pendente, e o feed dobraria de tamanho sem nunca resolver nada.
+
+    Agora: `publicar()` não grava mais status inventado, e o ack tem tipo
+    próprio (`bus.ack`), que fica FORA do feed da tela. O log continua
+    append-only, que é o que a rotação por tamanho exige.
+    """
     publicar(
         dataset_id,
-        "interface.atualizar",
+        "bus.ack",
         "bus",
         {"ack": message_id, "erro": erro},
         destino="bus",
