@@ -1018,7 +1018,25 @@ class PainelMesa(ctk.CTkFrame):
             from fluxo_captura import (capturar, limpar_ciclo_ativo,
                                        marcar_snapshot_processado,
                                        salvar_ciclo_ativo)
+            # ESPERA SEM AVISO É INDISTINGUÍVEL DE TRAVAMENTO.
+            #
+            # `capturar()` pode levar até o orçamento inteiro quando a API está
+            # ruim, e nada dizia isso na tela: ela continuava mostrando o
+            # estado da volta anterior, parada. Foi o que ele viu como "o
+            # lightning ta travado" — e, do lado de fora, ele estava certo:
+            # uma tela que não muda por minutos é uma tela travada, mesmo que
+            # o programa esteja trabalhando.
+            #
+            # O aviso vai ANTES da chamada demorada, não depois.
+            self._estado("consultando a mesa…", AMARELO)
+            _t0 = time.time()
             cap = capturar(self.jogo, page_size=50, max_pages=2)
+            _gasto = time.time() - _t0
+            if _gasto > 8:
+                # captura lenta é sintoma, e o log precisa disso para o dia em
+                # que ele perguntar por que a mesa está devagar
+                registrar(f"{self.jogo} CAPTURA_LENTA {_gasto:.0f}s "
+                          f"(fonte: {cap.get('fonte') or 'api'})")
             rows = cap.get("rows") or []
             if not rows:
                 # FALHAR CALADO FOI O QUE DEIXOU O CRAZY TIME A INVISIVEL.

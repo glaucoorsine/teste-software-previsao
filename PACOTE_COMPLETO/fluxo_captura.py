@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from time_utils import canonical_ts, event_key, sort_key_ts
 from hist_buffer import merge, load, normalizar_evento, DOMAIN
 from fetch_historico import fetch_paginas
+from api_fetch import ORCAMENTO_VOLTA_S
 from engolido import engolido
 
 ROOT = Path(__file__).resolve().parent
@@ -552,47 +553,104 @@ def _anunciados_no_giro(obj, fundo: int = 0, achados=None) -> List[dict]:
         for v in obj.values():
             _anunciados_no_giro(v, fundo + 1, achados)
     elif isinstance(obj, list):
-        # uma lista de dicts com número de roleta dentro é candidata a anúncio
-        lote = []
-        for it in obj[:40]:
-            if not isinstance(it, dict):
-                lote = []
-                break
-            num = None
-            for c in ("number", "n", "value", "num", "slot", "position"):
-                if c in it:
-                    try:
-                        num = int(it[c])
-                    except (TypeError, ValueError):
-                        num = None
-                    break
-            if num is None or not (0 <= num <= 36):
-                lote = []
-                break
-            mx = None
-            for c in ("roundedMultiplier", "multiplier", "x", "payout",
-                      "mult", "multiplicator"):
-                if it.get(c):
-                    try:
-                        mx = int(it[c])
-                    except (TypeError, ValueError):
-                        mx = None
-                    break
-            lote.append({"n": num, "x": mx})
-        # UM HISTORICO TAMBEM E LISTA DE NUMEROS DE ROLETA.
-        #
-        # Sem este crivo, uma lista de giros passados aninhada na resposta
-        # entraria como se fosse o anuncio -- e o software passaria a prever
-        # multiplicador em cima de resultados velhos, calado. O que separa os
-        # dois e o MULTIPLICADOR: anuncio de lucky/fire carrega valor, lista de
-        # historico nao. Exigir pelo menos um, e a lista ser curta como um
-        # anuncio de verdade.
-        if lote and len(lote) <= 12 and any(it["x"] for it in lote):
+        lote = _lote_de_anuncio(obj)
+        if lote is not None:
             achados.extend(lote)
         else:
             for it in obj[:40]:
                 _anunciados_no_giro(it, fundo + 1, achados)
     return achados
+
+
+# chaves que so aparecem em item de HISTORICO, nunca num numero anunciado
+MARCAS_DE_HISTORICO = {
+    "settledat", "settled", "startedat", "gameid", "tableid", "id",
+    "result", "outcome", "data", "wheelresult", "players", "currency",
+    "dealer", "round", "roundid", "timestamp", "time", "createdat",
+}
+MAX_ANUNCIADOS = 12
+
+
+def _lote_de_anuncio(obj: list):
+    """Esta lista e um anuncio de numeros? Devolve o lote, ou None.
+
+    O CRIVO EXIGIA MULTIPLICADOR, E O ANUNCIO QUASE NUNCA TEM.
+    ---------------------------------------------------------
+    Era assim:
+
+        if lote and len(lote) <= 12 and any(it["x"] for it in lote):
+
+    A ideia era separar anuncio de historico -- os dois sao lista de numeros de
+    roleta, e confundir um com o outro faria o software prever multiplicador em
+    cima de giro velho. O separador escolhido foi o multiplicador: "anuncio
+    carrega valor, historico nao".
+
+    Esta errado, e o print da mesa dele mostra por que. Na tabela "Numeros de
+    Fogo Coincidiu" a coluna Multip. esta VAZIA em quase toda linha -- so o 26
+    tem 38X. O multiplicador aparece quando o numero PAGA. O anuncio dos
+    numeros de fogo acontece todo giro, com ou sem valor.
+
+    Entao a condicao `any(x)` descartava a lista inteira em todos os giros que
+    nao pagaram -- que sao a esmagadora maioria. Resultado exato do que ele
+    viu: 213 giros lidos, `tags=[]` em todos, "[Multiplicador] sem palpite", e
+    -- porque o Cacador decide sozinho -- `alvos=[]`, tela vazia, contadores
+    parados e nenhum acerto/erro marcado no historico.
+
+    E o mesmo defeito que eu ja tinha consertado duas vezes noutros lugares,
+    escrito de terceira forma: guardar o anuncio so quando ele pagou.
+
+    O QUE SEPARA OS DOIS DE VERDADE
+    -------------------------------
+    Nao e o multiplicador -- e a FORMA do item. Item de historico carrega
+    carimbo de giro: settledAt, gameId, result, outcome. Numero anunciado nao
+    tem nada disso: e um numero, as vezes com um valor ao lado.
+
+    E anuncio nao repete numero. Uma lista de 40 giros repete; uma lista de
+    numeros de fogo, nao.
+    """
+    if not obj or len(obj) > MAX_ANUNCIADOS:
+        return None
+    lote = []
+    for it in obj:
+        num = None
+        mx = None
+        if isinstance(it, dict):
+            # carimbo de giro: isto e historico, nao anuncio
+            if any(str(k).lower() in MARCAS_DE_HISTORICO for k in it.keys()):
+                return None
+            for c in ("number", "n", "value", "num", "slot", "position"):
+                if c in it:
+                    try:
+                        num = int(it[c])
+                    except (TypeError, ValueError):
+                        return None
+                    break
+            for c in ("roundedMultiplier", "multiplier", "x", "payout",
+                      "mult", "multiplicator"):
+                if it.get(c):
+                    try:
+                        mx = int(float(it[c]))
+                    except (TypeError, ValueError):
+                        mx = None
+                    break
+        elif isinstance(it, (int, str)):
+            # `fireNumbers: [7, 12, 20]` -- lista crua, sem valor nenhum.
+            # O crivo antigo rejeitava isto no primeiro item, por nao ser dict.
+            try:
+                num = int(str(it).strip())
+            except (TypeError, ValueError):
+                return None
+        else:
+            return None
+        if num is None or not (0 <= num <= 36):
+            return None
+        lote.append({"n": num, "x": mx})
+    if not lote:
+        return None
+    # anuncio nao repete numero; historico repete
+    if len({it["n"] for it in lote}) != len(lote):
+        return None
+    return lote
 
 
 def parse_items_roulette(items: List[dict]) -> List[dict]:
@@ -921,11 +979,28 @@ def capturar(
     #
     # Agora percorre os candidatos e GRAVA o que funcionar, para a procura
     # acontecer uma vez so.
+    # A VOLTA TEM HORA PARA ACABAR.
+    #
+    # Com a API fora do ar, cada endereco custava 81s (25s de timeout x 3
+    # tentativas + backoff). O Lightning tem 3 enderecos: 4 minutos numa volta.
+    # A Crazy Time A tem 10: treze minutos e meio. A mesa consulta a cada 10s,
+    # mas a trava `ocupado` segura tudo enquanto isto move -- e a tela fica
+    # identica esse tempo todo. Foi o "o lightning ta travado".
+    #
+    # Insistir faz sentido para um 500 passageiro; nao faz para uma API que
+    # esta fora ha minutos. Agora a volta inteira tem orcamento, e quando ele
+    # acaba a captura cai para o historico salvo -- que mantem o software
+    # analisando em vez de congelar esperando.
+    import time as _t
+    _fim = _t.time() + ORCAMENTO_VOLTA_S
     items, err = [], None
     for _url in candidatos:
+        if _t.time() >= _fim:
+            err = err or "prazo da volta esgotado"
+            break
         items, err = fetch_paginas(
             _url, HEADERS, page_size=page_size, max_pages=max_pages,
-            duration=duration)
+            duration=duration, prazo=_fim)
         if items:
             _lembrar_fonte(dataset_id, _url)
             break
@@ -942,16 +1017,16 @@ def capturar(
         # dezenas de requisicoes e nao pode virar tempestade em cima do
         # provedor a cada ciclo de captura.
         try:
-            import time as _t
             from descobridor_endereco import descobrir as _descobrir
             _ultima = _ULTIMA_PROCURA.get(dataset_id, 0.0)
-            if _t.time() - _ultima > 600:
+            # a procura custa dezenas de requisicoes: nao comeca sem tempo
+            if _t.time() < _fim - 5 and _t.time() - _ultima > 600:
                 _ULTIMA_PROCURA[dataset_id] = _t.time()
                 _novo = _descobrir(str(dataset_id))
                 if _novo:
                     items, err = fetch_paginas(
                         _novo, HEADERS, page_size=page_size,
-                        max_pages=max_pages, duration=duration)
+                        max_pages=max_pages, duration=duration, prazo=_fim)
                     if items:
                         _lembrar_fonte(dataset_id, _novo)
         except Exception as _e:

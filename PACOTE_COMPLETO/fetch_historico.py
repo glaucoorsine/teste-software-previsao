@@ -13,19 +13,27 @@ def fetch_paginas(
     max_pages: int = 3,
     duration: int = 90,
     sort: str = "data.settledAt,desc",
+    prazo: Optional[float] = None,
 ) -> Tuple[List[dict], Optional[str]]:
     page_size = max(1, min(int(page_size), 100))
     max_pages = max(1, min(int(max_pages), 20))
     all_items: List[dict] = []
     err_last = None
+    import time as _t
     for page in range(max_pages):
+        # o prazo vale para a paginacao toda: nao adianta cortar a tentativa e
+        # depois pedir mais tres paginas
+        if prazo is not None and _t.time() >= prazo:
+            err_last = err_last or "prazo da volta esgotado"
+            break
         params = {
             "page": page,
             "size": page_size,
             "sort": sort,
             "duration": duration,
         }
-        data, err = fetch_api(api_url, params, headers=headers)
+        data, err = fetch_api(api_url, params, headers=headers,
+                              prazo=prazo)
         if err:
             err_last = err
             break

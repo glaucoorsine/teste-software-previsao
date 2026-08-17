@@ -168,9 +168,23 @@ for i in range(140):
 med2 = M.medir("lightning", plantado)
 prog.terminou("plantado")
 q = (med2.get("por_ia") or {}).get("QUENTE") or {}
-print(f"       QUENTE no plantado: {q.get('razao')}x  n={q.get('n')}")
-checa(q.get("razao") and q["razao"] > 1.2,
-      "QUENTE pega o padrao plantado -- o medidor tem forca", q.get("razao"))
+# O VICIO FOI PLANTADO NO ANUNCIO, E A RODA E ALEATORIA.
+#
+# `prem = [13, 26] + aleatorio` vicia quem e ANUNCIADO; o numero sorteado
+# continua sendo `randint(0,36)`. Sao dois alvos, e ate a v121 o medidor
+# tinha um so -- media contra o anuncio e essa razao virava peso no consenso,
+# que a tela cobra contra a RODA. Uma IA podia sair com 100% aqui e 0% la.
+#
+# Agora `razao` e contra a roda e `razao_anuncio` contra o anuncio. Neste
+# cenario o certo e: pega o vicio do anuncio, e NAO acha vantagem na roda.
+print(f"       QUENTE no plantado: roda={q.get('razao')}x  "
+      f"anuncio={q.get('razao_anuncio')}x  n={q.get('n')}")
+checa(q.get("razao_anuncio") and q["razao_anuncio"] > 1.2,
+      "QUENTE pega o padrao plantado NO ANUNCIO -- o medidor tem forca",
+      q.get("razao_anuncio"))
+checa(q.get("razao") is None or q["razao"] < 1.45,
+      "e NAO inventa vantagem na roda, que aqui e aleatoria",
+      q.get("razao"))
 
 print("\n[8] historico curto nao inventa taxa")
 prog.comecou("historico curto")

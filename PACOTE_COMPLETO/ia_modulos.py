@@ -976,10 +976,46 @@ class Memoria:
         else:
             # paralelo verdadeiro: soma (pode inflar levemente se overlap — preferível a perder)
             out["cobertura_acc"] = {"soma_y": y1 + y2, "soma_p": p1 + p2, "n": n1 + n2}
-        # calib/versoes/modulos: concat + trim
+        # CONCATENAR AQUI DOBRAVA A CALIBRAGEM A CADA SAVE.
+        #
+        # `out` começa como cópia do DISCO. E `self.d` já é o disco, porque no
+        # fim de `save()` está escrito `self.d = merged` — a memória em RAM
+        # passa a conter tudo o que foi gravado. Então `disco + local` soma o
+        # mesmo conteúdo com ele mesmo.
+        #
+        # Medido: uma entrada de calibragem virou 1 → 2 → 4 → 8 em quatro
+        # saves seguidos, sem nenhum giro novo acontecer.
+        #
+        # E calibragem duplicada não é ruído: o Brier e o log-loss são MÉDIAS
+        # sobre estas amostras. Duplicar não muda a média — mas muda o `n`, e
+        # o `n` é o que decide se há amostra suficiente para concluir. O
+        # software passaria a se declarar calibrado com 25 observações reais
+        # contadas como 200.
+        #
+        # As entradas de `calib` já carregam o `id` da decisão que as gerou.
+        # Bastava usá-lo.
         for key in ("calib", "versoes", "modulos"):
-            seq = list(out.get(key) or []) + list(local.get(key) or [])
-            out[key] = seq[-200:]
+            vistos = set()
+            juntos = []
+            for it in list(out.get(key) or []) + list(local.get(key) or []):
+                if isinstance(it, dict):
+                    chave = it.get("id")
+                    if chave is None:
+                        try:
+                            chave = json.dumps(it, sort_keys=True,
+                                               ensure_ascii=False, default=str)
+                        except (TypeError, ValueError):
+                            chave = repr(it)
+                    # `id` da decisão + tipo: a mesma decisão pode render uma
+                    # linha de janela e outra de giro, e as duas valem
+                    chave = (str(chave), str(it.get("tipo") or ""))
+                else:
+                    chave = ("_", repr(it))
+                if chave in vistos:
+                    continue
+                vistos.add(chave)
+                juntos.append(it)
+            out[key] = juntos[-200:]
         return out
 
     def registrar_decisao(self, alvos, modo, probs, hips_nomes, conf, dist_sel,

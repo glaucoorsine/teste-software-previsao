@@ -627,12 +627,36 @@ def medir(jogo: str, historico: List[dict], k: int = None,
         return {"jogo": jogo, "tem": True, "n": len(cron),
                 "suficiente": False,
                 "nota": f"só {len(cron)} rodadas — precisa de {minimo + 5}"}
-    placar = {nome: {"acertos": 0, "tentativas": 0, "acaso": 0.0}
+    # DOIS ALVOS, PORQUE SAO DUAS PERGUNTAS DIFERENTES.
+    #
+    # Esta funcao media uma coisa so: "a IA acertou o proximo ANUNCIO?" --
+    # se algum dos numeros que ela apontou apareceu na lista de lucky/fire/top
+    # slot do giro seguinte.
+    #
+    # So que a tela cobra outra coisa. `CENTRAL.validar()` pergunta se a bola
+    # PAROU num dos numeros escolhidos. Sao alvos diferentes: prever quem vai
+    # ser anunciado e prever onde a roda para nao sao o mesmo problema.
+    #
+    # E a razao daqui virava PESO no consenso (`_medir_mult` em ia_modulos).
+    # Uma IA boa em adivinhar anuncio era amplificada para uma tarefa em que
+    # ela nunca foi medida -- e podia aparecer com 100% aqui e 0% na tela, ou
+    # o contrario. E o tipo de erro que o proprio estudo dele proibe: medir
+    # contra um alvo e cobrar contra outro.
+    #
+    # Agora as duas sao medidas na MESMA passada, e a `razao` -- a que o resto
+    # do software usa para pesar -- e a do RESULTADO DA RODA, que e o que a
+    # tela cobra. A do anuncio fica ao lado, com o nome dela, porque continua
+    # sendo informacao legitima (e a razao de existir destas sete IAs).
+    placar = {nome: {"acertos": 0, "tentativas": 0, "acaso": 0.0,
+                     "acertos_anuncio": 0, "acaso_anuncio": 0.0,
+                     "tent_anuncio": 0}
               for nome, _f, _d in ias(jogo)}
     for i in range(minimo, len(cron) - 1):
         passado = list(reversed(cron[:i]))       # recente→antigo, como chega
-        alvo = set(str(x) for x in cron[i]["premiados"])
-        if not alvo:
+        anunciados = set(str(x) for x in cron[i]["premiados"])
+        saiu = cron[i].get("saiu")
+        saiu = str(saiu) if saiu is not None else None
+        if not anunciados and saiu is None:
             continue
         for nome, fn, _d in ias(jogo):
             try:
@@ -643,30 +667,55 @@ def medir(jogo: str, historico: List[dict], k: int = None,
             if not palpite:
                 continue
             p = placar[nome]
-            p["tentativas"] += 1
-            if any(str(x) in alvo for x in palpite):
-                p["acertos"] += 1
-            # acaso de acertar ao menos um: 1 - C(N-m, k)/C(N, k), aproximado
-            m = len(alvo)
-            q = 1.0
-            for j in range(len(palpite)):
-                q *= max(0.0, (n_dom - m - j)) / max(1, (n_dom - j))
-            p["acaso"] += (1.0 - q)
+            # --- alvo 1: onde a roda parou (o que a tela cobra) -------------
+            if saiu is not None:
+                p["tentativas"] += 1
+                if any(str(x) == saiu for x in palpite):
+                    p["acertos"] += 1
+                # acaso de k numeros distintos cobrirem 1 casa: k/N
+                p["acaso"] += min(1.0, len(set(str(x) for x in palpite)) / max(1, n_dom))
+            # --- alvo 2: quem foi anunciado (o que elas leem) ---------------
+            if anunciados:
+                p["tent_anuncio"] += 1
+                if any(str(x) in anunciados for x in palpite):
+                    p["acertos_anuncio"] += 1
+                m = len(anunciados)
+                q = 1.0
+                for j in range(len(palpite)):
+                    q *= max(0.0, (n_dom - m - j)) / max(1, (n_dom - j))
+                p["acaso_anuncio"] += (1.0 - q)
     saida = {}
     for nome, p in placar.items():
         t = p["tentativas"]
-        if not t:
+        ta = p["tent_anuncio"]
+        if not t and not ta:
             saida[nome] = {"n": 0}
             continue
-        taxa = p["acertos"] / t
-        acaso = p["acaso"] / t
-        saida[nome] = {
-            "n": t, "acertos": p["acertos"], "taxa": round(taxa, 4),
-            "acaso": round(acaso, 4),
-            "razao": round(taxa / acaso, 3) if acaso > 0 else None,
-        }
+        item = {"n": t, "acertos": p["acertos"]}
+        if t:
+            taxa = p["acertos"] / t
+            acaso = p["acaso"] / t
+            item.update({
+                "taxa": round(taxa, 4), "acaso": round(acaso, 4),
+                # `razao` e a do RESULTADO: e ela que vira peso, e e ela que a
+                # tela cobra
+                "razao": round(taxa / acaso, 3) if acaso > 0 else None,
+                "alvo": "resultado_da_roda",
+            })
+        if ta:
+            taxa_a = p["acertos_anuncio"] / ta
+            acaso_a = p["acaso_anuncio"] / ta
+            item.update({
+                "n_anuncio": ta, "taxa_anuncio": round(taxa_a, 4),
+                "acaso_anuncio": round(acaso_a, 4),
+                "razao_anuncio": round(taxa_a / acaso_a, 3) if acaso_a > 0 else None,
+            })
+        saida[nome] = item
     return {"jogo": jogo, "tem": True, "suficiente": True,
-            "n": len(cron), "k": k, "por_ia": saida}
+            "n": len(cron), "k": k, "por_ia": saida,
+            "nota_alvo": ("`razao` e contra o RESULTADO DA RODA, que e o que a "
+                          "tela cobra. `razao_anuncio` e contra a lista de "
+                          "anunciados, que e o que estas IAs leem.")}
 
 
 def resumo(jogo: str, historico: List[dict]) -> str:
