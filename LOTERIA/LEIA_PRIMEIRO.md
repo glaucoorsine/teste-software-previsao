@@ -16,7 +16,9 @@ python JOGAR.py                          as loterias e o acaso de cada uma
 python JOGAR.py mega_sena                o acaso e o custo, por tamanho de aposta
 python JOGAR.py mega_sena --dezenas "3 7 12 19 24 31 38 45 52 58 11 27"
                                          o fechamento, com a garantia provada
-python JOGAR.py mega_sena --historico dados/mega.csv
+python PUXAR.py mega_sena --ultimo       testa a API com uma chamada só
+python PUXAR.py mega_sena                puxa o histórico da API para o disco
+python JOGAR.py mega_sena --historico dados/mega_sena.json
                                          mede as crenças de loteria nos seus dados
 python JOGAR.py --base                   o que o software sabe, e o que o derruba
 ```
@@ -87,10 +89,16 @@ quantos você divide). Essas duas eu construo com prazer.
 ## O estado honesto, hoje
 
 **As regras não foram conferidas contra a Caixa.** Escrevi as oito loterias de
-memória, e o ambiente onde eu rodo tem a saída de rede fechada por política — a
-conexão com o site da Caixa é recusada antes de sair da máquina (403 no CONNECT,
-registrado pelo próprio proxy). Não é a Caixa fora do ar, e contornar isso não é
-decisão minha.
+memória, e não pude conferir de onde eu escrevo o código: a rede de lá recusa a
+saída. E não é sobre a Caixa — as APIs do seu outro software (`api.tracksino.com`,
+`api-cs.casino.org`), que funcionam na sua máquina todo dia, são recusadas do
+mesmo jeito. De lá só passam GitHub e repositório de pacote.
+
+O software, porém, roda na **sua** máquina, e lá a API responde. Por isso o
+puxador existe (`PUXAR.py`) e foi provado contra um servidor local que fala o
+formato do portal da Caixa. O que eu não pude provar é que a API real fala esse
+mesmo formato — e é a sua primeira execução com `--ultimo` que mostra isso, em
+uma chamada, antes de gravar nada.
 
 Por isso nenhum jogo nasce `conferido`, e o software confere sozinho assim que
 você passar um arquivo com `--historico`. Regra errada não dá erro — dá número
@@ -118,14 +126,15 @@ acontecem.
 
 ## Como sair daqui
 
-1. Baixe o arquivo de resultados da loteria que te interessa (veja
-   `dados/LEIA.md` — vale CSV, JSON ou texto).
-2. Rode `python JOGAR.py mega_sena --historico dados/o_arquivo.csv`.
-3. **Confira o diagnóstico** que aparece primeiro, com o arquivo aberto do lado.
-   Se o que eu li não for o que está lá, pare: toda medida abaixo sairia de
-   leitura errada, e sairia com cara de certa.
-4. As regras ficam conferidas, e os cinco itens ganham veredito nos **seus**
-   dados.
+1. `python PUXAR.py mega_sena --ultimo` — uma chamada só. Ela mostra todos os
+   campos que a fonte devolveu e o que eu entendi deles. Se o endereço for
+   outro, `python PUXAR.py --fonte "https://…"` e tente de novo.
+2. `python PUXAR.py mega_sena` — puxa o histórico (leva minutos; retoma de onde
+   parar se cair).
+3. **Confira o diagnóstico.** Se o que eu li não for o que está na fonte, pare:
+   toda medida depois sairia de leitura errada, e sairia com cara de certa.
+4. `python JOGAR.py mega_sena --historico dados/mega_sena.json` — as regras
+   ficam conferidas e os cinco itens ganham veredito nos **seus** dados.
 
 Depois disso, as suas teorias entram na base. A exigência é a mesma de todas as
 outras — dizer o que as derrubaria. Não é desconfiança da sua teoria: é o que faz
@@ -142,7 +151,9 @@ derrubar também não pode ser confirmada; ela só pode ser repetida.
 | `NUCLEO/regras.py` | as oito loterias e a probabilidade exata |
 | `NUCLEO/fechamento.py` | as apostas com garantia, e a prova exaustiva |
 | `NUCLEO/base_conhecimento.py` | o que o software sabe, e o que derruba cada coisa |
+| `PUXAR.py` | puxa os resultados da API e guarda no disco |
+| `NUCLEO/api.py` | o cliente da fonte, com o endereço configurável |
 | `NUCLEO/historico.py` | a porta de entrada dos sorteios reais |
 | `NUCLEO/estatistica.py` | a régua: Wilson, qui-quadrado, permutação |
 | `NUCLEO/medidor.py` | mede cada item, andando para frente |
-| `test_loteria.py` | 8 seções, 89 checagens, incluindo as destrutivas |
+| `test_loteria.py` | 9 seções, 100 checagens, incluindo as destrutivas |

@@ -20,6 +20,7 @@ BASE        Um item sem "o que me derrubaria" é opinião com número. O teste
 """
 from __future__ import annotations
 
+import json
 import sys
 from math import comb
 from pathlib import Path
@@ -33,6 +34,7 @@ from NUCLEO import fechamento as F                # noqa: E402
 from NUCLEO import estatistica as E               # noqa: E402
 from NUCLEO import historico as H                 # noqa: E402
 from NUCLEO import medidor as MD                  # noqa: E402
+from NUCLEO import api as API                     # noqa: E402
 
 FALHAS = []
 
@@ -478,6 +480,160 @@ def teste_medidor():
 
 
 
+
+# ═══════════════════ 9. o puxador da API, provado contra um servidor de mentira
+#
+# A fonte de verdade não responde daqui: a política de rede deste ambiente
+# recusa a conexão antes de ela sair (e recusa as APIs do outro software dele
+# do mesmo jeito). Isso impede provar a FONTE, não o CLIENTE.
+#
+# Então sobe um servidor local falando o formato do portal da Caixa, e o
+# puxador trabalha contra ele: histórico inteiro, retomada de onde parou,
+# concurso que não existe, resposta que não é JSON, e servidor fora do ar.
+# O que fica por confirmar é se a API real fala este formato — e é para isso
+# que existe o `--ultimo`, que mostra o que veio antes de gravar nada.
+def _servidor_falso(ultimo=12, quebrado=False):
+    import json as _json
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    def concurso(n):
+        base = (n * 7) % 40 + 1
+        dezenas = sorted({(base + i * 6 - 1) % 60 + 1 for i in range(6)})
+        while len(dezenas) < 6:
+            dezenas = sorted(set(dezenas) | {(dezenas[-1] % 60) + 1})
+        return {"loteria": "megasena", "numero": n,
+                "dataApuracao": f"{(n % 28) + 1:02d}/01/2024",
+                "listaDezenas": [f"{d:02d}" for d in dezenas],
+                "valorArrecadado": 50_000_000.0 + n,
+                "listaRateioPremio": [
+                    {"descricaoFaixa": "6 acertos", "faixa": 1,
+                     "numeroDeGanhadores": 0},
+                    {"descricaoFaixa": "5 acertos", "faixa": 2,
+                     "numeroDeGanhadores": 40 + n},
+                    {"descricaoFaixa": "4 acertos", "faixa": 3,
+                     "numeroDeGanhadores": 2000 + n}]}
+
+    class Mao(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            if quebrado:
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html")
+                self.end_headers()
+                self.wfile.write(b"<html><body>faca login</body></html>")
+                return
+            partes = [p for p in self.path.split("/") if p]
+            n = None
+            if partes and partes[-1].isdigit():
+                n = int(partes[-1])
+            if n is None:
+                corpo = concurso(ultimo)
+            elif n > ultimo or n < 1:
+                self.send_response(404)
+                self.end_headers()
+                return
+            else:
+                corpo = concurso(n)
+            dados = _json.dumps(corpo).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(dados)))
+            self.end_headers()
+            self.wfile.write(dados)
+
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), Mao)
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    return srv, f"http://127.0.0.1:{srv.server_address[1]}"
+
+
+def teste_api():
+    print("\n[9] API — o puxador, provado contra um servidor de mentira")
+
+    import tempfile
+    temporaria = Path(tempfile.mkdtemp(prefix="loteria_api_"))
+    dados_antes, fonte_antes = API.PASTA_DADOS, API.ARQUIVO_FONTE
+    API.PASTA_DADOS = temporaria
+    API.ARQUIVO_FONTE = temporaria / "fonte.json"
+    try:
+        srv, base = _servidor_falso(ultimo=12)
+        fonte = {"nome": "servidor de mentira", "url": base + "/api/{slug}",
+                 "url_concurso": base + "/api/{slug}/{n}",
+                 "slugs": {"mega_sena": "megasena"}}
+
+        r = API.puxar("mega_sena", pausa=0, fonte=fonte)
+        checar(r.get("ok") and r.get("total") == 12,
+               "puxa o histórico inteiro sem saber de antemão onde ele acaba",
+               f"{r.get('total')} concursos, último {r.get('ultimo')}")
+
+        arq = Path(r["arquivo"])
+        checar(arq.exists(), "e grava no disco, cru, sem recortar campo nenhum")
+
+        h, _ = H.de_arquivo(arq, "mega_sena", fonte="servidor de mentira")
+        checar(h is not None and len(h) == 12 and h.conferido,
+               "e o histórico gravado é lido e CONFERE com as regras",
+               f"{len(h) if h else 0} concursos, conferido={h.conferido if h else None}")
+        checar(h and h.concursos[0]["ganhadores"].get(6) == 0,
+               "e a faixa de 6 acertos com ZERO ganhador sobrevive — zero é "
+               "falso em Python, e some sozinho de quem usa `a or b`",
+               str(h.concursos[0]["ganhadores"]) if h else "")
+        checar(h and h.concursos[0]["faixas_lidas_por"] == "descrição",
+               "e a faixa saiu da descrição, não do campo `faixa` — que na "
+               "Caixa é a POSIÇÃO do prêmio, não o número de acertos")
+
+        # retomada: apaga metade e puxa de novo
+        cru = json.loads(arq.read_text(encoding="utf-8"))
+        arq.write_text(json.dumps(cru[:5]), encoding="utf-8")
+        r2 = API.puxar("mega_sena", pausa=0, fonte=fonte)
+        checar(r2.get("ok") and r2["tinha"] == 5 and r2["novos"] == 7,
+               "retoma de onde parou: tinha 5, buscou só os 7 que faltavam",
+               f"tinha {r2['tinha']}, novos {r2['novos']}")
+
+        r3 = API.puxar("mega_sena", pausa=0, fonte=fonte)
+        checar(r3.get("ok") and r3["novos"] == 0,
+               "e rodar de novo não bate na fonte à toa — não havia o que buscar")
+
+        # concurso além do fim: a fonte devolve 404 e isso não é falha
+        r4 = API.puxar("mega_sena", ate=15, pausa=0, fonte=fonte)
+        checar(r4.get("ok") and len(r4.get("falhas") or []) == 3,
+               "concurso que a fonte não tem vira 'não existe', não vira erro",
+               f"{[n for n, _ in (r4.get('falhas') or [])]}")
+        srv.shutdown()
+
+        # resposta que não é JSON — a página de login no lugar da API
+        srv2, base2 = _servidor_falso(quebrado=True)
+        fonte2 = dict(fonte, url=base2 + "/api/{slug}",
+                      url_concurso=base2 + "/api/{slug}/{n}")
+        _d, erro = API.buscar(API.endereco("mega_sena", None, fonte2),
+                              tentativas=1)
+        checar("não com JSON" in erro and "faca login" in erro,
+               "resposta que não é JSON é dita como é, com o começo do que veio",
+               erro[:70])
+        srv2.shutdown()
+
+        # servidor fora do ar
+        _d2, erro2 = API.buscar("http://127.0.0.1:9/api/megasena", tentativas=1)
+        checar(bool(erro2) and "não alcancei" in erro2,
+               "servidor fora do ar não vira histórico vazio, vira erro dito",
+               erro2[:60])
+
+        # e o erro que EU vejo aqui: a política deste ambiente
+        _d3, erro3 = API.buscar(
+            "https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena",
+            tentativas=1)
+        checar("DESTE ambiente" in (erro3 or ""),
+               "e a recusa da rede daqui é dita como o que é — política deste "
+               "ambiente, não defeito da API dele", (erro3 or "")[:60])
+    finally:
+        API.PASTA_DADOS, API.ARQUIVO_FONTE = dados_antes, fonte_antes
+        import shutil
+        shutil.rmtree(temporaria, ignore_errors=True)
+
+
+
 def main() -> int:
     print("═" * 72)
     print("LOTERIA — regras exatas, base falsificável, garantia provada, medida")
@@ -490,6 +646,7 @@ def main() -> int:
     teste_estatistica()
     teste_historico()
     teste_medidor()
+    teste_api()
     import shutil
     shutil.rmtree(RAIZ / "_teste_tmp", ignore_errors=True)
 

@@ -1,45 +1,63 @@
-# Onde largar o histórico dos sorteios
+# Os resultados dos sorteios
 
-O software lê os resultados **de arquivo**, não da internet. O motivo é chato e
-honesto: o ambiente onde eu rodo tem a saída de rede fechada por política, e a
-conexão com o site da Caixa é recusada antes mesmo de sair da máquina (403 no
-CONNECT, registrado pelo próprio proxy). Não é a Caixa fora do ar e não adianta
-tentar de novo.
+Há dois caminhos, e o primeiro é o bom.
 
-Isso acabou virando uma vantagem: o arquivo fica no seu disco, igual todas as
-vezes. Duas medições sobre o mesmo arquivo dão o mesmo número, e o veredito de
-cada item guarda a soma de verificação do arquivo de onde ele saiu. Se você
-trocar o arquivo, a soma muda e a medição antiga deixa de valer para o novo.
+## 1. Puxar da API (o caminho normal)
 
-## O que baixar
+```
+python PUXAR.py mega_sena --ultimo     testa a fonte com UMA chamada
+python PUXAR.py mega_sena              puxa o histórico e grava aqui
+```
 
-No portal de loterias da Caixa há o download dos resultados completos por
-loteria. Serve qualquer um destes formatos:
+Comece pelo `--ultimo`. Ele faz uma chamada só e mostra na tela **todos os
+campos que a fonte devolveu**, e o que eu entendi deles. Se o formato não for o
+que eu esperava, aparece ali — antes de milhares de chamadas e antes de qualquer
+estatística.
 
-- **CSV / planilha exportada** com colunas `Bola1`…`Bola6` (é o formato mais
-  comum). Se vierem junto as colunas de `Ganhadores N acertos` e de
-  `Arrecadacao`, melhor: são elas que permitem medir a partilha do prêmio (P01),
-  que é o único item capaz de aumentar o que você recebe sem prever nada.
-- **JSON** de API, com `dezenas` e `premiacoes`.
-- **Texto solto**, uma linha por concurso, só os números.
+O puxador **retoma de onde parou**. A API devolve um concurso por chamada, então
+o histórico inteiro leva minutos; se cair no meio (internet, computador
+dormindo, você fechando a janela), o que já veio fica gravado e a próxima
+execução continua da lacuna.
 
-Largue o arquivo aqui dentro e rode:
+### Se o endereço for outro
+
+O endereço não está chumbado no código. Para trocar:
+
+```
+python PUXAR.py --fonte "https://o/endereco/que/voce/tem/{slug}"
+```
+
+Use `{slug}` onde entra o nome da loteria e `{n}` onde entra o número do
+concurso. Se o seu endereço tiver outra forma, me mostre um exemplo dele que eu
+ajusto.
+
+**Eu não consegui testar contra a API de verdade.** A rede do ambiente onde eu
+escrevo o código recusa a saída — e recusa também as APIs do seu outro software,
+as mesmas que funcionam na sua máquina todo dia. Então o cliente foi provado
+contra um servidor local que fala o formato do portal da Caixa: histórico
+inteiro, retomada, concurso inexistente, resposta que não é JSON, servidor fora
+do ar. O que falta confirmar é se a API real fala exatamente esse formato, e é a
+sua primeira execução que diz.
+
+## 2. Arquivo baixado (se preferir, ou se a API não responder)
+
+Largue aqui um arquivo de resultados e rode:
 
 ```
 python JOGAR.py mega_sena --historico dados/o_seu_arquivo.csv
 ```
 
-## Confira o que eu li
+Serve CSV com colunas `Bola1`…`Bola6` (o formato mais comum), JSON de API, ou
+texto solto com uma linha por concurso. Se vierem as colunas de
+`Ganhadores N acertos` e `Arrecadacao`, melhor: são elas que permitem medir a
+partilha do prêmio (P01) — o único item capaz de aumentar o que você recebe sem
+prever nada.
 
-A primeira coisa que aparece é o **diagnóstico**: quantos concursos, quantas
-dezenas por concurso, de que valor a que valor, o primeiro e o último lido por
-extenso. Bata o olho nisso com o arquivo aberto do lado.
+## Nos dois casos: confira o diagnóstico
 
-Eu não consegui baixar o arquivo da Caixa, logo não conheço o formato exato dele
-— escrevi o leitor para as formas que eu conheço. Se ele pegar a coluna errada,
-o diagnóstico denuncia na hora ("li 6 dezenas indo de 1 a 2701" mostra que ele
-pegou o número do concurso junto). O erro que eu temo é o mudo: ler errado, não
+A primeira coisa que aparece é o que eu entendi: quantos concursos, quantas
+dezenas por concurso, de quanto a quanto, o primeiro e o último por extenso, e
+de onde saiu cada faixa de prêmio. Bata o olho com o arquivo do lado.
+
+O erro que eu temo não é o barulhento — é o mudo: ler a coluna errada, não
 reclamar, e produzir estatística bonita sobre lixo.
-
-Se o formato do seu arquivo for outro, me mostre as primeiras linhas dele que eu
-ensino o leitor. É melhor do que eu adivinhar.

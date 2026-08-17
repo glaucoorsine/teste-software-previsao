@@ -202,10 +202,25 @@ class Historico:
             L.append(f"[Histórico]   último lido: concurso "
                      f"{ultimo.get('concurso')} de {ultimo.get('data')} — "
                      f"{ultimo.get('dezenas')}")
-        L.append(f"[Histórico]   ganhadores por faixa: "
-                 + ("sim — dá para medir a partilha (P01)"
-                    if self.tem_ganhadores() else
-                    "não vieram no arquivo — P01 fica sem base"))
+        if self.tem_ganhadores():
+            metodos = sorted({c.get("faixas_lidas_por") for c in self.concursos
+                              if c.get("ganhadores") and c.get("faixas_lidas_por")})
+            faixas = sorted({f for c in self.concursos
+                             for f in (c.get("ganhadores") or {})}, reverse=True)
+            L.append(f"[Histórico]   ganhadores por faixa: sim, faixas {faixas} "
+                     f"— dá para medir a partilha (P01)")
+            if metodos:
+                L.append(f"[Histórico]   faixa identificada por: "
+                         + ", ".join(metodos))
+                if any("ordem" in m for m in metodos):
+                    L.append("[Histórico]   ATENÇÃO: a fonte não disse quantos "
+                             "acertos cada prêmio paga, então eu deduzi pela "
+                             "ordem da lista.")
+                    L.append("[Histórico]   Confira uma linha: o primeiro "
+                             "prêmio tem de ser o de mais acertos.")
+        else:
+            L.append("[Histórico]   ganhadores por faixa: não vieram no "
+                     "arquivo — P01 fica sem base")
         if self.conferido:
             L.append("[Histórico]   ✓ confere com as regras declaradas em "
                      "regras.py")
@@ -302,13 +317,15 @@ def _de_json(texto: str, chave_jogo: str) -> List[Dict[str, Any]]:
                 break
         if not dezenas:
             continue
+        ganhadores, metodo = _ganhadores_de_json(campos, regras.jogo(chave_jogo))
         saida.append({
             "concurso": next((_inteiro(campos.get(c)) for c in _CHAVES_CONCURSO
                               if campos.get(c) is not None), None),
             "data": next((str(campos.get(c)) for c in _CHAVES_DATA
                           if campos.get(c)), ""),
             "dezenas": sorted(dezenas),
-            "ganhadores": _ganhadores_de_json(campos),
+            "faixas_lidas_por": metodo,
+            "ganhadores": ganhadores,
             "arrecadacao": next((_dinheiro(campos.get(c))
                                  for c in _CHAVES_ARRECADACAO
                                  if campos.get(c) is not None), None),
@@ -316,31 +333,63 @@ def _de_json(texto: str, chave_jogo: str) -> List[Dict[str, Any]]:
     return saida
 
 
-def _ganhadores_de_json(campos: Dict[str, Any]) -> Dict[int, int]:
-    """Ganhadores por faixa, da lista de premiações das APIs conhecidas.
+def _ganhadores_de_json(campos: Dict[str, Any],
+                        jogo: Optional[Any] = None) -> Tuple[Dict[int, int], str]:
+    """Ganhadores por faixa. Devolve também COMO a faixa foi identificada.
 
-    O formato comum é uma lista de {"descricao": "6 acertos", "ganhadores": 0}.
-    A faixa sai do primeiro número da descrição.
+    A ARMADILHA DO CAMPO `faixa`
+    ────────────────────────────
+    No formato do portal da Caixa cada premiação vem com `descricaoFaixa`
+    ("6 acertos"), `numeroDeGanhadores`, e um campo `faixa` que vale 1, 2, 3…
+    Esse `faixa` é a POSIÇÃO do prêmio, não a quantidade de acertos. Ler ele
+    direto gravaria "1 acerto" onde é a sena e "3 acertos" onde é a quadra — e
+    depois P01 seria medida na faixa errada, sem erro nenhum na tela.
+
+    Então a ordem é: primeiro os dígitos da descrição, que é o dado explícito.
+    Só se não houver descrição com número é que a posição é usada — e aí ela é
+    traduzida pela lista de faixas do jogo (a 1ª posição é a faixa máxima), com
+    o método devolvido junto para o diagnóstico poder dizer que foi assim.
     """
-    saida: Dict[int, int] = {}
     for ch in ("premiacoes", "listarateiopremio", "rateiopremio", "premiacao"):
         lista = campos.get(ch)
-        if not isinstance(lista, (list, tuple)):
+        if not isinstance(lista, (list, tuple)) or not lista:
             continue
-        for it in lista:
+        por_descricao: Dict[int, int] = {}
+        por_ordem: Dict[int, int] = {}
+        faixas_do_jogo = list(getattr(jogo, "faixas", ()) or ())
+        for pos, it in enumerate(lista):
             if not isinstance(it, dict):
                 continue
             c = {_simples(k): v for k, v in it.items()}
-            desc = str(c.get("descricao") or c.get("faixa") or "")
+            # NÃO usar `a or b` aqui: zero ganhadores é falso em Python, e
+            # zero ganhadores é o caso mais comum da faixa máxima. A cadeia com
+            # `or` pulava a sena de todo concurso não premiado, e P01 acabaria
+            # medida só nos concursos em que alguém ganhou -- que é o pior viés
+            # possível para uma medida sobre RATEIO. Vale a primeira chave que
+            # EXISTIR, ainda que valha zero.
+            g = None
+            for k in ("ganhadores", "numerodeganhadores", "numeroganhadores",
+                      "quantidadeganhadores"):
+                if k in c:
+                    g = _inteiro(c[k])
+                    break
+            if g is None:
+                continue
+            desc = str(c.get("descricao") or c.get("descricaofaixa") or "")
             m = re.search(r"\d+", desc)
-            faixa = _inteiro(m.group()) if m else _inteiro(c.get("faixa"))
-            g = _inteiro(c.get("ganhadores") or c.get("numeroganhadores")
-                         or c.get("quantidadeganhadores"))
-            if faixa is not None and g is not None:
-                saida[faixa] = g
-        if saida:
-            break
-    return saida
+            if m:
+                por_descricao[int(m.group())] = g
+            # a posição pode vir declarada em `faixa`; se não vier, é o índice
+            rank = _inteiro(c.get("faixa"))
+            if rank is None:
+                rank = pos + 1
+            if faixas_do_jogo and 1 <= rank <= len(faixas_do_jogo):
+                por_ordem[faixas_do_jogo[rank - 1]] = g
+        if por_descricao:
+            return por_descricao, "descrição"
+        if por_ordem:
+            return por_ordem, "ordem da lista (confira)"
+    return {}, ""
 
 
 def _de_tabela(texto: str, chave_jogo: str) -> List[Dict[str, Any]]:
