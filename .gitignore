@@ -45,3 +45,15 @@ PACOTE_COMPLETO/academia_autonoma/INDICE_ESTUDOS.json
 # Os logs de captura DELE, importados para medicao. Sao dados dele e o
 # repositorio e publico; ficam locais.
 PACOTE_COMPLETO/bases_estudo/*_logs_reais.json
+
+# Pacote de terceiro extraido so para conferencia (SUPER_IA_QUANTICA_Dashboard).
+#
+# Nao e' fonte deste repositorio: foi descompactado para eu verificar a
+# auditoria de 57 pontos. Sao 7,7 MB, dos quais 7,5 sao copia dos mesmos tres
+# PDFs que ja estao em PACOTE_COMPLETO -- commitar seria duplicar o peso do
+# repositorio com material que nao e' codigo daqui.
+#
+# A conclusao da conferencia esta na conversa: a auditoria descreve um build
+# diferente do ZIP recebido (freeze, event_id, pending, topSlot e
+# state_*.json nao existem nele).
+SUPER_IA/
