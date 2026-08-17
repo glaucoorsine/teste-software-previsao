@@ -319,11 +319,18 @@ def limpar_fontes_duplicadas() -> list:
         for u, mesas in por_url.items():
             if len(mesas) < 2:
                 continue
-            # quem fica: a mesa cujo nome aparece no proprio endereco; se
-            # nenhuma, a primeira em ordem -- e as outras voltam a procurar
-            fica = next((m for m in sorted(mesas)
-                         if m.replace("_", "") in u.replace("-", "").lower()),
-                        sorted(mesas)[0])
+            # QUEM FICA: A MESA COM O NOME MAIS ESPECIFICO NO ENDERECO.
+            #
+            # Isto era `next(m for m in sorted(mesas) if ...)`, e `sorted` poe
+            # `crazy_time` antes de `crazy_time_a`. Como `crazytime` esta DENTRO
+            # de `crazytimea`, o Crazy Time comum "batia" no endereco do A e
+            # ficava com ele -- e o A, o dono de verdade, era quem perdia o
+            # registro e ia procurar. Na abertura seguinte a mesma coisa. Era um
+            # dos caminhos para "perde conexao e nao volta mais", e vinha da
+            # correcao que eu escrevi para o problema oposto.
+            donos = [m for m in mesas
+                     if m.replace("_", "") in u.replace("-", "").replace("_", "").lower()]
+            fica = max(donos, key=len) if donos else sorted(mesas)[0]
             for m in mesas:
                 if m != fica:
                     d.pop(m, None)
@@ -388,6 +395,29 @@ def fonte_de_outra_mesa(dataset_id: str, url: str) -> Optional[str]:
     return None
 
 
+def _endereco_e_da_mesa(dataset_id: str, url: str) -> bool:
+    """O nome DESTA mesa aparece no endereço?
+
+    Serve para desempatar um caso que a minha própria proteção criou. O guarda
+    contra duas mesas na mesma API é necessário -- ele resolveu o Crazy Time e o
+    Crazy Time A mostrarem histórico idêntico. Mas ele julga por posse: "outra
+    mesa já gravou este endereço, então você não pode".
+
+    Isso deixa uma armadilha sem saída. Se o Crazy Time comum tiver gravado, por
+    engano de alguma versão anterior, o endereço que na verdade é do Crazy Time A,
+    o A é barrado do PRÓPRIO endereço para sempre -- e como nada nunca esquece
+    uma fonte, o engano é permanente.
+
+    A saída é olhar a evidência em vez da ordem de chegada: `crazy_time_a` num
+    endereço que termina em `crazy-time-a` é o dono legítimo, tenha ele gravado
+    antes ou depois. Comparação sem `_` e sem `-` porque as duas grafias
+    circulam.
+    """
+    alvo = str(dataset_id).replace("_", "")
+    limpo = str(url).replace("-", "").replace("_", "").lower()
+    return alvo in limpo
+
+
 def _lembrar_fonte(dataset_id: str, url: str) -> None:
     """Grava o endereco que respondeu, para nao procurar de novo."""
     try:
@@ -398,17 +428,107 @@ def _lembrar_fonte(dataset_id: str, url: str) -> None:
             return
         _outra = fonte_de_outra_mesa(dataset_id, url)
         if _outra:
-            # nao grava, e deixa rastro: e mais honesto a mesa ficar sem fonte
-            # do que ler a fonte de outra e mostrar historico alheio como seu
-            engolido(f"fluxo_captura/FONTE_DUPLICADA {dataset_id} tentou usar "
-                     f"o endereco de {_outra}: {url}", None)
-            return
+            # O DONO LEGITIMO TOMA O ENDERECO DE VOLTA.
+            #
+            # Antes isto so recusava, e recusar sozinho cria prisao perpetua: se
+            # a outra mesa gravou por engano um endereco que e DESTA, esta mesa
+            # ficava barrada do proprio endereco para sempre -- e nada esquecia
+            # fontes, entao o engano nunca se desfazia. Era um caminho direto
+            # para "perde conexao e nao volta mais".
+            #
+            # Quando o nome desta mesa esta no endereco e o da outra nao, a posse
+            # e desta: a outra perde o registro e volta a procurar o dela.
+            # E QUEM VENCE E O NOME MAIS ESPECIFICO, NAO SO "quem bate".
+            #
+            # `crazytime` esta dentro de `crazytimea`. Entao no endereco
+            # .../crazy-time-a as DUAS mesas "batem", e uma regra de igualdade
+            # simples nunca decide -- foi assim que a primeira versao deste
+            # desempate falhou no teste. E a mesma armadilha de prefixo que ja
+            # derrubou o parser (`== "crazy_time"` esquecendo a mesa nova) e o
+            # DOMAIN. Aqui ela se resolve pelo comprimento: entre dois nomes que
+            # aparecem no endereco, o mais longo e o mais especifico, e o dono.
+            _meu = _endereco_e_da_mesa(dataset_id, url)
+            _dela = _endereco_e_da_mesa(_outra, url)
+            if _meu and (not _dela or len(str(dataset_id)) > len(str(_outra))):
+                d.pop(_outra, None)
+                _FALHAS_FONTE.pop(_outra, None)
+                engolido(f"fluxo_captura/FONTE_DEVOLVIDA {url} e de "
+                         f"{dataset_id} (o nome esta no endereco); {_outra} "
+                         f"perdeu o registro e vai procurar o proprio", None)
+            else:
+                # nao grava, e deixa rastro: e mais honesto a mesa ficar sem
+                # fonte do que ler a fonte de outra e mostrar historico alheio
+                engolido(f"fluxo_captura/FONTE_DUPLICADA {dataset_id} tentou "
+                         f"usar o endereco de {_outra}: {url}", None)
+                return
         d[dataset_id] = url
         # troca atômica: este arquivo é a memória de qual endereço funciona em
         # cada mesa, e corrompê-lo custa a descoberta de todas elas
         _gravar_json(FONTES_OK, d)
     except Exception as _e:
         engolido("fluxo_captura/_lembrar_fonte", _e)
+
+
+# quantas voltas seguidas a fonte gravada pode falhar antes de ser esquecida
+FALHAS_ATE_ESQUECER = 3
+_FALHAS_FONTE: dict = {}
+
+
+def esquecer_fonte(dataset_id: str, motivo: str = "") -> bool:
+    """Apaga o endereço gravado desta mesa, para ela voltar a procurar.
+
+    O DEFEITO QUE ISTO CONSERTA — "crazy time a perde conexão e não volta mais"
+    ────────────────────────────────────────────────────────────────────────
+    Não existia jeito de esquecer uma fonte. `_lembrar_fonte` gravava o endereço
+    que funcionou, e ele ficava gravado para sempre -- inclusive depois de o
+    provedor desligá-lo.
+
+    O que acontece então, toda volta, para sempre:
+
+        candidatos = [o endereço morto, o principal, as alternativas]
+
+    O endereço morto é sempre o PRIMEIRO. Ele consome timeout e novas
+    tentativas, e o orçamento da volta acaba antes de chegar nos outros. E como
+    `fonte_lembrada` continua devolvendo alguma coisa, o atalho da página dele --
+    aquele que só roda "quando a mesa não tem fonte conhecida" -- nunca dispara.
+
+    A mesa fica presa consultando um endereço que não existe mais, com um
+    registro dizendo que aquele endereço funciona. É exatamente "perde conexão e
+    não volta mais": ela não perdeu nada, ela está insistindo num cadáver.
+
+    Três falhas seguidas, não uma: uma API cai por trinta segundos e volta, e
+    esquecer na primeira faria a mesa reprocurar o endereço a cada soluço.
+    """
+    try:
+        d = {}
+        if FONTES_OK.is_file():
+            d = json.loads(FONTES_OK.read_text(encoding="utf-8")) or {}
+        if dataset_id not in d:
+            return False
+        antigo = d.pop(dataset_id, None)
+        _gravar_json(FONTES_OK, d)
+        _FALHAS_FONTE.pop(dataset_id, None)
+        engolido(f"fluxo_captura/FONTE_ESQUECIDA {dataset_id} deixou de usar "
+                 f"{antigo} — {motivo or 'falhou seguidas vezes'}; volta a "
+                 f"procurar endereco", None)
+        return True
+    except Exception as _e:
+        engolido("fluxo_captura/esquecer_fonte", _e)
+    return False
+
+
+def _fonte_falhou(dataset_id: str) -> bool:
+    """Conta mais uma falha da fonte gravada; esquece ao chegar no limite."""
+    n = int(_FALHAS_FONTE.get(dataset_id, 0)) + 1
+    _FALHAS_FONTE[dataset_id] = n
+    if n >= FALHAS_ATE_ESQUECER:
+        return esquecer_fonte(dataset_id,
+                              f"{n} voltas seguidas sem resposta")
+    return False
+
+
+def _fonte_funcionou(dataset_id: str) -> None:
+    _FALHAS_FONTE.pop(dataset_id, None)
 
 
 def fonte_lembrada(dataset_id: str):
@@ -1158,6 +1278,7 @@ def capturar(
         except Exception as _e:
             engolido("fluxo_captura/pagina_primeiro", _e)
 
+    _lembrada = fonte_lembrada(dataset_id)
     for _url in candidatos:
         if _t.time() >= _fim:
             err = err or "prazo da volta esgotado"
@@ -1167,7 +1288,29 @@ def capturar(
             duration=duration, prazo=_fim)
         if items:
             _lembrar_fonte(dataset_id, _url)
+            _fonte_funcionou(dataset_id)
             break
+    # A FONTE GRAVADA QUE NAO RESPONDE MAIS TEM DE SER ESQUECIDA.
+    #
+    # Sem isto ela continua sendo o PRIMEIRO candidato de toda volta, para
+    # sempre: consome o orcamento em timeout antes de os outros enderecos serem
+    # tentados, e -- pior -- mantem `fonte_lembrada` respondendo, o que desliga o
+    # atalho da pagina dele, que so roda "quando a mesa nao tem fonte conhecida".
+    # A mesa nao perdeu a conexao; ela esta insistindo num cadaver.
+    if not items and _lembrada:
+        if _fonte_falhou(dataset_id):
+            # esqueceu agora: tenta JA os enderecos que sobraram, sem esperar a
+            # volta seguinte -- se ha orcamento, nao ha motivo para adiar
+            for _url in [c for c in candidatos if c != _lembrada]:
+                if _t.time() >= _fim:
+                    break
+                items, err = fetch_paginas(
+                    _url, HEADERS, page_size=page_size, max_pages=max_pages,
+                    duration=duration, prazo=_fim)
+                if items:
+                    _lembrar_fonte(dataset_id, _url)
+                    _fonte_funcionou(dataset_id)
+                    break
     if err and not items:
         # ULTIMO RECURSO ANTES DE DESISTIR: PROCURAR O ENDERECO.
         #
@@ -1184,7 +1327,12 @@ def capturar(
             from descobridor_endereco import descobrir as _descobrir
             _ultima = _ULTIMA_PROCURA.get(dataset_id, 0.0)
             # a procura custa dezenas de requisicoes: nao comeca sem tempo
-            if _t.time() < _fim - 5 and _t.time() - _ultima > 600:
+            # 20s, nao 5: a procura consulta dezenas de enderecos, e comecar
+            # com 5 segundos garantia que ela nao terminaria -- so gastaria o
+            # portao de dez minutos sem chegar a lugar nenhum, e a mesa ficaria
+            # bloqueada de procurar por mais dez minutos por causa de uma
+            # tentativa que nunca teve chance.
+            if _t.time() < _fim - 20 and _t.time() - _ultima > 600:
                 _ULTIMA_PROCURA[dataset_id] = _t.time()
                 # PRIMEIRO PERGUNTA A PAGINA DA MESA, DEPOIS CHUTA GRAFIA.
                 #

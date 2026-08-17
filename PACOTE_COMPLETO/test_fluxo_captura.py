@@ -237,6 +237,126 @@ def test_crazy_time_a_viva():
     print("  ok   crazy time A: enderecos, parser e memoria da fonte")
 
 
+def test_crazy_time_a_volta_depois_de_cair():
+    """"crazy time a perde conexao e nao volta mais" -- os tres defeitos.
+
+    O SINTOMA E A CAUSA
+    -------------------
+    A mesa abria, funcionava, e em algum momento parava para sempre. Nao era
+    perda de conexao: era o software insistindo num endereco morto, sem nenhum
+    caminho de volta. Tres coisas se somavam, e a pior era minha.
+
+    1. NAO EXISTIA `esquecer_fonte`. O endereco que funcionou uma vez ficava
+       gravado para sempre. Depois de o provedor desliga-lo ele continuava sendo
+       o PRIMEIRO candidato de toda volta, consumindo o orcamento em timeout --
+       e, pior, mantendo `fonte_lembrada` respondendo, o que desligava o atalho
+       da pagina dele (que so roda "quando a mesa nao tem fonte conhecida").
+
+    2. O MEU GUARDA CONTRA MESAS DUPLICADAS CRIOU PRISAO PERPETUA. Ele julgava
+       por posse: "outra mesa ja gravou este endereco, entao voce nao pode". Se
+       o Crazy Time comum tivesse gravado, por engano de versao anterior, o
+       endereco que e do Crazy Time A, o A ficava barrado do PROPRIO endereco --
+       e como nada esquecia fonte, para sempre.
+
+    3. O PORTAO DE DEZ MINUTOS DA PROCURA era marcado antes de a procura rodar,
+       e bastavam 5 segundos de orcamento para comeca-la. Uma procura que nao
+       tinha como terminar bloqueava a proxima por dez minutos.
+    """
+    import fluxo_captura as F
+    import tempfile, pathlib as _pl
+    guardado = F.FONTES_OK
+    try:
+        F.FONTES_OK = _pl.Path(tempfile.mkdtemp()) / "fontes.json"
+        F._FALHAS_FONTE.clear()
+
+        # ── 1. a fonte morta e esquecida depois de N falhas, nao antes ──
+        F._lembrar_fonte("crazy_time_a", "https://morreu/api")
+        assert F.fonte_lembrada("crazy_time_a") == "https://morreu/api"
+        for i in range(F.FALHAS_ATE_ESQUECER - 1):
+            assert F._fonte_falhou("crazy_time_a") is False, i
+            assert F.fonte_lembrada("crazy_time_a"), \
+                "uma API que cai por 30s e volta nao pode perder a fonte"
+        assert F._fonte_falhou("crazy_time_a") is True
+        assert F.fonte_lembrada("crazy_time_a") is None, \
+            "depois de N falhas seguidas a fonte morta TEM que ser esquecida"
+
+        # e sem fonte gravada o atalho da pagina dele volta a valer
+        assert not F.fonte_lembrada("crazy_time_a")
+
+        # ── e uma resposta boa zera o contador ──────────────────────────
+        F._lembrar_fonte("crazy_time_a", "https://voltou/api")
+        F._fonte_falhou("crazy_time_a")
+        F._fonte_funcionou("crazy_time_a")
+        assert F._FALHAS_FONTE.get("crazy_time_a") is None
+        for _ in range(F.FALHAS_ATE_ESQUECER - 1):
+            F._fonte_falhou("crazy_time_a")
+        assert F.fonte_lembrada("crazy_time_a") == "https://voltou/api", \
+            "o contador tem que zerar quando a fonte responde"
+
+        # ── 2. o dono legitimo toma o endereco de volta ─────────────────
+        F.FONTES_OK.unlink(missing_ok=True)
+        F._FALHAS_FONTE.clear()
+        proprio = "https://api-cs.casino.org/svc/crazy-time-a"
+        # o Crazy Time comum gravou, por engano, o endereco que e do A
+        F._lembrar_fonte("crazy_time", proprio)
+        assert F.fonte_lembrada("crazy_time") == proprio
+        # antes: o A ficava barrado do PROPRIO endereco, para sempre
+        F._lembrar_fonte("crazy_time_a", proprio)
+        assert F.fonte_lembrada("crazy_time_a") == proprio, \
+            "o dono legitimo (nome no endereco) tem que tomar o endereco"
+        assert F.fonte_lembrada("crazy_time") is None, \
+            "e quem gravou por engano volta a procurar o proprio"
+
+        # ── e o guarda continua guardando o caso de verdade ─────────────
+        F.FONTES_OK.unlink(missing_ok=True)
+        alheio = "https://api-cs.casino.org/svc/crazy-time"
+        F._lembrar_fonte("crazy_time", alheio)
+        F._lembrar_fonte("crazy_time_a", alheio)
+        assert F.fonte_lembrada("crazy_time_a") is None, \
+            "o A NAO pode ficar com o endereco do Crazy Time comum"
+        assert F.fonte_lembrada("crazy_time") == alheio, \
+            "e o dono legitimo daquele endereco nao pode perde-lo"
+
+        # ── quem e dono de que ──────────────────────────────────────────
+        assert F._endereco_e_da_mesa("crazy_time_a", proprio)
+        assert not F._endereco_e_da_mesa("crazy_time_a", alheio)
+        assert F._endereco_e_da_mesa("crazy_time", alheio)
+        # `crazytime` esta DENTRO de `crazytimea`: as duas mesas "batem" no
+        # endereco do A, e por isso o desempate nao pode ser por igualdade --
+        # tem que ser pelo nome mais especifico (o mais longo).
+        assert F._endereco_e_da_mesa("crazy_time", proprio), \
+            "o prefixo bate nas duas -- e por isso que o desempate e por " \
+            "especificidade"
+        assert len("crazy_time_a") > len("crazy_time")
+    finally:
+        F.FONTES_OK = guardado
+        F._FALHAS_FONTE.clear()
+
+    # ── a limpeza da abertura tambem tem que dar o endereco ao dono certo ──
+    guardado = F.FONTES_OK
+    try:
+        F.FONTES_OK = _pl.Path(tempfile.mkdtemp()) / "fontes.json"
+        proprio = "https://api-cs.casino.org/svc/crazy-time-a"
+        F._gravar_json(F.FONTES_OK, {"crazy_time": proprio,
+                                     "crazy_time_a": proprio})
+        apagadas = F.limpar_fontes_duplicadas()
+        assert F.fonte_lembrada("crazy_time_a") == proprio, \
+            "na limpeza da abertura, quem fica com .../crazy-time-a e o A"
+        assert F.fonte_lembrada("crazy_time") is None
+        assert "crazy_time" in apagadas, apagadas
+    finally:
+        F.FONTES_OK = guardado
+
+    # ── 3. o portao da procura nao se gasta sem tempo de rodar ──────────
+    _fonte = (ROOT / "fluxo_captura.py").read_text(encoding="utf-8")
+    assert "_t.time() < _fim - 20 and _t.time() - _ultima > 600" in _fonte, \
+        "a procura precisa de folga real antes de gastar o portao de 10 min"
+    # e o laco esquece a fonte quando nada responde
+    assert "if not items and _lembrada:" in _fonte
+    assert "_fonte_funcionou(dataset_id)" in _fonte
+    print("  ok   crazy time A volta depois de cair -- fonte morta e esquecida")
+
+
 if __name__ == "__main__":
     test_parser_legacy_and_lists()
     test_zero_purge()
@@ -251,4 +371,5 @@ if __name__ == "__main__":
     test_parser_aceita_formato_plano()
     test_links_dele_sao_fonte_de_captura()
     test_crazy_time_a_viva()
+    test_crazy_time_a_volta_depois_de_cair()
     print("FLUXO_TESTES_OK")
