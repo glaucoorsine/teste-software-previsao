@@ -1,59 +1,15 @@
-__pycache__/
-*.pyc
-
-# estado de execucao — nasce com o software rodando, nunca vai no pacote
-PACOTE_COMPLETO/memoria_*.json
-PACOTE_COMPLETO/notificacoes.json
-PACOTE_COMPLETO/Logs/_test_isolado/
-PACOTE_COMPLETO/academia_autonoma/data/
-PACOTE_COMPLETO/biblioteca_estudos_*.json
-PACOTE_COMPLETO/Logs/*_state.json
-PACOTE_COMPLETO/Logs/central_log.txt
-
-# zip de entrega — artefato de build, a fonte ja esta versionada
-PACOTE_COMPLETO_*.zip
-
-# Residuo que os TESTES escrevem toda vez que rodam. Ficavam versionados e
-# apareciam como alteracao a cada suite, escondendo mudanca de verdade no meio.
-PACOTE_COMPLETO/Logs/autopsia_*.jsonl
-PACOTE_COMPLETO/Logs/central_log.txt
-PACOTE_COMPLETO/Logs/*_ciclo_ativo.json
-PACOTE_COMPLETO/Logs/fontes_que_funcionam.json
-
-# OS ESTUDOS DELE — os PDFs do livro e o texto integral extraido.
+# Área de trabalho desta sessão — não é parte do software.
 #
-# Este repositorio e PUBLICO. Os dois PDFs sao pesquisa inedita do livro dele,
-# com o nome dele na capa, e o JSON extraido carrega 3,4 milhoes de caracteres
-# do mesmo texto. Commitar publicaria o livro antes dele, e historico de git
-# nao se apaga direito.
+# TRATADOS/ foi onde eu preparei os PDFs antes de colocá-los no pacote. Os três
+# já estão versionados no lugar certo, em PACOTE_COMPLETO/tratados/, que é de
+# onde o motor os lê. Versionar de novo aqui seriam 7,6 MB duplicados.
 #
-# O software le estes arquivos quando eles estao na pasta; sem eles, cai no
-# resumo curado de 80 conceitos (dados_teorias.json), que ja esta versionado.
-# Rode ABSORVER_PDF.py para reconstruir a partir dos PDFs.
-PACOTE_COMPLETO/estudos_pdf/
-PACOTE_COMPLETO/academia_autonoma/dados_compendio_400_*.json
-PACOTE_COMPLETO/academia_autonoma/dados_estudo_capacidade_preditiva_*.json
-PACOTE_COMPLETO/academia_autonoma/dados_livro_capacidade_*.json
-PACOTE_COMPLETO/academia_autonoma/INDICE_ESTUDOS.json
-#
-# O indice DESTILADO e a excecao, e entra de proposito: numero, mesa, familia,
-# IA, titulo e formula -- o que o programa executa, sem a prosa. Tres vezes o
-# container foi apagado e o software voltou sem saber nada; guardar o indice
-# resolve isso sem republicar o livro dele.
-!PACOTE_COMPLETO/academia_autonoma/indice_estudos_destilado.json
-
-# Os logs de captura DELE, importados para medicao. Sao dados dele e o
-# repositorio e publico; ficam locais.
-PACOTE_COMPLETO/bases_estudo/*_logs_reais.json
-
-# Pacote de terceiro extraido so para conferencia (SUPER_IA_QUANTICA_Dashboard).
-#
-# Nao e' fonte deste repositorio: foi descompactado para eu verificar a
-# auditoria de 57 pontos. Sao 7,7 MB, dos quais 7,5 sao copia dos mesmos tres
-# PDFs que ja estao em PACOTE_COMPLETO -- commitar seria duplicar o peso do
-# repositorio com material que nao e' codigo daqui.
-#
-# A conclusao da conferencia esta na conversa: a auditoria descreve um build
-# diferente do ZIP recebido (freeze, event_id, pending, topSlot e
-# state_*.json nao existem nele).
+# APOIO/ são os pacotes de referência que ele mandou para conferência (o
+# SUPER_IA_QUANTICA, o Leitor_Auditor, a Academia). Não são deste repositório e
+# não devem entrar nele.
+TRATADOS/
+APOIO/
 SUPER_IA/
+
+# os ZIPs de entrega são gerados a partir do que está versionado
+PACOTE_COMPLETO_v*.zip
