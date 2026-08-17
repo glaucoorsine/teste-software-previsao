@@ -308,6 +308,77 @@ def _extract_number(obj):
                     return v
     return None
 
+def _anunciados_no_giro(obj, fundo: int = 0, achados=None) -> List[dict]:
+    """Procura, em qualquer lugar da resposta, a lista de números anunciados.
+
+    POR QUE UMA BUSCA EM VEZ DE UM CAMPO
+    ────────────────────────────────────
+    O código antigo lia `res["fireNumbers"]` -- e SÓ quando `superBoost` era
+    verdadeiro. Nos dados reais dele isso deu 7 giros com marca em 132: nos
+    outros 125 a Mega Fire anunciou os números e o software descartou.
+
+    É o mesmo defeito que quase matou a v103 no Lightning: guardar o anúncio só
+    quando ele pagou. Ali eram 10 registros de umas 600 premiações; aqui são 7
+    de 132. E a consequência é a mesma -- `[Multiplicador] mega_fire: sem
+    palpite (254 rodadas lidas)`, que foi exatamente o que ele viu na tela.
+
+    Como daqui não dá para inspecionar a resposta da API, não adianta eu
+    adivinhar mais um nome de campo. Esta função procura o FORMATO: uma lista
+    de itens que tenham um número de roleta (0..36) e, quando houver, um
+    multiplicador. Funciona seja qual for o nome que o provedor use, e sobrevive
+    a ele renomear amanhã.
+    """
+    if achados is None:
+        achados = []
+    if fundo > 6 or len(achados) >= 40:
+        return achados
+    if isinstance(obj, dict):
+        for v in obj.values():
+            _anunciados_no_giro(v, fundo + 1, achados)
+    elif isinstance(obj, list):
+        # uma lista de dicts com número de roleta dentro é candidata a anúncio
+        lote = []
+        for it in obj[:40]:
+            if not isinstance(it, dict):
+                lote = []
+                break
+            num = None
+            for c in ("number", "n", "value", "num", "slot", "position"):
+                if c in it:
+                    try:
+                        num = int(it[c])
+                    except (TypeError, ValueError):
+                        num = None
+                    break
+            if num is None or not (0 <= num <= 36):
+                lote = []
+                break
+            mx = None
+            for c in ("roundedMultiplier", "multiplier", "x", "payout",
+                      "mult", "multiplicator"):
+                if it.get(c):
+                    try:
+                        mx = int(it[c])
+                    except (TypeError, ValueError):
+                        mx = None
+                    break
+            lote.append({"n": num, "x": mx})
+        # UM HISTORICO TAMBEM E LISTA DE NUMEROS DE ROLETA.
+        #
+        # Sem este crivo, uma lista de giros passados aninhada na resposta
+        # entraria como se fosse o anuncio -- e o software passaria a prever
+        # multiplicador em cima de resultados velhos, calado. O que separa os
+        # dois e o MULTIPLICADOR: anuncio de lucky/fire carrega valor, lista de
+        # historico nao. Exigir pelo menos um, e a lista ser curta como um
+        # anuncio de verdade.
+        if lote and len(lote) <= 12 and any(it["x"] for it in lote):
+            achados.extend(lote)
+        else:
+            for it in obj[:40]:
+                _anunciados_no_giro(it, fundo + 1, achados)
+    return achados
+
+
 def parse_items_roulette(items: List[dict]) -> List[dict]:
     """Aceita estruturas aninhadas antigas e planas."""
     # expande se item contém lista interna de resultados
@@ -395,6 +466,18 @@ def parse_items_roulette(items: List[dict]) -> List[dict]:
             _boost = res.get("superBoost")
             if _boost is None:
                 _boost = d.get("superBoost")
+
+            # O ANUNCIO VEM TODO GIRO, TENHA PAGO OU NAO.
+            #
+            # Antes, tudo isto vivia dentro do `if _boost:`, entao o canal
+            # anunciado da Mega Fire so era guardado nos giros em que o super
+            # boost disparou -- 7 em 132 nos dados dele. As 7 IAs de
+            # multiplicador liam 254 rodadas e nao tinham o que dizer.
+            if not _sorteados:
+                _achados = _anunciados_no_giro(res) or _anunciados_no_giro(d)
+                if _achados:
+                    tags.append({"fire_nums": _achados})
+
             if _boost:
                 tags.append({"fire": True})
                 if isinstance(_boost, (dict, list)):
