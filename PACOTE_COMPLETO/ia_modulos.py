@@ -1019,7 +1019,14 @@ class Memoria:
         return out
 
     def registrar_decisao(self, alvos, modo, probs, hips_nomes, conf, dist_sel,
-                          baseline_alvos=None, features_hash=None, settled_ref=None, janela=None):
+                          baseline_alvos=None, features_hash=None, settled_ref=None, janela=None,
+                          contexto=None):
+        # `contexto` e o estado do momento em que a decisao foi tomada: quantas
+        # pessoas, quanta seca, quantos multiplicados em 500, magnitude recente,
+        # hora, cor do semaforo. Sem isto guardado NA HORA nao ha como responder a
+        # pergunta dele depois -- "porque errei tanto? foi questao de momento? foi
+        # questao de quantidade de pessoa?" -- porque o momento ja passou e o
+        # contexto de entao nao se reconstroi do historico atual.
         # SOMBRA com alvos registra pendente; AGUARDANDO/vazio não
         if modo == "AGUARDANDO" or (not alvos):
             self.d["n_aguardando_total"] = int(self.d.get("n_aguardando_total") or 0) + 1
@@ -1058,6 +1065,7 @@ class Memoria:
             "top_probs": dict(list(sorted((probs or {}).items(), key=lambda x: -x[1]))[:8]),
             "hips": hips_nomes, "resultado": None,
             "settled_ref": settled_ref, "hits": 0, "misses": 0, "janela": janela, "spins": [],
+            "contexto": dict(contexto) if isinstance(contexto, dict) else None,
         }
         self.d["decisoes_pendentes"].append(item)
         self.d["decisoes_pendentes"] = self.d["decisoes_pendentes"][-50:]
@@ -2017,6 +2025,61 @@ class PipelinePerceptivo:
             saida.append(melhor)
         return saida
 
+    def _contexto_do_momento(self, jogadores=None, janela=None) -> dict:
+        """O estado do momento em que a decisão está sendo tomada.
+
+        POR QUE GRAVAR ISTO, E POR QUE NA HORA
+        ──────────────────────────────────────
+        Ele pediu que a inteligência revisse os próprios atos:
+
+            "eu estou acertando muito, estou errando muito, porque eu acertei
+             muito, será que dá pra ficar usando isso aqui mais vezes? Porque eu
+             errei muito, será que foi questão de momento? Será que foi questão
+             de quantidade de pessoas? Será que eu usei corretamente a teoria?"
+
+        Essas perguntas não se respondem depois com o histórico de agora. Para
+        saber se errou por mesa vazia é preciso saber quantas pessoas havia NA
+        HORA daquela decisão -- e isso só existe se tiver sido gravado então.
+        Sem este dicionário, a autocrítica dele seria opinião minha.
+        """
+        # `janela` aqui e a QUANTIDADE de giros da janela, um numero -- nao a
+        # lista. Eu escrevi `len(janela)` e derrubei o motor em tres suites; o k
+        # da aposta vem de `alvos`, que e quem tem tamanho.
+        ctx = {"em_hora": datetime.now().hour}
+        try:
+            if janela is not None:
+                ctx["janela"] = int(janela)
+        except (TypeError, ValueError):
+            pass
+        if jogadores is not None:
+            try:
+                ctx["publico"] = float(jogadores)
+            except (TypeError, ValueError):
+                pass
+        reg = getattr(self, "_regime", None) or {}
+        d = reg.get("densidade") or {}
+        if d:
+            ctx["mult_em_500"] = (d.get("quantos") if d.get("completa")
+                                  else d.get("projetado_500"))
+            ctx["acima_do_45"] = bool(d.get("acima_do_limiar"))
+        s = reg.get("seca") or {}
+        if s:
+            ctx["seca"] = s.get("agora")
+            if s.get("mediu"):
+                ctx["seca_quantil"] = s.get("quantil")
+        mg = reg.get("magnitude") or {}
+        if mg.get("mediu"):
+            ctx["magnitude"] = mg.get("faixa")
+            ctx["posto_magnitude"] = mg.get("posto_recente")
+        sm = getattr(self, "_semaforo", None) or {}
+        if sm:
+            ctx["cor"] = sm.get("cor")
+            ctx["n_motivos"] = len(sm.get("motivos") or [])
+        st = getattr(self, "_situacao", None) or {}
+        if st.get("fala"):
+            ctx["razao_parecidos"] = st.get("razao")
+        return ctx
+
     def _perda_do_tratado(self, saiu) -> None:
         """Cobra de cada inteligência o palpite que ela deu na volta passada.
 
@@ -2961,7 +3024,63 @@ class PipelinePerceptivo:
             except Exception as _e:
                 msgs.append(f"[Situação] {type(_e).__name__}: {_e}")
 
+        # ── O AUTOEXAME: rever os proprios atos, teoria por teoria ────────
+        #
+        #   "essa super inteligencia analitica ela tem que rever os proprios
+        #    atos. porque eu acertei muito, sera que da pra ficar usando isso
+        #    aqui mais vezes? Porque eu errei muito, sera que foi questao de
+        #    momento? Sera que foi questao de quantidade de pessoas? Sera que eu
+        #    usei corretamente a teoria?"
+        #
+        # A autocritica que havia aqui olhava o placar GERAL -- "35% contra acaso
+        # 27%". Aquilo responde "errei muito?" e para ali: nao diz QUAL teoria
+        # errou nem em que momento, e portanto nao permite fazer nada diferente
+        # na volta seguinte. Agora a conta e por teoria, o diagnostico e por eixo
+        # do contexto gravado na hora, e sai daqui com consequencia: o peso do
+        # voto de cada teoria nesta votacao.
+        #
+        # A consequencia so acontece quando a medida aguenta o tamanho da
+        # amostra. Teoria sem base mantem o peso -- mexer por ruido seria trocar
+        # de rumo por sorteio.
+        try:
+            from NUCLEO import autoexame as _ax
+            _fechadas = [r for r in (self.mem.d.get("avaliadas") or [])
+                         if isinstance(r, dict) and (r.get("resultado") or {})]
+            if _fechadas:
+                _ex = _ax.examinar(_fechadas, self.n_classes)
+                for _l in _ax.resumo(_ex):
+                    msgs.append(_l)
+                _pw = _ax.pesos(_ex)
+                if _pw:
+                    _mex = []
+                    for _h in hips:
+                        _w = _pw.get(str(_h.get("nome")))
+                        if _w:
+                            _antes = float(_h.get("peso") or 1.0)
+                            _h["peso"] = round(_antes * _w, 3)
+                            _mex.append(f"{_h['nome']} {_antes:.2f}→{_h['peso']:.2f}")
+                    if _mex:
+                        msgs.append("[Autoexame→voto] " + " | ".join(_mex[:6]))
+                self._autoexame = _ex
+        except Exception as _e:
+            msgs.append(f"[Autoexame] {type(_e).__name__}: {_e}")
+
         aprovados, probs, fontes, score, sig, p0 = self.crit.consenso(hips, self.n_classes, self.k_alvos, minimo=2)
+        # ── qual teoria esta em uso AGORA ─────────────────────────────────
+        #
+        #   "qual teoria que esta sendo utilizada naquele momento com base nos
+        #    vinte ultimos giros"
+        #
+        # Nao e a lista do que existe no pacote: e quem teve condicao cumprida
+        # nesta volta, com o peso que trouxe. Teoria que esta no software mas cuja
+        # condicao nao se cumpriu agora nao aparece -- e essa diferenca e o que
+        # ele quer ver.
+        try:
+            from NUCLEO import autoexame as _ax2
+            for _l in _ax2.em_uso_agora(hips, sig, aprovados[:self.k_alvos]):
+                msgs.append(_l)
+        except Exception as _e:
+            msgs.append(f"[Em uso] {type(_e).__name__}: {_e}")
         msgs.append(f"[Hipóteses] {[h['nome'] for h in hips]}")
         msgs.append(f"[Crítico] multi-fonte={aprovados[:8]} p0={p0:.3f}")
         # placar da votação: por que cada número entrou
@@ -3468,6 +3587,7 @@ class PipelinePerceptivo:
                 alvos, modo_reg, probs, [h["nome"] for h in hips], conf, dist_sel,
                 baseline_alvos=base_alvos, features_hash=fh,
                 settled_ref=(settled[0] if settled else None), janela=janela,
+                contexto=self._contexto_do_momento(jogadores, janela),
             )
             if item:
                 msgs.append(f"[Memória] decisão {modo_reg} id={item['id']} baseline={base_alvos}")
@@ -3629,6 +3749,8 @@ class PipelinePerceptivo:
             # as medidas de multiplicador que sustentaram a cor, para a tela
             # poder mostrar o numero atras de cada razao
             "regime": getattr(self, "_regime", None),
+            # o que cada teoria rendeu e em que contexto ela erra
+            "autoexame": getattr(self, "_autoexame", None),
             "pad5": pad_ui, "anti5": [], "janela": janela, "msgs": msgs,
             "device": str(self.lstm.device), "modo": _modo_final, "conf": conf,
             "probs": {str(k): round(float(v),4) for k,v in top_p},
