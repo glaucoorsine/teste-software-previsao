@@ -113,19 +113,27 @@ _MATEMATICA = [
               "mesmo para a CHANCE. Para o VALOR do prêmio não dá, e é aí que "
               "há o que fazer — ver P01."),
 
-    Item("M02", "o acaso da aposta cresce com o tamanho dela",
-         afirma="Aumentar as dezenas apostadas aumenta a chance na proporção "
-                "exata de C(k, acertos), e o custo cresce mais rápido que a "
-                "chance.",
-         como_medir="Comparar `p_faixa(k, f)` com o preço de cada k. A razão "
-                    "chance/custo é calculável para todo k.",
-         derruba="Encontrar um k em que a chance por real gasto seja maior que "
-                 "no k mínimo. (Isso é aritmética; se acontecer, é erro meu no "
-                 "cálculo — e o teste tem de pegar.)",
+    Item("M02", "aposta grande não é melhor nem pior por real — é outra forma",
+         afirma="Uma aposta de k dezenas custa exatamente C(k, mínimo) apostas "
+                "mínimas e concorre exatamente com essas C(k, mínimo) "
+                "combinações. Então a chance da faixa máxima POR REAL GASTO é "
+                "idêntica em todo k. O que cai com k é a chance de ganhar "
+                "ALGUMA coisa por real: a aposta grande concentra o dinheiro "
+                "num núcleo fixo de dezenas.",
+         como_medir="`p_faixa(k, f) / C(k, mínimo)` para todo k — tem de dar o "
+                    "mesmo número. E `p_algum_premio(k) / C(k, mínimo)`, que "
+                    "cai. Ambos em regras.py, sem precisar de dado nenhum.",
+         derruba="Algum k em que a chance da faixa máxima por real gasto seja "
+                 "diferente da do k mínimo. Isso é aritmética: se acontecer, é "
+                 "erro meu, e o teste tem de pegar antes dele.",
          origem=MATEMATICA,
-         nota="É a régua central deste software: comparar duas estratégias com "
-              "número de apostas diferente sem igualar o gasto é a mesma fraude "
-              "que comparar apostas de tamanhos diferentes na roleta."),
+         nota="ESTE ITEM EU ESCREVI ERRADO NA PRIMEIRA VERSÃO. Eu tinha posto "
+              "que 'o custo cresce mais rápido que a chance', repetindo o que "
+              "se diz por aí. Fui calcular para mostrar na tela e a razão deu "
+              "constante até a última casa — 1,997449e-08 em todo k da "
+              "Mega-Sena. Não é o custo que cresce mais rápido; é exatamente "
+              "proporcional. A aritmética derrubou a minha própria frase, que é "
+              "para o que serve declarar o que derruba."),
 
     Item("M03", "fechamento dá garantia, não previsão",
          afirma="É possível montar um conjunto de apostas tal que, SE x das "

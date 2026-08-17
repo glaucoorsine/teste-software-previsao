@@ -1,0 +1,148 @@
+# LOTERIA
+
+Software de loteria com três regras que não se dobram: **o acaso é calculado
+exato**, **toda afirmação diz o que a derrubaria**, e **garantia só se
+entregue provada**.
+
+Para abrir no Windows: **LOTERIA.bat**. Para conferir que está tudo provado:
+**TESTES.bat** (a última linha tem de ser `LOTERIA_BASE_OK`).
+
+---
+
+## O que ele faz
+
+```
+python JOGAR.py                          as loterias e o acaso de cada uma
+python JOGAR.py mega_sena                o acaso e o custo, por tamanho de aposta
+python JOGAR.py mega_sena --dezenas "3 7 12 19 24 31 38 45 52 58 11 27"
+                                         o fechamento, com a garantia provada
+python JOGAR.py mega_sena --historico dados/mega.csv
+                                         mede as crenças de loteria nos seus dados
+python JOGAR.py --base                   o que o software sabe, e o que o derruba
+```
+
+### O acaso, exato
+
+A chance de uma aposta de 7 dezenas acertar a sena não é estimativa: é
+`C(7,6)/C(60,6)`, um número. Isso deixa a régua mais afiada do que qualquer
+coisa que eu tenha construído antes — toda teoria pode ser medida contra o
+número certo.
+
+E daí sai uma coisa que eu **escrevi errado na primeira versão** e a aritmética
+corrigiu: a chance da faixa máxima **por real gasto é rigorosamente constante**
+em todo tamanho de aposta — 1,997449e-08 na Mega-Sena, do 6 ao 15. Uma aposta de
+k dezenas custa C(k,6) apostas mínimas e concorre com exatamente essas C(k,6)
+combinações. Aposta grande não compra vantagem nenhuma; compra outra *forma* de
+gastar o mesmo dinheiro. O que cai com k é a chance de ganhar **alguma** coisa.
+
+### O fechamento — a coisa real deste software
+
+> "Escolhi 12 dezenas. Se 5 delas saírem, quantas apostas garantem uma quadra?"
+
+Resposta medida: **15 apostas**, contra 924 de cobrir tudo. Mesma garantia, 909
+apostas de economia. E "garantia" aqui é literal — a prova percorre **todos** os
+792 casos possíveis, nunca uma amostra, porque um único caso descoberto derruba a
+promessa inteira. Quando não dá para conferir tudo dentro do teto, o software
+**recusa** em vez de afirmar.
+
+Isto não aumenta a chance das suas dezenas saírem. Converte acerto parcial em
+prêmio com certeza, e dá para verificar antes de gastar um real.
+
+### A medida — o que os seus dados dizem
+
+Cada crença de loteria (atrasadas, quentes, soma, par/ímpar, partilha) é medida
+**andando para frente**: em cada concurso, o atraso e a frequência saem só dos
+concursos anteriores, e a aposta é conferida no seguinte. Usar a amostra inteira
+para escolher e depois medir na mesma amostra faz qualquer coisa parecer que
+funciona.
+
+São três respostas possíveis, e a terceira é a que mais me custou aprender:
+
+| | |
+|---|---|
+| **confirmado** | a medida excluiu o acaso |
+| **derrubado** | aconteceu o que o próprio item declarou como sua queda |
+| **sem base** | o `n` não dá para dizer nem uma coisa nem outra |
+
+No outro software eu escrevia "não se sustentou" com pouco dado — e com pouco
+dado o intervalo é largo, engole o acaso quase sempre, e o software "derruba"
+tudo o que olha. Não medir e não achar viravam a mesma tela. Agora, antes de
+derrubar, o medidor pergunta se o `n` daria para **notar** o efeito. Se nem
+isso, a resposta é *sem base*.
+
+---
+
+## O que ele não faz, e não vai fazer
+
+**Não diz quais dezenas vão sair.** Num sorteio de bolas honesto isso não existe,
+e uma tela que fingisse saber estaria mentindo com número — que é a mentira mais
+convincente que existe.
+
+O que existe de real é o fechamento (eficiência **provada**) e a partilha do
+prêmio (P01: dezenas pouco jogadas não mudam a chance de acertar, mudam com
+quantos você divide). Essas duas eu construo com prazer.
+
+---
+
+## O estado honesto, hoje
+
+**As regras não foram conferidas contra a Caixa.** Escrevi as oito loterias de
+memória, e o ambiente onde eu rodo tem a saída de rede fechada por política — a
+conexão com o site da Caixa é recusada antes de sair da máquina (403 no CONNECT,
+registrado pelo próprio proxy). Não é a Caixa fora do ar, e contornar isso não é
+decisão minha.
+
+Por isso nenhum jogo nasce `conferido`, e o software confere sozinho assim que
+você passar um arquivo com `--historico`. Regra errada não dá erro — dá número
+plausível e falso, que é pior.
+
+**Nenhum item foi medido nos seus dados ainda**, pelo mesmo motivo: não há dados
+ainda. O que está provado é que o **medidor** funciona, e isso foi provado dos
+dois lados:
+
+- num sorteio uniforme que eu gerei, ele **não** acha vantagem em atrasada,
+  quente, soma nem par/ímpar — como não pode achar;
+- num sorteio que eu **viciei de propósito**, ele acha: 0,2439 contra 0,1000 de
+  acaso, intervalo inteiro acima.
+
+A segunda metade é a que importa. Um medidor que só sabe dizer "não" acerta em
+sorteio honesto por acidente, e o "não se sustentou" dele não vale nada.
+
+E há uma trava contra mim mesmo: **histórico sintético nunca grava veredito na
+base**. Os meus testes fabricam sorteios; sem essa trava, um deles poderia
+escrever "C01 confirmado" na sua base com número que eu inventei, e você leria
+como achado nos seus dados. Seria uma mentira de boa-fé, que é como as piores
+acontecem.
+
+---
+
+## Como sair daqui
+
+1. Baixe o arquivo de resultados da loteria que te interessa (veja
+   `dados/LEIA.md` — vale CSV, JSON ou texto).
+2. Rode `python JOGAR.py mega_sena --historico dados/o_arquivo.csv`.
+3. **Confira o diagnóstico** que aparece primeiro, com o arquivo aberto do lado.
+   Se o que eu li não for o que está lá, pare: toda medida abaixo sairia de
+   leitura errada, e sairia com cara de certa.
+4. As regras ficam conferidas, e os cinco itens ganham veredito nos **seus**
+   dados.
+
+Depois disso, as suas teorias entram na base. A exigência é a mesma de todas as
+outras — dizer o que as derrubaria. Não é desconfiança da sua teoria: é o que faz
+a **confirmação** valer alguma coisa quando ela vier. Uma afirmação que nada pode
+derrubar também não pode ser confirmada; ela só pode ser repetida.
+
+---
+
+## Os arquivos
+
+| | |
+|---|---|
+| `JOGAR.py` | o programa |
+| `NUCLEO/regras.py` | as oito loterias e a probabilidade exata |
+| `NUCLEO/fechamento.py` | as apostas com garantia, e a prova exaustiva |
+| `NUCLEO/base_conhecimento.py` | o que o software sabe, e o que derruba cada coisa |
+| `NUCLEO/historico.py` | a porta de entrada dos sorteios reais |
+| `NUCLEO/estatistica.py` | a régua: Wilson, qui-quadrado, permutação |
+| `NUCLEO/medidor.py` | mede cada item, andando para frente |
+| `test_loteria.py` | 8 seções, 89 checagens, incluindo as destrutivas |

@@ -13,3 +13,16 @@ SUPER_IA/
 
 # os ZIPs de entrega são gerados a partir do que está versionado
 PACOTE_COMPLETO_v*.zip
+
+# Bytecode do Python: e gerado a partir do .py e fica velho sem avisar.
+# Quatro .pyc entraram no commit da base da loteria por descuido meu; saem aqui.
+__pycache__/
+*.pyc
+
+# Os arquivos de resultado que ele baixa da Caixa sao dados dele, nao codigo.
+# A pasta e o LEIA dela ficam versionados; o que ele largar la dentro, nao.
+LOTERIA/dados/*
+!LOTERIA/dados/LEIA.md
+
+# area temporaria que o teste da loteria cria e apaga sozinho
+LOTERIA/_teste_tmp/

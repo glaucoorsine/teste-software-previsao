@@ -47,6 +47,8 @@ software diz qual dos dois está entregando.
 """
 from __future__ import annotations
 
+import random
+import time
 from itertools import combinations
 from math import comb
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
@@ -57,6 +59,24 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 # milhões a verificação levaria minutos e travaria a tela, e uma garantia que
 # ninguém espera conferir não serve para nada. Então há teto, e ele é dito.
 MAX_CASOS = 3_000_000
+
+# quantas partidas do guloso disputam entre si, e o teto de tempo delas.
+#
+# ISTO NASCEU DE UM DEFEITO QUE SÓ APARECEU NA TELA
+# ─────────────────────────────────────────────────
+# A primeira versão montava UMA partida, e as candidatas dela saíam de
+# `list(casos)[:60]` — a ordem de iteração de um `set`. Essa ordem depende dos
+# VALORES das dezenas, não da estrutura do problema. O resultado: as mesmas 12
+# dezenas fechavam em 15 apostas quando eram 1 a 12, e em 20 ou 21 quando eram
+# espalhadas. O problema é o mesmo, renomeado — e ele pagaria 5 apostas a mais
+# por causa da ordem interna de uma estrutura de dados.
+#
+# Agora as candidatas saem em ordem definida, e várias partidas com
+# embaralhamentos semeados disputam a menor. Os três conjuntos equivalentes
+# passaram a fechar nas mesmas 15, e o de 14 dezenas caiu de 43 para 39.
+# As sementes são fixas: rodar duas vezes dá o mesmo conjunto de apostas.
+PARTIDAS = 12
+SEGUNDOS_ALVO = 20.0
 
 
 def _milhar(n: int) -> str:
@@ -70,7 +90,9 @@ def custo_de_cobrir_tudo(d: int, k: int) -> int:
 
 
 def montar(dezenas: Sequence[int], k: int, acertos_previstos: int,
-           garantir: int, limite_apostas: int = 5000) -> Dict[str, Any]:
+           garantir: int, limite_apostas: int = 5000,
+           partidas: int = PARTIDAS,
+           segundos: float = SEGUNDOS_ALVO) -> Dict[str, Any]:
     """Monta apostas de `k` dezenas que garantem `garantir` acertos.
 
     A garantia: SE `acertos_previstos` das `dezenas` forem sorteadas, ALGUMA das
@@ -86,10 +108,9 @@ def montar(dezenas: Sequence[int], k: int, acertos_previstos: int,
     descobertos. Guloso não dá o mínimo -- este é um problema em aberto -- mas dá
     um conjunto válido, e a validade é o que se pode PROVAR.
 
-    Para não varrer todas as C(d,k) apostas possíveis (que explode), as
-    candidatas saem dos próprios casos descobertos, completados com as dezenas
-    que mais aparecem entre o que falta cobrir. É o que mantém isto rodando em
-    segundos com 15 ou 18 dezenas.
+    Várias partidas disputam a menor (ver PARTIDAS acima). Isso é honesto porque
+    a garantia é conferida à parte, exaustivamente: escolher a menor entre
+    conjuntos todos válidos não afrouxa nada, só gasta menos dinheiro dele.
     """
     dez = sorted(set(int(x) for x in dezenas))
     d = len(dez)
@@ -97,46 +118,84 @@ def montar(dezenas: Sequence[int], k: int, acertos_previstos: int,
     if erro:
         return {"ok": False, "nota": erro}
 
-    casos: Set[Tuple[int, ...]] = set(combinations(dez, acertos_previstos))
-    total_casos = len(casos)
+    total_casos = comb(d, acertos_previstos)
     if total_casos > MAX_CASOS:
         return {"ok": False,
                 "nota": f"seriam {_milhar(total_casos)} casos a cobrir — acima "
                         f"do teto de {_milhar(MAX_CASOS)}. Uma garantia que não "
                         f"dá para conferir não é garantia."}
 
+    inicio = time.monotonic()
+    melhor: Optional[List[Tuple[int, ...]]] = None
+    incompleta: Optional[Tuple[List[Tuple[int, ...]], int]] = None
+    tamanhos: List[int] = []
+    jogadas = 0
+    for i in range(partidas + 1):
+        # a partida 0 é a determinística; as outras embaralham com semente fixa
+        semente = None if i == 0 else 20260817 + i
+        apostas, sobraram = _uma_partida(dez, k, acertos_previstos, garantir,
+                                         limite_apostas, semente)
+        jogadas += 1
+        if sobraram == 0:
+            tamanhos.append(len(apostas))
+            if melhor is None or len(apostas) < len(melhor):
+                melhor = apostas
+        elif incompleta is None or sobraram < incompleta[1]:
+            incompleta = (apostas, sobraram)
+        if time.monotonic() - inicio > segundos:
+            break
+
+    if melhor is None:
+        faltam = incompleta[1] if incompleta else total_casos
+        return {"ok": False, "apostas": [list(a) for a in (incompleta[0] if incompleta else [])],
+                "n_apostas": len(incompleta[0]) if incompleta else 0,
+                "dezenas": dez, "k": k,
+                "acertos_previstos": acertos_previstos, "garantir": garantir,
+                "casos_totais": total_casos, "casos_descobertos": faltam,
+                "custo_de_cobrir_tudo": custo_de_cobrir_tudo(d, k),
+                "economia": None, "otimo": False,
+                "nota": f"NÃO fechou: {faltam} caso(s) sem cobertura em "
+                        f"{jogadas} partida(s). Isto não é garantia nenhuma; "
+                        f"ou aumente o limite de apostas, ou peça menos."}
+
+    return {
+        "ok": True,
+        "apostas": [list(a) for a in melhor],
+        "n_apostas": len(melhor),
+        "dezenas": dez, "k": k,
+        "acertos_previstos": acertos_previstos, "garantir": garantir,
+        "casos_totais": total_casos,
+        "casos_descobertos": 0,
+        "custo_de_cobrir_tudo": custo_de_cobrir_tudo(d, k),
+        "economia": custo_de_cobrir_tudo(d, k) - len(melhor),
+        "partidas": jogadas,
+        "pior_partida": max(tamanhos) if tamanhos else None,
+        "segundos": round(time.monotonic() - inicio, 2),
+        "nota": "garantia completa — falta conferir com conferir()",
+        # ver o cabeçalho: válido e provado ≠ o menor possível. Nem a menor de
+        # doze partidas é o mínimo; é só a menor que eu achei.
+        "otimo": False,
+    }
+
+
+def _uma_partida(dez: Sequence[int], k: int, acertos_previstos: int,
+                 garantir: int, limite_apostas: int,
+                 semente: Optional[int]) -> Tuple[List[Tuple[int, ...]], int]:
+    """Uma corrida do guloso. Devolve (apostas, quantos casos ficaram de fora)."""
+    casos: Set[Tuple[int, ...]] = set(combinations(dez, acertos_previstos))
+    rnd = random.Random(semente) if semente is not None else None
     apostas: List[Tuple[int, ...]] = []
     while casos and len(apostas) < limite_apostas:
         melhor, cobertos_pela_melhor = None, -1
-        for cand in _candidatas(casos, dez, k, garantir):
+        for cand in _candidatas(casos, dez, k, garantir, rnd=rnd):
             n = _quantos_cobre(cand, casos, garantir)
             if n > cobertos_pela_melhor:
                 melhor, cobertos_pela_melhor = cand, n
         if not melhor or cobertos_pela_melhor <= 0:
             break
         apostas.append(melhor)
-        casos -= {c for c in casos
-                  if len(set(c) & set(melhor)) >= garantir}
-
-    completo = not casos
-    return {
-        "ok": completo,
-        "apostas": [list(a) for a in apostas],
-        "n_apostas": len(apostas),
-        "dezenas": dez, "k": k,
-        "acertos_previstos": acertos_previstos, "garantir": garantir,
-        "casos_totais": total_casos,
-        "casos_descobertos": len(casos),
-        "custo_de_cobrir_tudo": custo_de_cobrir_tudo(d, k),
-        "economia": (custo_de_cobrir_tudo(d, k) - len(apostas)
-                     if completo else None),
-        "nota": ("garantia completa — falta conferir com conferir()"
-                 if completo else
-                 f"NÃO fechou: {len(casos)} caso(s) sem cobertura. Isto não é "
-                 f"garantia nenhuma; ou aumente o limite de apostas, ou peça "
-                 f"menos."),
-        "otimo": False,   # ver o cabeçalho: válido e provado ≠ o menor possível
-    }
+        casos -= {c for c in casos if len(set(c) & set(melhor)) >= garantir}
+    return apostas, len(casos)
 
 
 def _conferir_pedido(d: int, k: int, acertos: int, garantir: int) -> str:
@@ -157,20 +216,33 @@ def _conferir_pedido(d: int, k: int, acertos: int, garantir: int) -> str:
 
 
 def _candidatas(casos: Set[Tuple[int, ...]], dez: Sequence[int],
-                k: int, garantir: int, quantas: int = 60) -> List[Tuple[int, ...]]:
+                k: int, garantir: int, quantas: int = 60,
+                rnd: Optional[random.Random] = None) -> List[Tuple[int, ...]]:
     """Apostas plausíveis para o próximo passo do guloso.
 
     Varrer todas as C(d,k) apostas seria correto e lento: com 18 dezenas e
     aposta de 6 são 18.564 candidatas em cada passo, vezes dezenas de passos.
     Estas candidatas nascem dos casos ainda DESCOBERTOS -- que é onde a aposta
     útil tem de estar -- completados com as dezenas mais frequentes entre eles.
+
+    A ORDEM AQUI NÃO PODE VIR DO `set`
+    ──────────────────────────────────
+    Ela vinha, e era um defeito de verdade: a ordem de iteração de um conjunto
+    depende dos valores guardados nele, então o mesmo problema com dezenas
+    renomeadas dava fechamento maior ou menor por acaso. Ou os casos saem
+    ordenados, ou saem sorteados com semente -- as duas dependem da estrutura do
+    problema, e nenhuma depende de qual número ele escolheu.
     """
-    faltando = list(casos)[:quantas]
+    faltando = sorted(casos)
+    if rnd is not None and len(faltando) > quantas:
+        faltando = rnd.sample(faltando, quantas)
+    else:
+        faltando = faltando[:quantas]
     peso: Dict[int, int] = {}
     for c in casos:
         for x in c:
             peso[x] = peso.get(x, 0) + 1
-    ordem = sorted(dez, key=lambda x: -peso.get(x, 0))
+    ordem = sorted(dez, key=lambda x: (-peso.get(x, 0), x))
     saida: List[Tuple[int, ...]] = []
     vistas: Set[Tuple[int, ...]] = set()
     for caso in faltando:
@@ -250,6 +322,11 @@ def resumo(r: Dict[str, Any], prova: Optional[Dict[str, Any]] = None) -> List[st
          f"[Fechamento]   cobrir tudo custaria {r['custo_de_cobrir_tudo']} "
          f"apostas; estas são {r['n_apostas']} — economia de "
          f"{r.get('economia')} apostas com a MESMA garantia"]
+    if r.get("partidas"):
+        L.append(f"[Fechamento]   menor de {r['partidas']} partidas do guloso "
+                 f"(a pior deu {r.get('pior_partida')}), em "
+                 f"{r.get('segundos')}s — e nenhuma delas é o mínimo provado "
+                 f"da matemática, que ninguém conhece para todo tamanho")
     if prova is not None:
         L.append(f"[Fechamento]   {prova.get('nota')}")
         if not prova.get("provado"):
