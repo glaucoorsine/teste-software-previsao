@@ -2049,7 +2049,7 @@ class PipelinePerceptivo:
                     max(2, self.n_classes))
         self._palpites_tratado = {}
 
-    def processar(self, historico, ok, err, settled=None, mults=None, last_result=None, active_selection=None, linhas=None):
+    def processar(self, historico, ok, err, settled=None, mults=None, last_result=None, active_selection=None, linhas=None, jogadores=None):
         # zera o palpite do Cacador a cada volta: sem isto ele repetiria o da
         # volta anterior quando a captura nao trouxesse linhas, e a tela
         # mostraria numero velho como se fosse novo
@@ -2863,6 +2863,49 @@ class PipelinePerceptivo:
                                     f"votando na escolha")
             except Exception as _e:
                 msgs.append(f"[Multiplicador→consenso] {type(_e).__name__}")
+
+        # ── A SITUAÇÃO: momentos parecidos, público, hora, ritmo ──────────
+        #
+        # Ele listou como obrigações da IA: "ver o que funcionou naquele momento
+        # para aplicar em momentos iguais", "perceber quantidade de pessoas em
+        # momentos de pico de multiplicadores", "sinais de que muitos
+        # multiplicadores virão", "percepção de momentos iguais ou parecidos",
+        # "melhores horários".
+        #
+        # Eu quis medir antes de ligar; ele respondeu que já mediu ao vivo e que
+        # tudo aquilo influencia. Ele tem meses de observação e eu tenho 1885
+        # giros -- a evidência é dele. Então está ligado.
+        #
+        # Os quatro pedidos são a MESMA pergunta -- "o que costuma acontecer
+        # depois de um momento como este?" -- e é isso que `NUCLEO/situacao.py`
+        # responde. Hora e público entram como EIXOS da descrição do momento,
+        # nunca como regra minha: não existe "depois das 22h aposte X", existe
+        # "os 40 momentos mais parecidos foram seguidos por isto".
+        #
+        # E a fonte entra no consenso como qualquer outra, com o `n` que a
+        # sustenta e a razão contra o acaso da MESMA aposta.
+        if linhas:
+            try:
+                from NUCLEO import situacao as _sit
+                _rs = _sit.ler(linhas, self.n_classes,
+                               publico_agora=jogadores, k_alvos=self.k_alvos)
+                for _l in _sit.resumo(_rs):
+                    msgs.append(_l)
+                if _rs.get("fala") and _rs.get("numeros"):
+                    # o peso segue a razão MEDIDA, não a minha estimativa: uma
+                    # situação que só empata com o acaso fala baixo
+                    _r = float(_rs.get("razao") or 1.0)
+                    _pk = 2.2 * min(1.8, max(0.5, _r))
+                    _nums_s = [str(x) for x in _rs["numeros"]]
+                    if self.is_ct:
+                        _nums_s = [x for x in _nums_s if x in CT_SETORES]
+                    if _nums_s:
+                        hips.append({"nome": "SITUACAO",
+                                     "nums": _nums_s,
+                                     "peso": round(_pk, 3)})
+                    self._situacao = _rs
+            except Exception as _e:
+                msgs.append(f"[Situação] {type(_e).__name__}: {_e}")
 
         aprovados, probs, fontes, score, sig, p0 = self.crit.consenso(hips, self.n_classes, self.k_alvos, minimo=2)
         msgs.append(f"[Hipóteses] {[h['nome'] for h in hips]}")

@@ -50,6 +50,7 @@ def process_cerebro(in_q, out_q, jogo="mega_fire"):
                 linhas=dados.get("linhas"),
                 last_result=dados.get("last_result"),
                 active_selection=dados.get("active_selection"),
+                jogadores=dados.get("jogadores"),
             )
             if not isinstance(sug, dict):
                 sug = {"pad5": [], "msgs": [f"resposta inesperada: {type(sug).__name__}"],

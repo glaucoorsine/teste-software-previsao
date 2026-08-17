@@ -1102,6 +1102,18 @@ class PainelMesa(ctk.CTkFrame):
                               "last_result": self.ultimo_resultado,
                               "active_selection": list(self.escolhas),
                               "head_id": cap.get("head_id"),
+                              # QUANTAS PESSOAS ESTAO NA MESA -- ate aqui isto
+                              # morria na tela.
+                              #
+                              # Ele mediu ao vivo e disse: "mega acima de 800,
+                              # crazy acima de 13 mil, mais facil a previsao e
+                              # os multiplicadores". O numero era coletado,
+                              # mostrado e gravado na autopsia -- e o motor
+                              # NUNCA o via (`jogadores` nao aparecia uma vez
+                              # em ia_modulos.py). A percepcao dele estava
+                              # sendo registrada e ignorada.
+                              "jogadores": self.jogadores,
+                              "mesa_cheia": self.mesa_cheia,
                               "req_id": self._novo_pedido()}
             try:
                 self.entrada.put(_pedido, timeout=2)
