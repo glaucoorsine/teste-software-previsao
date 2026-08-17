@@ -92,7 +92,7 @@ MAPA: Dict[str, Tuple[str, Optional[Tuple[int, int]], str]] = {
 }
 
 MESAS = {
-    "mega_fire": "MEGA FIRE", "lightning": "LIGHTING", "immersive": "IMMERSIVE",
+    "mega_fire": "MEGA FIRE", "lightning": "LIGHTING",
     "crazy_time": "CRAZY TIME", "crazy_time_a": "CRAZY TIME A",
 }
 

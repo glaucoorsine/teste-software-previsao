@@ -85,15 +85,15 @@ checa(d2["mega_fire"]["janelas"] == [], "mesa sem entrada fica vazia")
 
 print("\n[4] janela herdada de antes do log não inventa tamanho")
 log3 = escrever([
-    "immersive HIT 7 restam=1",
-    "immersive MISS 9 restam=0",
-    "immersive JANELA OK ok=1 err=0",
+    "lightning HIT 7 restam=1",
+    "lightning MISS 9 restam=0",
+    "lightning JANELA OK ok=1 err=0",
 ])
 d3 = R.ler(log3)
-j3 = d3["immersive"]["janelas"]
+j3 = d3["lightning"]["janelas"]
 checa(len(j3) == 1 and j3[0]["k"] is None,
       "guardada sem tamanho, em vez de chutar um", j3)
-saida = "\n".join(R.relatar("immersive", d3["immersive"]))
+saida = "\n".join(R.relatar("lightning", d3["lightning"]))
 checa("nenhuma janela fechada com aposta registrada" in saida,
       "e o relatório não a usa na conta", saida)
 
@@ -132,11 +132,11 @@ checa("pouco para concluir" in txt,
 # mesmo caso, com aposta de 7 números: 32% ali EMPATA com o acaso
 linhas7 = []
 for i in range(10):
-    linhas7 += ["immersive NOVA_JANELA [1, 2, 3, 4, 5, 6, 7] OPERAR",
-                f"immersive {'HIT' if i < 5 else 'MISS'} 1 restam=0",
-                f"immersive JANELA {'OK' if i < 5 else 'ERRO'} ok=0 err=0"]
+    linhas7 += ["lightning NOVA_JANELA [1, 2, 3, 4, 5, 6, 7] OPERAR",
+                f"lightning {'HIT' if i < 5 else 'MISS'} 1 restam=0",
+                f"lightning JANELA {'OK' if i < 5 else 'ERRO'} ok=0 err=0"]
 d5 = R.ler(escrever(linhas7))
-txt5 = "\n".join(R.relatar("immersive", d5["immersive"]))
+txt5 = "\n".join(R.relatar("lightning", d5["lightning"]))
 print("       " + txt5.replace("\n", "\n       "))
 checa("50.0%" in txt5, "50% de acerto com 7 números")
 esperado7 = 0.5 / (7 / 37)

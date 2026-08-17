@@ -26,7 +26,7 @@ echo.
 echo ----------------------------------------------------------
 echo  [1/2] Essenciais - o software funciona so com estes
 echo ----------------------------------------------------------
-%CMD% -m pip install customtkinter requests numpy psutil Pillow
+%CMD% -m pip install customtkinter requests numpy psutil Pillow pyflakes pypdf
 if %errorlevel% neq 0 (
   echo.
   echo   FALHOU nos essenciais. Mande um print desta janela.
@@ -63,8 +63,9 @@ if %errorlevel% neq 0 (
 )
 
 echo ==========================================================
-echo   PRONTO - pode rodar INICIAR_COLETA.bat
-echo   ou 2_INICIAR_LIGHTNING.bat para a interface completa
+echo   PRONTO - agora abra CENTRAL.bat
+echo   (as quatro mesas numa janela so). As janelas
+echo   avulsas 1_ a 3_ mostram uma mesa por vez.
 echo ==========================================================
 echo.
 pause

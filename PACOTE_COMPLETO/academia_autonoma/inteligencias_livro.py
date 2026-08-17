@@ -84,7 +84,6 @@ POS = {n: i for i, n in enumerate(RODA)}
 MESAS = {
     "mega_fire": "MEGA FIRE",
     "lightning": "LIGHTING",          # é assim que está escrito no livro dele
-    "immersive": "IMMERSIVE",
     "crazy_time": "CRAZY TIME",
     "crazy_time_a": "CRAZY TIME A",
 }

@@ -23,7 +23,11 @@ import customtkinter as ctk
 import threading, requests, time, os, json, traceback
 import multiprocessing as mp
 from worker_process import process_cerebro
-from tela_segura import depois  # after que nao quebra ao fechar a janela
+from queda import registrar_queda
+from tela_segura import bombear, depois  # after que nao quebra ao fechar a janela
+from fila_cerebro import (novo_pedido as _novo_pedido,
+                          resposta_de as _resposta_de,
+                          garantir_cerebro as _garantir_cerebro)
 
 GAME = "lightning"
 API = "https://api-cs.casino.org/svc-evolution-game-events/api/lightningroulette"
@@ -53,6 +57,10 @@ class App(ctk.CTk):
     def __init__(self, in_q, out_q):
         super().__init__()
         self.in_q, self.out_q = in_q, out_q
+        # a thread da interface se identifica e a bomba comeca a rodar:
+        # sem isto, `depois()` chamado de thread de fundo toca no Tk de
+        # fora da thread dele -- a corrida que trava a janela. Ver tela_segura.
+        bombear(self)
         self.title("LIGHTNING — Pipeline 24reqs")
         self.geometry("1120x820")
         ctk.set_appearance_mode("dark")
@@ -447,6 +455,10 @@ class App(ctk.CTk):
         if self.busy: return
         self.busy=True
         try:
+            if not _garantir_cerebro(self, GAME, registrar=lambda m: log(f"{GAME} {m}")):
+                depois(self, 0, lambda: self.st.configure(
+                    text="cerebro nao sobe", text_color="#ef4444"))
+                return
             depois(self, 0, lambda: self.st.configure(text="Capturando...", text_color="#eab308"))
             from fluxo_captura import capturar, marcar_snapshot_processado, salvar_ciclo_ativo, limpar_ciclo_ativo
             cap = capturar(GAME, page_size=50, max_pages=2)
@@ -491,29 +503,48 @@ class App(ctk.CTk):
             pending_lr = self.last_result if mudou else None
             payload={
                 "nums": [x["n"] for x in rows],
+                # AS LINHAS CRUAS -- SEM ELAS O CAÇADOR NÃO FALA.
+                #
+                # A janela avulsa mandava só os números. Só que quem escolhe
+                # agora é o Caçador de Multiplicador, e ele lê o sorteio de
+                # lucky/fire/top slot de cada rodada -- que vive nas `tags`,
+                # não no número. Sem `linhas` ele fica mudo, e como não há
+                # régua atrás dele para cair, a tela fica VAZIA.
+                #
+                # A CENTRAL já mandava. Estas três janelas, não: o mesmo
+                # software mostrava aposta numa tela e nada na outra.
+                "linhas": rows[:200],
                 "settled": [x.get("settled") for x in rows],
                 "mults": mults,
                 "ok": self.ok, "err": self.err,
                 "last_result": pending_lr,
                 "active_selection": list(getattr(self, "escolhas", None) or []),
                 "head_id": head_id,
+                "req_id": _novo_pedido(self, GAME),
             }
             # evita reenvio do mesmo head sem ciclo: grava poll head antes do put
             if head_id and not mudou:
                 self._last_poll_head = head_id
-            self.in_q.put(payload)
-            sug=None
             try:
-                import queue as _queue
-                sug=self.out_q.get(timeout=45)
-            except _queue.Empty:
-                # timeout: NÃO apaga last_result — próxima tentativa reenvia
+                self.in_q.put(payload, timeout=2)
+            except Exception:
+                log(f"{GAME} FILA_CHEIA - cerebro atrasado, pulando esta volta")
+                depois(self, 0, lambda: self.st.configure(
+                    text="cerebro atrasado - pulando volta", text_color="#eab308"))
+                return
+            sug = _resposta_de(self, self.out_q, 300 if getattr(self, "primeira", True) else 90,
+                               registrar=lambda m: log(f"{GAME} {m}"))
+            if sug is None:
+                # PRAZO: era 45s, e a PRIMEIRA volta leva mais que isso.
+                #
+                # Ela carrega o modelo e a academia -- perto de setenta
+                # segundos numa máquina normal. Com 45 a janela desistia
+                # SEMPRE na primeira volta, mostrava "Timeout motor" e o
+                # usuário via a tela morta logo ao abrir.
                 depois(self, 0, lambda: self.st.configure(text="Timeout motor", text_color="#ef4444"))
                 return
-            except Exception as e:
-                err=str(e)[:60]
-                depois(self, 0, lambda err=err: self.st.configure(text=f"Falha fila: {err}", text_color="#ef4444"))
-                return
+            if getattr(self, "primeira", True):
+                self.primeira = False
             if not sug:
                 depois(self, 0, lambda: self.st.configure(text="Resposta vazia do motor", text_color="#ef4444"))
                 # NÃO marca snapshot — permite reprocessar
@@ -539,13 +570,27 @@ class App(ctk.CTk):
 
 def main():
     mp.freeze_support()
-    in_q, out_q = mp.Queue(), mp.Queue()
+    # FILAS COM TETO: sem limite, um cerebro engasgado acumula pedido
+    # a cada volta -- e cada pedido leva 200 linhas com as tags de
+    # multiplicador. Fila cheia agora e' detectada e a volta e' pulada.
+    in_q, out_q = mp.Queue(maxsize=4), mp.Queue(maxsize=8)
     p=mp.Process(target=process_cerebro, args=(in_q, out_q, "lightning"), daemon=True); p.start()
-    try: App(in_q, out_q).mainloop()
+    try:
+        app = App(in_q, out_q)
+        app.proc = p          # para o supervisor poder levanta-lo de novo
+        app.mainloop()
     except Exception:
-        open("crash_log.txt","w").write(traceback.format_exc())
+        _onde = registrar_queda(GAME)
+        print(f"\n  A janela caiu. O rastro ficou em {_onde}\n")
     finally:
-        in_q.put(None); p.join(timeout=2)
+        # o supervisor pode ter trocado a fila e o processo depois que
+        # o cerebro caiu -- desligar os originais deixaria o novo de pe
+        _q = getattr(locals().get('app', None), 'in_q', None) or in_q
+        _p = getattr(locals().get('app', None), 'proc', None) or p
+        try: _q.put_nowait(None)
+        except Exception: pass
+        try: _p.join(timeout=2)
+        except Exception: pass
 
 if __name__ == "__main__":
     main()

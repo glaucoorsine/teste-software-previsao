@@ -4,7 +4,7 @@ import customtkinter as ctk
 import threading, traceback
 from academia_agentes import get_academia, feed_tail, snapshot_somente_leitura, PROTOCOLO
 import academia_db as DB
-from tela_segura import depois  # after que nao quebra ao fechar a janela
+from tela_segura import bombear, depois  # after que nao quebra ao fechar a janela
 
 class CentralIAs(ctk.CTk):
     def __init__(self):
@@ -170,7 +170,8 @@ class CentralIAs(ctk.CTk):
         # TRIBUNAL DE REVISÃO (7 IAs)
         tri = snap.get("tribunal") or {}
         jogo_atual = self.jogo.get()
-        nomes = {"mega_fire": "Mega Fire", "lightning": "Lightning", "crazy_time": "Crazy Time", "immersive": "Immersive"}
+        nomes = {"mega_fire": "Mega Fire", "lightning": "Lightning",
+                 "crazy_time": "Crazy Time", "crazy_time_a": "Crazy Time A"}
         ctk.CTkLabel(
             self.cards_host,
             text=f"⚖ TRIBUNAL · {nomes.get(jogo_atual, jogo_atual)} — 7 IAs isoladas deste jogo",
@@ -315,4 +316,6 @@ if __name__ == "__main__":
     try:
         CentralIAs().mainloop()
     except Exception:
-        open("crash_central.txt","w").write(traceback.format_exc())
+        from queda import registrar_queda
+        _onde = registrar_queda("central_ias")
+        print(f"\n  A CENTRAL DAS IAS caiu. O rastro ficou em {_onde}\n")

@@ -35,9 +35,20 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent
 LOG = RAIZ / "Logs" / "central_log.txt"
-JOGOS = ("lightning", "mega_fire", "immersive", "crazy_time", "crazy_time_a")
-N_CLASSES = {"lightning": 37, "mega_fire": 37, "immersive": 37,
-             "crazy_time": 54}
+JOGOS = ("lightning", "mega_fire", "crazy_time", "crazy_time_a")
+
+# A CRAZY TIME A FALTAVA AQUI, E ISSO ERA UM KeyError NA PRIMEIRA JANELA.
+#
+# `JOGOS` tinha a mesa, `N_CLASSES` não. Na primeira janela fechada da Crazy
+# Time A, `chance_por_giro` fazia `N_CLASSES[jogo]` e o relatório inteiro
+# morria -- não só a linha dela: as quatro mesas sumiam junto, porque o
+# estouro acontece antes de qualquer coisa ser impressa.
+#
+# É o tipo de defeito que só aparece quando o software finalmente funciona:
+# enquanto a Crazy Time A não capturava nada, nenhuma janela dela fechava, e
+# o erro ficava dormindo.
+N_CLASSES = {"lightning": 37, "mega_fire": 37,
+             "crazy_time": 54, "crazy_time_a": 54}
 
 # A RODA DO CRAZY TIME NÃO TEM CASAS IGUAIS.
 #
@@ -47,8 +58,14 @@ N_CLASSES = {"lightning": 37, "mega_fire": 37, "immersive": 37,
 # Na primeira leitura do log dele deu "5,32x acima do acaso" no Crazy Time.
 # Só que o software apostou `['5']` em 36 das 56 janelas, e o 5 vale 13,0% por
 # giro, não 1,9%. O 5,32x era erro meu de baseline, não vantagem dele.
+#
+# O resto do software chama a casa premiada de "CrazyBonus" (é o nome que
+# `hist_buffer.CT` valida). Aqui estava escrito "CrazyTime", então o símbolo
+# caía no `.get(..., 1)` por acidente. Deu certo por coincidência -- a casa
+# vale 1 mesmo -- mas coincidência não é conta. Os dois nomes entram.
 FATIAS_CT = {"1": 21, "2": 13, "5": 7, "10": 4,
-             "CoinFlip": 4, "CashHunt": 2, "Pachinko": 2, "CrazyTime": 1}
+             "CoinFlip": 4, "CashHunt": 2, "Pachinko": 2,
+             "CrazyBonus": 1, "CrazyTime": 1}
 
 LINHA = re.compile(
     r"^\S+ \S+ \| (\w+) (NOVA_JANELA|HIT|MISS|JANELA) ?(.*)$")
@@ -70,6 +87,24 @@ def ler(caminho: Path) -> dict:
         if tipo == "NOVA_JANELA":
             alvos = re.findall(r"'([^']+)'", resto.split("]")[0]) or \
                 re.findall(r"\b\w+\b", resto.split("]")[0])
+            # APOSTA REPETIDA É ESPERA, NÃO JANELA NOVA.
+            #
+            # Insistir num atrasado está certo pelo critério dele. O que estava
+            # errado era a contabilidade: cada volta reabria uma janela, e
+            # quinze minutos esperando o CashHunt viravam vinte janelas
+            # perdidas no placar em vez de uma espera longa. O placar mentia
+            # para baixo — e mentia justamente nas horas em que ele estava
+            # fazendo o que o método manda.
+            #
+            # A CENTRAL agora marca essas reaberturas com REPETICAO. Aqui elas
+            # voltam para a janela anterior, somando giros nela.
+            if "REPETICAO" in resto and d["janelas"]:
+                ultima = d["janelas"][-1]
+                if [str(x) for x in (ultima.get("alvos") or [])] == \
+                        [str(x) for x in alvos]:
+                    ultima.pop("fechou_bem", None)
+                    d["aberta"] = d["janelas"].pop()
+                    continue
             d["aberta"] = {"k": len(alvos), "alvos": list(alvos),
                            "acertos": 0, "giros": 0}
         elif tipo in ("HIT", "MISS"):
@@ -95,8 +130,13 @@ def chance_por_giro(jogo: str, alvos, k: int) -> float:
     símbolo ocupa um número diferente de casas, e é preciso somar as casas
     dos símbolos apostados.
     """
-    n = N_CLASSES[jogo]
-    if jogo != "crazy_time":
+    n = N_CLASSES.get(jogo)
+    if n is None:
+        # mesa que o log conhece e este arquivo não: melhor devolver 0 e a
+        # linha sair marcada como "sem baseline" do que derrubar o relatório
+        # inteiro das outras mesas por causa dela
+        return 0.0
+    if not str(jogo).startswith("crazy_time"):
         return min(k, n) / n
     casas = sum(FATIAS_CT.get(str(a), 1) for a in (alvos or []))
     if not casas:

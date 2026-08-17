@@ -220,6 +220,32 @@ class Placar:
 
 # ═══════════════════════════════════════════════════════ a previsão
 
+def _cacador(historico: List[dict], jogo: str, k: int) -> tuple:
+    """O palpite do Caçador de Multiplicador — a única fonte que decide.
+
+    Devolve `(numeros, nota)`. Lista vazia quando ele não fala: mesa sem
+    multiplicador, histórico sem rodada de sorteio, ou nenhum voto. Nesses
+    casos a previsão fica vazia mesmo, e a nota diz por quê.
+    """
+    try:
+        from academia_autonoma.previsores_multiplicador import (
+            prever as _pm, tem_multiplicador as _tem)
+    except Exception as e:
+        return [], f"Caçador indisponível ({type(e).__name__})"
+    if not _tem(jogo):
+        return [], "esta mesa não tem multiplicador"
+    try:
+        r = _pm(jogo, historico, k=k) or {}
+    except Exception as e:
+        return [], f"Caçador falhou ({type(e).__name__})"
+    nums = [str(x) for x in (r.get("consenso") or [])][:k]
+    if not nums:
+        return [], (r.get("nota") or "o Caçador não votou nesta volta")
+    return nums, (f"{len(r.get('por_ia') or {})} IAs + "
+                  f"{len(r.get('por_agente') or {})} agentes, "
+                  f"{r.get('n_rodadas', 0)} rodadas de sorteio lidas")
+
+
 def prever(historico: List[dict], jogo: str, k: int,
            placar: Optional[Placar] = None) -> Dict[str, Any]:
     """Os k números, com quem votou em cada um."""
@@ -255,8 +281,29 @@ def prever(historico: List[dict], jogo: str, k: int,
         palpites.update({f: list(v)
                          for f, v in (canal.get("palpites") or {}).items()})
 
+    # ─────────────────────────────────────────────────────────────────────
+    # QUEM ESCOLHE É O CAÇADOR — AQUI TAMBÉM.
+    #
+    # Este arquivo nasceu do pedido de fazer os três PDFs serem a base, e ele
+    # faz: as leituras F01–F44 rodam, o canal anunciado vota, a agregação F45
+    # pesa. Só que a decisão final dele saía por conta própria, enquanto a
+    # tela ao vivo já entregava o número do Caçador.
+    #
+    # Isso é o software com duas respostas para a mesma pergunta. Se ele
+    # olhasse as duas no mesmo giro, veria listas diferentes e nenhuma forma
+    # de saber qual é "a" previsão. A ordem foi uma só: "somente o Caçador de
+    # Multiplicador escolhendo os números para todos os jogos".
+    #
+    # Então o consenso dos PDFs continua sendo calculado inteiro — ele é quem
+    # dá o "quem votou", a robustez e a entropia — mas o número entregue é o
+    # do Caçador. Quando o Caçador não fala, aqui também não sai número: cair
+    # para a lista dos PDFs seria régua reserva, que é exatamente o que ele
+    # mandou tirar.
+    do_cacador, nota_cacador = _cacador(historico, jogo, k)
     return {
-        "numeros": ag["ordem"][:k],
+        "numeros": do_cacador if do_cacador else [],
+        "numeros_pdfs": ag["ordem"][:k],
+        "cacador": nota_cacador,
         # o placar bruto do consenso -- e sobre ele que a entropia da
         # R04-UNC-04 e medida, para saber se a concentracao e genuina ou se
         # pegar o topo seria ordenacao arbitraria de empate
@@ -278,12 +325,25 @@ def mostrar(p: Dict[str, Any], jogo: str, k: int) -> None:
     print(f"  {jogo.upper()}   {agora}   {p['n_giros']} giros lidos")
     print("═" * 66)
     print()
-    print(f"  PRÓXIMO GIRO — {k} números:")
+    if not p["numeros"]:
+        print(f"  PRÓXIMO GIRO — sem número.")
+        print(f"      o Caçador não votou: {p.get('cacador') or '?'}")
+        print(f"      (os PDFs apontariam {p.get('numeros_pdfs') or []}, mas")
+        print(f"       quem decide é o Caçador — sem ele não há aposta)")
+        print()
+    else:
+        print(f"  PRÓXIMO GIRO — {k} números  ·  Caçador de Multiplicador:")
+        print()
+        linha = "   ".join(f"{n:>2}" for n in p["numeros"])
+        print(f"      {linha}")
+        print()
+        print(f"      {p.get('cacador') or ''}")
+        _pdfs = p.get("numeros_pdfs") or []
+        _junto = [n for n in p["numeros"] if n in _pdfs]
+        print(f"      os PDFs concordam em {len(_junto)} de {len(p['numeros'])}"
+              f"  ({' '.join(str(x) for x in _junto) if _junto else '—'})")
     print()
-    linha = "   ".join(f"{n:>2}" for n in p["numeros"])
-    print(f"      {linha}")
-    print()
-    for n in p["numeros"][:3]:
+    for n in (p.get("numeros_pdfs") or [])[:3]:
         rob = p["robustez"].get(n, 0)
         quem = p["quem"].get(n, [])
         fam = quem[0].replace("CANAL_", "") if quem else ""

@@ -44,7 +44,8 @@ from pathlib import Path
 import customtkinter as ctk
 
 from worker_process import process_cerebro
-from tela_segura import depois  # after que nao quebra ao fechar a janela
+from tela_segura import bombear, depois  # after que nao quebra ao fechar a janela
+from fila_cerebro import novo_pedido as _novo_pedido, resposta_de as _resposta_de
 
 RAIZ = Path(__file__).resolve().parent
 PASTA = RAIZ / "Logs"
@@ -226,12 +227,25 @@ def texto_multiplicador(r) -> str:
                 valores.append(int(x))
             except (TypeError, ValueError):
                 pass
-        for L in (t.get("lucky") or []):
-            if isinstance(L, dict) and L.get("x") and L.get("n") == r.get("n"):
-                try:
-                    valores.append(int(L["x"]))
-                except (TypeError, ValueError):
-                    pass
+        # A MEGA FIRE GRAVA `fire_nums`, E ESTA LINHA SÓ LIA `lucky`.
+        #
+        # É o mesmo esquecimento que deixava o Caçador cego: o Lightning chama
+        # de `lucky`, a Mega Fire chama de `fire_nums`, e o código foi escrito
+        # olhando para o Lightning. A coluna de multiplicador da Mega Fire
+        # ficava vazia mesmo nos giros em que o fogo pagou — e ele viu isso na
+        # tela, ao lado de um Lightning mostrando ×500 normalmente.
+        #
+        # A comparação também precisa ser por TEXTO. O `n` do anúncio vem
+        # inteiro e o `n` do giro pode vir texto conforme a fonte; `7 == "7"`
+        # é falso, e o multiplicador que pagou sumia por isso.
+        _saiu = str(r.get("n"))
+        for canal in ("lucky", "fire_nums"):
+            for L in (t.get(canal) or []):
+                if isinstance(L, dict) and L.get("x") and str(L.get("n")) == _saiu:
+                    try:
+                        valores.append(int(L["x"]))
+                    except (TypeError, ValueError):
+                        pass
     return f"×{max(valores)}" if valores else ""
 
 
@@ -586,11 +600,23 @@ class PainelMesa(ctk.CTkFrame):
         self._carregar()
         self._montar()
 
-        self.entrada, self.saida = mp.Queue(), mp.Queue()
-        self.processo = mp.Process(target=process_cerebro,
-                                   args=(self.entrada, self.saida, jogo),
-                                   daemon=True)
-        self.processo.start()
+        # FILAS COM TETO, E NÃO INFINITAS.
+        #
+        # Eram `mp.Queue()` sem limite. Se o cérebro engasgar — primeira volta
+        # carregando modelo, ou uma mesa lenta — a captura continua empurrando
+        # um pedido a cada volta, para sempre. Cada pedido leva `linhas[:200]`
+        # com as tags de multiplicador: não é um dicionário pequeno.
+        #
+        # O que ele viu como "tudo travado" tem essa cara: memória subindo,
+        # máquina engasgando, e o cérebro trabalhando numa fila de pedidos
+        # velhos que ninguém mais quer.
+        #
+        # Com teto, a fila cheia é detectada na hora (`Full`) e a volta pula,
+        # que é o certo: pedido velho não vale mais nada quando já existe um
+        # giro mais novo esperando.
+        self.entrada, self.saida = mp.Queue(maxsize=4), mp.Queue(maxsize=8)
+        self.processo = None
+        self._acender_cerebro()
         depois(self, 1200 + ordem * ATRASO_ENTRE_MESAS_S * 1000, self.rodar)
 
     # ------------------------------------------------------------- interface
@@ -700,7 +726,7 @@ class PainelMesa(ctk.CTkFrame):
         # isso a coluna dele é mais alta e mais larga.
         largura = 74 if str(self.jogo).startswith("crazy_time") else 38
         self.hist_col = []
-        for _ in range(16 if self.jogo != "crazy_time" else 11):
+        for _ in range(11 if str(self.jogo).startswith("crazy_time") else 16):
             col = ctk.CTkFrame(self.hist, fg_color="transparent")
             col.pack(side="left", padx=2)
             topo = ctk.CTkLabel(col, text="", width=largura, height=14,
@@ -792,6 +818,30 @@ class PainelMesa(ctk.CTkFrame):
             registrar(f"{self.jogo} salvar: {e}")
 
     # ------------------------------------------------------------ conferência
+    def _chave_do_giro(self, r) -> str:
+        """A identidade de um giro — a MESMA em quem confere e em quem marca.
+
+        Havia duas contas diferentes para a mesma coisa. `validar` usava o
+        horário e, na falta dele, montava `valor#head`. `_marca_do_giro` usava
+        só o horário: `str(r.get("settled") or "")`.
+
+        Enquanto a fonte era a API, as duas coincidiam — todo giro tem
+        horário. Na fonte HTML, não: lá `settled` é `None` para todos os
+        giros. `validar` gravava a chave `5#html:ab12…` e o histórico
+        procurava pela chave `""`. Nenhuma batia, e o `✓`/`✗` simplesmente
+        não aparecia nessa fonte — sem erro, sem aviso, só a coluna vazia.
+
+        Agora é uma função só, e ela prefere o identificador do evento quando
+        existe: ele é estável entre leituras, enquanto a posição na lista não.
+        """
+        eid = r.get("event_id")
+        if eid:
+            return str(eid)
+        ts = r.get("settled")
+        if ts:
+            return str(ts)
+        return ""
+
     def validar(self, r) -> None:
         """Confere o giro que acabou de sair contra a janela aberta.
 
@@ -801,9 +851,8 @@ class PainelMesa(ctk.CTkFrame):
         """
         n = r.get("n")
         ts = r.get("settled")
-        if ts:
-            chave = str(ts)
-        else:
+        chave = self._chave_do_giro(r)
+        if not chave:
             # SEM HORÁRIO, O CONTADOR TRANSFORMAVA REPETIÇÃO EM GIRO NOVO.
             #
             # O contador dava chave própria a cada leitura -- inclusive quando
@@ -811,17 +860,12 @@ class PainelMesa(ctk.CTkFrame):
             # horário, o mesmo "5" da página virava 5#s1, 5#s2, 5#s3... e a
             # mesa contava um giro novo a cada volta da captura.
             #
-            # A chave passa a vir do CONTEÚDO: o valor e a posição dele na
-            # sequência devolvida. Repetição relida cai na mesma chave e é
-            # ignorada; giro realmente novo empurra a sequência e muda a
-            # posição de todos, então entra.
-            # A chave vem do IDENTIFICADOR DA CAPTURA, não de um contador.
-            # `validar` só é alcançado quando a captura disse que houve giro
-            # novo, e agora até a fonte HTML tem identificador próprio (a
-            # impressão digital da sequência). Se por algum caminho o mesmo
-            # head chegar duas vezes, a chave repete e o giro é ignorado --
-            # que é o comportamento certo. O contador antigo garantia o
-            # contrário: chave nova para leitura repetida.
+            # Este ramo é o último recurso: giro sem `event_id` E sem horário.
+            # A chave vem então do IDENTIFICADOR DA CAPTURA, não de um
+            # contador — `validar` só é alcançado quando a captura disse que
+            # houve giro novo. Se o mesmo head chegar duas vezes, a chave
+            # repete e o giro é ignorado, que é o certo. O contador antigo
+            # garantia o contrário: chave nova para leitura repetida.
             chave = f"{n}#{getattr(self, 'head_corrente', '') or self.seq_giro}"
             if not getattr(self, "head_corrente", ""):
                 self.seq_giro += 1
@@ -911,6 +955,54 @@ class PainelMesa(ctk.CTkFrame):
         self._salvar()
 
     # ---------------------------------------------------------------- ciclo
+    def _acender_cerebro(self) -> None:
+        """Sobe o processo do cérebro desta mesa."""
+        self.processo = mp.Process(target=process_cerebro,
+                                   args=(self.entrada, self.saida, self.jogo),
+                                   daemon=True)
+        self.processo.start()
+
+    def _cerebro_vivo(self) -> bool:
+        """Confere se o processo morreu — e o levanta de novo se morreu.
+
+        O PROCESSO MORTO NÃO ERA NOTADO POR NINGUÉM.
+        --------------------------------------------
+        O cérebro roda em processo separado justamente para que um estouro
+        nele não leve a interface junto. Mas ninguém perguntava se ele ainda
+        estava lá. Se ele morresse — falta de memória, erro na carga do
+        modelo, o processo derrubado pelo sistema — a mesa continuava
+        capturando, continuava empurrando pedido na fila, e continuava
+        esperando resposta que nunca mais viria.
+
+        Na tela isso aparece como "cérebro sem resposta" a cada volta, para
+        sempre. Nunca como "morreu, vou levantar de novo".
+        """
+        p = self.processo
+        if p is not None and p.is_alive():
+            return True
+        try:
+            saiu = p.exitcode if p is not None else None
+        except Exception:
+            saiu = None
+        registrar(f"{self.jogo} CEREBRO_MORREU codigo={saiu} — levantando outro")
+        self._estado("cérebro caiu — reiniciando", VERMELHO)
+        # filas novas: as antigas podem ter pedido pela metade do processo que
+        # morreu, e resposta órfã seria aplicada ao giro errado
+        try:
+            self.entrada.close()
+            self.saida.close()
+        except Exception:
+            pass
+        self.entrada, self.saida = mp.Queue(maxsize=4), mp.Queue(maxsize=8)
+        self.primeira = True
+        self._t_primeira = 0.0
+        try:
+            self._acender_cerebro()
+        except Exception as e:
+            registrar(f"{self.jogo} CEREBRO_NAO_SOBE {type(e).__name__}: {e}")
+            return False
+        return True
+
     def rodar(self):
         if not self.vivo:
             return
@@ -921,6 +1013,8 @@ class PainelMesa(ctk.CTkFrame):
     def _trabalhar(self):
         self.ocupado = True
         try:
+            if not self._cerebro_vivo():
+                return
             from fluxo_captura import (capturar, limpar_ciclo_ativo,
                                        marcar_snapshot_processado,
                                        salvar_ciclo_ativo)
@@ -971,7 +1065,7 @@ class PainelMesa(ctk.CTkFrame):
             else:
                 limpar_ciclo_ativo(self.jogo)
 
-            self.entrada.put({"nums": [r.get("n") for r in rows],
+            _pedido = {"nums": [r.get("n") for r in rows],
                               # AS LINHAS CRUAS, COM AS TAGS DE MULTIPLICADOR.
                               #
                               # Ele reparou que a previsao de multiplicador
@@ -989,7 +1083,18 @@ class PainelMesa(ctk.CTkFrame):
                               "ok": self.ok, "err": self.err,
                               "last_result": self.ultimo_resultado,
                               "active_selection": list(self.escolhas),
-                              "head_id": cap.get("head_id")})
+                              "head_id": cap.get("head_id"),
+                              "req_id": self._novo_pedido()}
+            try:
+                self.entrada.put(_pedido, timeout=2)
+            except Exception:
+                # fila cheia: o cérebro está atrasado. Empilhar mais um pedido
+                # só aumenta o atraso -- e o pedido de agora vira lixo assim
+                # que o próximo giro sair. Pula a volta e diz por quê.
+                registrar(f"{self.jogo} FILA_CHEIA — cérebro atrasado, "
+                          f"pulando esta volta")
+                self._estado("cérebro atrasado — pulando volta", AMARELO)
+                return
             if self.primeira:
                 # "PREPARANDO O CEREBRO" SEM RELOGIO PARECE TRAVADO.
                 #
@@ -1005,10 +1110,9 @@ class PainelMesa(ctk.CTkFrame):
                 _faz = int(time.time() - self._t_primeira)
                 self._estado(f"preparando o cérebro — {_faz}s de até "
                              f"{ESPERA_1A_S}s", ROXO)
-            try:
-                sug = self.saida.get(
-                    timeout=ESPERA_1A_S if self.primeira else ESPERA_S)
-            except _queue.Empty:
+            sug = self._resposta_do_cerebro(
+                ESPERA_1A_S if self.primeira else ESPERA_S)
+            if sug is None:
                 # Não apaga o resultado pendente: a próxima volta reenvia,
                 # senão o cérebro perde o retorno daquele giro para sempre.
                 if self.primeira:
@@ -1030,6 +1134,7 @@ class PainelMesa(ctk.CTkFrame):
                     marcar_snapshot_processado(self.jogo, cap["head_id"])
                 except Exception:
                     pass
+            self._alimentar_academia(rows, cap)
             depois(self, 0, lambda s=sug, r=rows: self._aplicar(s, r))
         except Exception as e:
             registrar(f"{self.jogo}: {type(e).__name__}: {e}")
@@ -1037,6 +1142,59 @@ class PainelMesa(ctk.CTkFrame):
             self.aviso_geral(self.jogo, f"erro: {type(e).__name__}")
         finally:
             self.ocupado = False
+
+    # --------------------------------------------------- conversa com o cérebro
+    def _novo_pedido(self) -> str:
+        """Um número de pedido por volta, para reconhecer a resposta dele."""
+        return _novo_pedido(self, self.jogo)
+
+    def _resposta_do_cerebro(self, prazo: float):
+        """Espera a resposta DESTE pedido, jogando fora as atrasadas.
+
+        A conta está em `fila_cerebro.py`, junto com o motivo: são quatro
+        telas com o mesmo par de filas e o mesmo defeito, e consertar só esta
+        deixaria as três janelas avulsas de pé.
+        """
+        return _resposta_de(self, self.saida, prazo,
+                            registrar=lambda m: registrar(f"{self.jogo} {m}"))
+
+    # ------------------------------------------------------------- academia
+    # de quantos em quantos giros a academia recebe trabalho. Ela relê o
+    # histórico inteiro por teoria -- rodar a cada giro seria inviável, e a
+    # resposta dela muda devagar.
+    GIROS_ENTRE_JOBS = 25
+
+    def _alimentar_academia(self, rows, cap) -> None:
+        """Coloca trabalho na fila da academia.
+
+        A ACADEMIA RODAVA SEM NUNCA RECEBER NADA.
+        -----------------------------------------
+        `academia_servico.py` tem fila, lock, inbox, prioridade, idempotência
+        por id — e `enfileirar_job()`, a "única forma suportada de colocar
+        trabalho na fila", só era chamada de dentro dos testes dela mesma.
+
+        Ou seja: quem abrisse o `6_ACADEMIA_SERVICO.bat` teria um processo
+        acordado, consumindo máquina, esperando para sempre um trabalho que
+        nenhuma parte do software mandava. A tela dele dizia "academia
+        rodando", e estava tecnicamente certa e praticamente vazia.
+
+        Agora a mesa que capturou giro novo enfileira o histórico dela.
+        """
+        self._giros_desde_job = int(getattr(self, "_giros_desde_job", 0)) + 1
+        if self._giros_desde_job < self.GIROS_ENTRE_JOBS:
+            return
+        self._giros_desde_job = 0
+        try:
+            from academia_servico import enfileirar_job
+            enfileirar_job(
+                self.jogo,
+                [r.get("n") for r in rows],
+                settled=[r.get("settled") for r in rows],
+                mults=cap.get("mults") or [],
+            )
+        except Exception as e:
+            # a academia é opcional: se ela não estiver de pé, a mesa segue
+            registrar(f"{self.jogo} ACADEMIA_FILA {type(e).__name__}: {e}")
 
     # ------------------------------------------------------------- desenho
     def _estado(self, texto, cor):
@@ -1075,7 +1233,7 @@ class PainelMesa(ctk.CTkFrame):
         antigo apareceria como erro só por não ter sido escolhido, o que daria
         um placar visual falso e muito pior do que o real.
         """
-        chave = str(r.get("settled") or "")
+        chave = self._chave_do_giro(r)
         if chave and chave in self.acertos_keys:
             return "✓", VERDE
         if chave and chave in self.erros_keys:
@@ -1101,6 +1259,18 @@ class PainelMesa(ctk.CTkFrame):
         if pad and not (self.escolhas and self.restantes > 0):
             # o teto por mesa e o que ele fixou: ate 10 na roleta, ate 3 no
             # crazy time. Quantos vem preenchidos e decisao do consenso.
+            # O QUE FOI APOSTADO ANTES — guardado ANTES de ser sobrescrito.
+            #
+            # A comparação de repetição lá embaixo usava `self.ultimas_escolhas`,
+            # e esta linha aqui já tinha atribuído `ultimas_escolhas = escolhas`
+            # três linhas acima dela. Ou seja: a lista era comparada consigo
+            # mesma, e `set(a) == set(a)` é sempre verdadeiro.
+            #
+            # Consequência: TODA janela era anunciada como repetição no log, o
+            # contador subia até seis em qualquer sequência, e a repetição de
+            # verdade — a que ele viu, "travado no CashHunt há 15 minutos" —
+            # ficava indistinguível de uma aposta nova.
+            _antes_escolhas = list(self.ultimas_escolhas or [])
             self.escolhas = list(pad)[:len(self.caixas)]
             self.restantes = int(sug.get("janela") or 3)
             self.ultima_janela = self.restantes
@@ -1130,9 +1300,10 @@ class PainelMesa(ctk.CTkFrame):
             #
             # Agora aposta repetida ESTENDE a janela em vez de abrir outra: conta
             # como um evento, que e o que ela e.
-            if (self.ultimas_escolhas
-                    and set(self.escolhas) == set(self.ultimas_escolhas)
-                    and self._n_repetiu < 6):
+            _repetiu = bool(_antes_escolhas
+                            and set(self.escolhas) == set(_antes_escolhas)
+                            and self._n_repetiu < 6)
+            if _repetiu:
                 self._n_repetiu += 1
                 registrar(f"{self.jogo} MESMA_APOSTA {self.escolhas} "
                           f"(x{self._n_repetiu}) — estendendo a espera, "
@@ -1140,7 +1311,16 @@ class PainelMesa(ctk.CTkFrame):
             else:
                 self._n_repetiu = 0
             self._salvar()
-            registrar(f"{self.jogo} NOVA_JANELA {self.escolhas} {modo}")
+            # E A EXTENSÃO PRECISA APARECER NO LOG, senão ela não existe.
+            #
+            # Antes o `NOVA_JANELA` era escrito de qualquer forma, inclusive
+            # logo depois da linha que dizia "não abrindo janela nova". Quem lê
+            # o log — o RESULTADO.py — contava as duas coisas como duas
+            # janelas, que é justamente o que o comentário acima diz que não
+            # deveria acontecer. A marca abaixo é o que permite ao leitor somar
+            # os giros na janela anterior em vez de abrir outra.
+            registrar(f"{self.jogo} NOVA_JANELA {self.escolhas} {modo}"
+                      + (" REPETICAO" if _repetiu else ""))
             try:
                 from notificador import notificar_sinal
                 tx = sug.get("taxa_acerto")
@@ -1867,6 +2047,11 @@ class Laboratorio(ctk.CTkFrame):
 class Central(ctk.CTk):
     def __init__(self):
         super().__init__()
+        # A THREAD DA INTERFACE SE IDENTIFICA, E A BOMBA COMEÇA A RODAR.
+        # Sem isto, cada `depois()` chamado de uma thread de fundo tocava no
+        # Tk de fora da thread dele -- que é a corrida que travava a janela
+        # sem deixar rastro. Ver tela_segura.py.
+        bombear(self)
         self.title("Laboratório — as quatro mesas ao vivo")
         self.geometry("1280x860")
         ctk.set_appearance_mode("dark")
@@ -1922,8 +2107,9 @@ def main():
     try:
         Central().mainloop()
     except Exception:
-        (RAIZ / "crash_central.txt").write_text(traceback.format_exc(),
-                                                encoding="utf-8")
+        from queda import registrar_queda
+        _onde = registrar_queda("CENTRAL")
+        print(f"\n  A CENTRAL caiu. O rastro ficou em {_onde}\n")
         raise
 
 

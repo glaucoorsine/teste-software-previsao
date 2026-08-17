@@ -646,19 +646,76 @@ class Critico:
             # Isso nao e regua estatistica minha barrando teoria. E a definicao
             # de consenso aplicada a si mesma. Quando nao ha, a tela diz
             # AGUARDANDO -- que e resposta, nao falha.
+            # E A CONTA PRECISA SER FEITA PARA CADA CANDIDATO, NAO SO PARA O
+            # PRIMEIRO.
+            #
+            # Estava assim: pegava `ordenados[0]`, media as vozes dele, e se
+            # passasse aprovava a lista INTEIRA. Ou seja, um numero bem
+            # sustentado no topo servia de fiador para todos os outros -- e os
+            # que vinham atras entravam na aposta sem ninguem ter perguntado
+            # quantas vozes independentes eles tinham. Numa lista de dez, o
+            # criterio valia para um.
+            #
+            # E o inverso tambem estragava: o primeiro colocado sustentado por
+            # uma fonte so zerava a lista inteira, jogando fora numeros abaixo
+            # dele que TINHAM cruzamento.
+            #
+            # Agora cada candidato responde por si. Quem nao tem vozes
+            # independentes sai; quem tem, fica. Se nenhum tiver, a lista sai
+            # vazia -- e a tela diz AGUARDANDO, que e resposta.
+            # SÃO DUAS PERGUNTAS DIFERENTES, E HAVIA UMA RESPOSTA SÓ.
+            #
+            # (1) "esta mesa tem cruzamento suficiente para abrir aposta?"  —
+            #     é a pergunta do primeiro colocado, e o limiar dela é
+            #     MIN_VOZES_INDEPENDENTES. É ela que impede a mesa de estar
+            #     sempre com aposta aberta, que foi o que ele reclamou ("as
+            #     roletas estao dando numeros toda hora").
+            #
+            # (2) "este número aqui tem mais de uma voz, ou é uma fonte só
+            #     falando?" — é a pergunta de CADA candidato.
+            #
+            # Só a (1) era feita, e a resposta dela era aplicada à lista
+            # inteira: o primeiro colocado servia de fiador para todos os
+            # outros, e números sustentados por uma fonte única entravam na
+            # aposta sem que ninguém perguntasse nada sobre eles.
+            #
+            # Fazer a (2) com o limiar da (1) seria trocar um erro por outro:
+            # `n_efetivo` desconta correlação, então 2,0 só é alcançável com
+            # três ou mais fontes -- duas fontes honestas e quase disjuntas dão
+            # 1,67. Cobrar 2,0 de cada candidato esvaziaria a lista quase
+            # sempre, e isso seria régua minha, não critério dele.
+            #
+            # Então cada pergunta com o seu limiar. A (1) continua igual --
+            # nada muda em quando a mesa abre. A (2) cobra o que o defeito
+            # pedia: mais de uma voz, e vozes que não sejam a mesma evidência
+            # repetida (é isso que o efetivo > 1 quer dizer).
             aprovados = ordenados
             try:
                 from academia_autonoma.biblioteca_teorias import (
                     n_efetivo as _nef_ap)
-                if ordenados:
-                    _topo_n = ordenados[0]
-                    _ap_topo = {h.get("nome", "?"): (h.get("nums") or [])
-                                for h in hips
-                                if _topo_n in [str(x).strip()
-                                               for x in (h.get("nums") or [])]}
-                    _vozes = float((_nef_ap(_ap_topo) or {}).get("efetivo", 0))
-                    if _vozes < MIN_VOZES_INDEPENDENTES:
-                        aprovados = []
+
+                def _vozes_de(_cand):
+                    _ap_c = {h.get("nome", "?"): (h.get("nums") or [])
+                             for h in hips
+                             if _cand in [str(x).strip()
+                                          for x in (h.get("nums") or [])]}
+                    return float((_nef_ap(_ap_c) or {}).get("efetivo", 0))
+
+                _vozes = {c: _vozes_de(c)
+                          for c in ordenados[:max(k_alvos * 3, 12)]}
+                # (1) a mesa abre se EXISTE cruzamento — não se ele calhou de
+                #     ficar em primeiro. Perguntar só ao primeiro colocado
+                #     tinha um efeito perverso: uma fonte solitária e barulhenta
+                #     que subisse ao topo fechava a mesa inteira, jogando fora
+                #     números abaixo dela que TINHAM cruzamento de verdade. O
+                #     critério é a existência de cruzamento; quem o traz é
+                #     detalhe.
+                if not any(v >= MIN_VOZES_INDEPENDENTES for v in _vozes.values()):
+                    aprovados = []
+                else:
+                    # (2) e entra quem tem mais de uma voz — cada um por si
+                    aprovados = [c for c in ordenados
+                                 if _vozes.get(c, 0) > MIN_VOZES_POR_NUMERO]
             except Exception:
                 pass
         else:
@@ -1603,6 +1660,19 @@ CONSENSO_PURO = True
 # janelas de 3 a 4 -- nunca parava de apostar.
 MIN_VOZES_INDEPENDENTES = 2.0
 
+# E o mínimo por NÚMERO, que é outra pergunta.
+#
+# O acima decide se a mesa abre aposta; este decide se um número específico
+# entra nela. Antes só o primeiro colocado era conferido, e a aprovação dele
+# valia para a lista inteira — números com uma fonte única entravam de carona.
+#
+# O valor é 1.0 e não 2.0 porque `n_efetivo` desconta correlação: duas fontes
+# honestas com listas quase disjuntas dão 1,67, não 2. Cobrar 2,0 de cada
+# candidato esvaziaria a lista quase sempre. Acima de 1,0 quer dizer o que o
+# defeito pedia: mais de uma voz, e vozes que não sejam a mesma evidência
+# contada duas vezes.
+MIN_VOZES_POR_NUMERO = 1.0
+
 # Teto da janela de apostas. Era 3, fixo no meio do código; ele pediu 5.
 JANELA_MAX = 5
 
@@ -1820,6 +1890,98 @@ class PipelinePerceptivo:
         self.k_alvos = self.k_max
         self.prefs = {"peso_isol":1.0,"boost_anti":False,"prioritizar_atraso":False,"reduzir_12":False,"janela":None}
 
+    @staticmethod
+    def _mult_por_giro(linhas, quantos: int) -> list:
+        """O multiplicador QUE PAGOU em cada giro, alinhado giro a giro.
+
+        DOIS FORMATOS COM O MESMO NOME.
+        -------------------------------
+        `mults`, como a captura monta, é a lista de ANÚNCIOS: um item por
+        número anunciado, `{"n": 12, "x": 50}`, com tamanho variável e sem
+        relação de posição com os giros — um giro pode anunciar cinco números
+        e o seguinte nenhum.
+
+        Só que a IA de intensidade do tratado dele faz `zip(seq, mults)` e
+        `float(m)`. Ela espera o outro formato: um valor por giro, na mesma
+        ordem dos giros, zero quando não pagou.
+
+        Com o formato errado, o `zip` casava o giro 0 com o anúncio 0 (que
+        pode ser de qualquer giro), e o `float()` de um dicionário estourava e
+        era engolido pelo `except`. A metade da magnitude do modelo hurdle
+        ficava sempre vazia, e a metade da existência contava sobre um
+        denominador que não era o número de giros. Nada disso aparecia: a
+        inteligência simplesmente devolvia pouco, como se a mesa fosse pobre.
+
+        Aqui o valor sai das `linhas`, que é onde a informação realmente está:
+        para cada giro, o maior multiplicador cujo número anunciado é o número
+        que saiu. Anúncio que não bateu vale 0 — porque não pagou.
+        """
+        saida = []
+        for r in (linhas or [])[:quantos]:
+            if not isinstance(r, dict):
+                saida.append(0.0)
+                continue
+            saiu = str(r.get("n", r.get("sec")))
+            melhor = 0.0
+            for t in (r.get("tags") or []):
+                if not isinstance(t, dict):
+                    continue
+                for canal in ("lucky", "fire_nums"):
+                    for it in (t.get(canal) or []):
+                        if (isinstance(it, dict) and it.get("x")
+                                and str(it.get("n")) == saiu):
+                            try:
+                                melhor = max(melhor, float(it["x"]))
+                            except (TypeError, ValueError):
+                                pass
+                # o top slot do Crazy Time só paga quando o símbolo bate
+                top = t.get("top")
+                if isinstance(top, dict) and top.get("x") and \
+                        str(top.get("simbolo")) == saiu:
+                    try:
+                        melhor = max(melhor, float(top["x"]))
+                    except (TypeError, ValueError):
+                        pass
+                if not (t.keys() - {"x"}) and t.get("x"):
+                    try:
+                        melhor = max(melhor, float(t["x"]))
+                    except (TypeError, ValueError):
+                        pass
+            saida.append(melhor)
+        return saida
+
+    def _perda_do_tratado(self, saiu) -> None:
+        """Cobra de cada inteligência o palpite que ela deu na volta passada.
+
+        A perda é a de log restrita ao palpite: quem apontou o número que saiu
+        paga pouco, quem não apontou paga o teto. É a mesma escala para todas,
+        então `exp(-η·Loss)` compara laranja com laranja.
+
+        Nada é cobrado de quem calou -- a inteligência que não opinou naquela
+        volta não errou nela. (É a F46 dele: vigília. Perda só conta quando a
+        fonte estava acordada.)
+        """
+        if saiu is None:
+            return
+        palpites = getattr(self, "_palpites_tratado", None) or {}
+        if not palpites:
+            return
+        alvo = str(saiu)
+        perdas = getattr(self, "_perdas_tratado", None)
+        if perdas is None:
+            perdas = self._perdas_tratado = {}
+        for nome, nums in palpites.items():
+            lista = [str(x) for x in (nums or [])]
+            if not lista:
+                continue
+            if alvo in lista:
+                # acertou: paga o preço de ter apontado k números em vez de um
+                perdas[nome] = perdas.get(nome, 0.0) + math.log(len(lista))
+            else:
+                perdas[nome] = perdas.get(nome, 0.0) + math.log(
+                    max(2, self.n_classes))
+        self._palpites_tratado = {}
+
     def processar(self, historico, ok, err, settled=None, mults=None, last_result=None, active_selection=None, linhas=None):
         # zera o palpite do Cacador a cada volta: sem isto ele repetiria o da
         # volta anterior quando a captura nao trouxesse linhas, e a tela
@@ -1850,7 +2012,9 @@ class PipelinePerceptivo:
                 pass
             elif fabricar_para is not None:
                 _hist_fab = historico if historico is not None else []
-                _maxk = 7 if self.jogo != "crazy_time" else 3
+                # prefixo, não igualdade: a Crazy Time A pegava 7 alvos numa
+                # mesa de 8 símbolos -- quase a roda inteira
+                _maxk = 3 if self.is_ct else 7
                 fr = fabricar_para(self.jogo, _hist_fab, mults=mults, max_k=_maxk)
                 for _m in fr.get("msgs") or []:
                     msgs.append(_m)
@@ -1893,6 +2057,14 @@ class PipelinePerceptivo:
                 msgs.append(f"[Memória] janela aberta id={aval.get('id')} h={aval.get('hits')} m={aval.get('misses')}")
             elif aval:
                 msgs.append(f"[Memória] FECHOU id={aval.get('id')} acertou={(aval.get('resultado') or {}).get('acertou')}")
+            # A PERDA DE CADA INTELIGÊNCIA — é o que a IA12 dele precisa.
+            #
+            # A décima segunda inteligência do tratado é a agregação:
+            # w_(j,t) ∝ exp(-η·Loss_j). Ela não lê a mesa, ela pesa as outras
+            # onze pelo que cada uma acumulou de erro. Sem contar essa perda,
+            # `pesos_ia12` devolve peso igual para todas e a fórmula dele vira
+            # média simples -- que é exatamente o que ela existe para não ser.
+            self._perda_do_tratado(last_result.get("saiu"))
 
         hist, hist_set, rep = self.qual.validar(historico, settled, is_ct=self.is_ct)
         msgs.append(f"[Qualidade] n={rep['n']} dup={rep['duplicados']} inv={rep['invalidos']} ordem_ok={rep['ordem_ok']} corr={rep['ordem_corrigida']}")
@@ -2430,17 +2602,51 @@ class PipelinePerceptivo:
             # leitura. Silencioso, que e o pior tipo.
             _hist_leitura = ([MAP_CT_TO_IDX[x] for x in hist
                               if x in MAP_CT_TO_IDX] if self.is_ct else hist)
-            _ctx_t = {"mults": mults, "jogo": self.jogo}
+            # o tratado quer um valor POR GIRO, não a lista de anúncios
+            _mg = self._mult_por_giro(linhas, len(_hist_leitura))
+            _ctx_t = {"mults": _mg if any(_mg) else None, "jogo": self.jogo}
             _rt = _tratado(_hist_leitura, self.n_classes, _ctx_t)
+            # A IA12 DELE NÃO ESTAVA SENDO CHAMADA.
+            #
+            # As onze votavam com peso 2,4 fixo, todas iguais. Mas a décima
+            # segunda inteligência do tratado é justamente o contrário disso:
+            # `w_(j,t) ∝ exp(-η·Loss_j)` -- quem vem errando fala mais baixo.
+            # Ela existia no arquivo, tinha teste, e nenhum caminho do software
+            # ao vivo passava por ela. O peso fixo é a média simples que a
+            # fórmula dele existe para NÃO ser.
+            from academia_autonoma.inteligencias_livro import (
+                consenso_ia12 as _ia12)
+            _perdas = dict(getattr(self, "_perdas_tratado", {}) or {})
+            _ag12 = _ia12(_rt.get("pesos") or {}, _perdas,
+                          k=max(6, self.k_max))
+            _w12 = _ag12.get("pesos_ia") or {}
+            _guardar = {}
             for _nome, _nums in (_rt.get("palpites") or {}).items():
                 if self.is_ct:
                     _nums = [MAP_IDX_TO_CT[int(x)] for x in _nums
                              if str(x).isdigit() and int(x) in MAP_IDX_TO_CT]
                     if not _nums:
                         continue
-                hips.append({"nome": _nome, "nums": _nums, "peso": 2.4})
+                _guardar[_nome] = list(_nums)
+                # o peso do tratado agora é o peso 2,4 MODULADO pela IA12
+                _w = float(_w12.get(_nome, 1.0))
+                hips.append({"nome": _nome, "nums": _nums,
+                             "peso": round(2.4 * max(0.25, min(2.0, _w)), 3)})
+            # e a agregação dela entra como voz própria, com o nome dela
+            _ord12 = list(_ag12.get("ordem") or [])
+            if self.is_ct:
+                _ord12 = [MAP_IDX_TO_CT[int(x)] for x in _ord12
+                          if str(x).isdigit() and int(x) in MAP_IDX_TO_CT]
+            if _ord12:
+                hips.append({"nome": "IA12_AGREGACAO",
+                             "nums": _ord12[:self.k_max], "peso": 2.4})
+            # guardado para cobrar a perda quando o resultado deste giro vier
+            self._palpites_tratado = _guardar
             msgs.append(f"[Tratado] {_rt.get('opinaram')} das "
-                        f"{_rt.get('total')} inteligências leram a mesa")
+                        f"{_rt.get('total')} inteligências leram a mesa"
+                        + (f" · IA12 agrega com {len(_perdas)} perda(s) "
+                           f"acumulada(s)" if _perdas else
+                           " · IA12 agrega (ainda sem perda acumulada)"))
             # de onde saiu cada leitura -- previsao sem fonte nao e auditavel
             for _nome in (_rt.get("palpites") or {}):
                 _c = _citar(_nome, self.jogo)
@@ -2529,9 +2735,21 @@ class PipelinePerceptivo:
                         hips.append({"nome": f"MULT_{_nome}",
                                      "nums": [str(x) for x in _palpite],
                                      "peso": round(_peso, 3)})
+                    # OS QUINZE AGENTES ESTATISTICOS, que ate a v119 so
+                    # viravam texto de relatorio em ciclo_academia.py. Eles
+                    # apontam numero com selo de significancia; agora o que
+                    # eles acham entra na votacao com o nome de cada um.
+                    for _nome, _d in (_pm.get("por_agente") or {}).items():
+                        if not _d.get("alvos"):
+                            continue
+                        hips.append({"nome": f"CACA_{_nome}",
+                                     "nums": [str(x) for x in _d["alvos"]],
+                                     "peso": round(2.6 * float(_d["peso"]), 3)})
                     if _pm.get("por_ia"):
+                        _nag = len(_pm.get("por_agente") or {})
                         msgs.append(f"[Multiplicador→consenso] "
                                     f"{len(_pm['por_ia'])} IAs de multiplicador "
+                                    f"+ {_nag} agente(s) caçador(es) "
                                     f"votando na escolha")
             except Exception as _e:
                 msgs.append(f"[Multiplicador→consenso] {type(_e).__name__}")

@@ -60,6 +60,7 @@ TESTES = [
     ("test_descobridor.py", "DESCOBRIDOR_OK", 300, 2),
     ("test_quatro_falhas.py", "QUATRO_FALHAS_OK", 300, 2),
     ("test_cacador_decide.py", "CACADOR_DECIDE_OK", 900, 90),
+    ("test_v121.py", "V121_OK", 900, 60),
     ("test_honestidade_gates.py", "HONEST_TESTS_OK", 300, 1),
     ("test_coletor_sites.py", "COLETOR_OK", 300, 1),
     ("teste_a6_ruido.py", None, 900, 1),
@@ -89,9 +90,28 @@ def rodar_um(arquivo: str, marca, limite: int):
 def main() -> int:
     existem = [x for x in TESTES if (RAIZ / x[0]).is_file()]
     faltando = [x[0] for x in TESTES if not (RAIZ / x[0]).is_file()]
-    print(f"\n  Rodando {len(existem)} testes."
-          + (f"  ({len(faltando)} não encontrados: "
-             f"{', '.join(faltando)})" if faltando else ""))
+
+    # ARQUIVO DE TESTE QUE SUMIU É FALHA, NÃO NOTA DE RODAPÉ.
+    #
+    # Antes o sumiço virava uma linha entre parênteses e a suíte seguia até
+    # "Tudo verde". Ou seja: apagar um teste era a forma mais rápida de fazer
+    # a suíte passar — e um `git mv` distraído tinha o mesmo efeito de um
+    # teste desligado de propósito, sem ninguém perceber.
+    #
+    # E o contrário também conta: teste que existe na pasta e não está na
+    # lista nunca roda. Escrever o teste e esquecer de registrá-lo dá a mesma
+    # falsa sensação de cobertura.
+    listados = {x[0] for x in TESTES}
+    orfaos = sorted(p.name for p in RAIZ.glob("test*.py")
+                    if p.name not in listados)
+
+    print(f"\n  Rodando {len(existem)} testes.")
+    if faltando:
+        print(f"  ERRO: {len(faltando)} teste(s) da lista não existem: "
+              f"{', '.join(faltando)}")
+    if orfaos:
+        print(f"  ERRO: {len(orfaos)} teste(s) na pasta fora da lista "
+              f"(nunca rodam): {', '.join(orfaos)}")
     _tot = sum(x[3] for x in existem)
     print("  O último deles sozinho leva a maior parte do tempo — 75 roletas"
           " com régua de permutação, divididas pelos núcleos da máquina.")
@@ -106,6 +126,12 @@ def main() -> int:
             falhas.append((arquivo, motivo))
         p.terminou(f"{arquivo} ({gasto:.0f}s)", ok=ok)
     print(p.fim(f"{len(existem) - len(falhas)} passaram, {len(falhas)} falharam"))
+    for a in faltando:
+        falhas.append((a, "arquivo de teste não existe — a suíte não pode "
+                          "dizer que passou sem ele"))
+    for a in orfaos:
+        falhas.append((a, "teste existe na pasta mas não está na lista — "
+                          "nunca roda"))
     if falhas:
         print("\n  FALHOU:")
         for arquivo, motivo in falhas:

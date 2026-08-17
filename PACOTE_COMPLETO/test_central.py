@@ -730,9 +730,18 @@ _aprovados, _probs, _f, _score, _sig, _p0 = _c.consenso(
      {"nome": "TEORIA_Y", "nums": ["7", "21", "9"], "peso": 2.0}],
     n_classes=37, k_alvos=20)
 print("       primeiros 6 do consenso:", _aprovados[:6])
-checa(all(x in _aprovados[:4] for x in _especifico),
-      "os tres especificos ficam na frente dos dezoito genericos",
+checa(all(x in _aprovados[:4] for x in ("7", "21")),
+      "os especificos com mais de uma voz ficam na frente dos genericos",
       _aprovados[:5])
+checa(not any(x in _aprovados for x in _grupao if x not in ("7", "9")),
+      "e nenhum dos dezoito do grupao entra por conta propria",
+      [x for x in _aprovados if x in _grupao])
+# O 33 e apontado SO pela TEORIA_X. Antes ele entrava de carona: bastava o
+# primeiro colocado ter cruzamento e a lista inteira era aprovada junto. Agora
+# cada numero responde por si, e uma fonte sozinha nao e cruzamento.
+checa("33" not in _aprovados,
+      "numero com uma fonte so nao entra de carona no aprovado do topo",
+      _aprovados)
 checa(_score["7"] > _score["1"],
       "e o peso de quem aponta 3 supera o de quem aponta 18",
       (round(_score["7"], 2), round(_score["1"], 2)))

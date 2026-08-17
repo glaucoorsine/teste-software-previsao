@@ -12,3 +12,9 @@ Pillow
 # le os arquivos procurando nome indefinido -- o erro que
 # derruba o programa sem nenhum teste perceber (ver test_lint.py)
 pyflakes
+
+# ABSORVER_PDF.py importa `pypdf` e nao estava aqui. Quem seguisse o
+# 0_INSTALAR_DEPENDENCIAS.bat e depois tentasse carregar os PDFs de estudo
+# levava um ImportError sem explicacao -- a dependencia existia so na cabeca
+# de quem escreveu o arquivo.
+pypdf

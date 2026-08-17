@@ -102,33 +102,83 @@ def extrair_jogadores(html: str) -> Optional[int]:
     return None
 
 
+# O "data" ACEITAVA QUALQUER COISA.
+#
+# A busca varria `results`, `history`, `spins`, `lastResults` e `data`, pegava
+# o PRIMEIRO array que desse `json.loads` e devolvia como histórico -- sem
+# conferir se aquilo eram giros.
+#
+# `"data"` é o nome mais comum que existe numa página. Qualquer bloco de
+# anúncio, de configuração ou de rastreio que traga `"data": [...]` casa com a
+# expressão e ganha da fonte verdadeira, porque a ordem das chaves decide e
+# `data` estava na lista. Isso vira histórico inteiro inventado.
+#
+# E foi o que ele fotografou: Crazy Time mostrando "5" e mais nada, volta após
+# volta. Não havia como a mesa saber que estava lendo lixo -- números são
+# números, e a tela não tem como distinguir um giro de um id de banner.
+#
+# Agora todo valor é conferido contra o domínio da mesa (as 37 casas da
+# roleta, os 8 símbolos do Crazy Time) e o array só é aceito se a MAIORIA dos
+# itens passar. Um array de ids não passa; um histórico de verdade passa
+# inteiro.
+CHAVES = ("results", "history", "spins", "lastResults", "data")
+FRACAO_VALIDA = 0.8
+MIN_ITENS = 5
+
+
+def _dominio(jogo: str) -> set:
+    try:
+        from hist_buffer import DOMAIN, ROULETTE
+        return DOMAIN.get(jogo) or ROULETTE
+    except Exception:
+        return {str(i) for i in range(37)}
+
+
 def extrair_resultados(html: str, jogo: str, limite: int = 200) -> List[str]:
     """Os últimos resultados, do mais novo para o mais velho."""
     if not html:
         return []
-    # o caminho bom: um bloco JSON na página
-    for chave in ("results", "history", "spins", "lastResults", "data"):
-        m = re.search(rf'"{chave}"\s*:\s*(\[.*?\])', html, re.S)
-        if not m:
-            continue
-        try:
-            arr = json.loads(m.group(1))
-        except ValueError:
-            continue
-        saida = []
-        for it in arr:
-            v = it
-            if isinstance(it, dict):
-                for c in ("result", "value", "number", "outcome", "sector"):
-                    if it.get(c) is not None:
-                        v = it[c]
-                        break
-            v = str(v).strip()
-            if v:
-                saida.append(v)
-        if saida:
-            return saida[:limite]
-    return []
+    dom = _dominio(jogo)
+    aliases = {"coinflip": "CoinFlip", "cashhunt": "CashHunt",
+               "pachinko": "Pachinko", "crazybonus": "CrazyBonus",
+               "bonus": "CrazyBonus", "crazytime": "CrazyBonus"}
+    melhor: List[str] = []
+    for chave in CHAVES:
+        for m in re.finditer(rf'"{chave}"\s*:\s*(\[.*?\])', html, re.S):
+            try:
+                arr = json.loads(m.group(1))
+            except ValueError:
+                continue
+            if not isinstance(arr, list) or len(arr) < MIN_ITENS:
+                continue
+            saida, vistos = [], 0
+            for it in arr:
+                v = it
+                if isinstance(it, dict):
+                    for c in ("result", "value", "number", "outcome", "sector"):
+                        if it.get(c) is not None:
+                            v = it[c]
+                            break
+                if isinstance(v, (dict, list)):
+                    vistos += 1
+                    continue
+                vistos += 1
+                s = str(v).strip()
+                if not s:
+                    continue
+                s = aliases.get(s.lower().replace(" ", "").replace("_", ""), s)
+                if s in dom:
+                    saida.append(s)
+            if not vistos or len(saida) / vistos < FRACAO_VALIDA:
+                # array que não é histórico desta mesa: segue procurando em
+                # vez de devolver lixo com cara de giro
+                continue
+            if len(saida) > len(melhor):
+                melhor = saida
+        if melhor:
+            # chave específica achou: não desce para o `data` genérico
+            return melhor[:limite]
+    return melhor[:limite]
 
 
 def coletar(jogo: str) -> Dict[str, Any]:

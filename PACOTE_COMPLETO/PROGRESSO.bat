@@ -1,6 +1,8 @@
 @echo off
-chcp 65001 >nul
+chcp 65001 >nul 2>&1
 cd /d "%~dp0"
-where python >nul 2>&1 && (python PROGRESSO.py) || (py PROGRESSO.py)
+title Progresso
+call "%~dp0_PYTHON.bat" || exit /b 1
+%CMD% PROGRESSO.py
 echo.
 pause

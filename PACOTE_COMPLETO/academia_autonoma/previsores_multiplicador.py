@@ -382,6 +382,68 @@ def _topo(peso: Dict[Any, float], k: int) -> List[Any]:
             if _ > 0][:k]
 
 
+# ------------------------------------------- os quinze agentes estatísticos
+# OS `alvos` DELES SÓ VIRAVAM TEXTO.
+#
+# `agentes_multiplicador.py` roda quinze agentes que procuram vício no sorteio
+# de multiplicador, e vários deles terminam apontando NÚMERO: M05 acha o número
+# que aparece premiado acima do esperado, M10 acha o setor da roda que
+# concentra prêmio, M06 acha o que repete. Cada achado sai com `alvos` e com
+# selo estatístico (confirmado / em observação / indício, já com correção para
+# múltiplos testes).
+#
+# E o único consumidor disso era `ciclo_academia.py`, que chamava
+# `resumo_multiplicadores()` e jogava as linhas no log. Quinze agentes com
+# medida de significância produzindo relatório para ninguém ler, enquanto a
+# escolha do número era feita sem eles.
+#
+# Como agora quem escolhe é o Caçador, e estes são caçadores, eles votam. Com
+# peso vindo do selo -- não do meu gosto: confirmado (sobrevive à correção de
+# múltiplos testes) fala mais alto que indício, e indício fala baixinho em vez
+# de ser calado.
+PESO_DO_SELO = {"confirmado": 1.0, "em_observacao": 0.55, "indicio": 0.2}
+MIN_GIROS_AGENTES = 60
+
+
+def votos_dos_agentes(historico: List[dict]) -> Dict[str, Dict[str, Any]]:
+    """O que cada agente estatístico aponta, com o peso do selo dele.
+
+    Devolve `{nome_do_agente: {"alvos": [...], "peso": float, "achado": str}}`.
+    Agente sem `alvos` não entra -- ele mediu ritmo ou intervalo, não número,
+    e forçá-lo a apontar seria inventar palpite que ele não deu.
+    """
+    try:
+        from .agentes_multiplicador import cacar_multiplicadores
+    except Exception:
+        return {}
+    try:
+        r = cacar_multiplicadores(historico or [])
+    except Exception:
+        return {}
+    if r.get("erro"):
+        return {}
+    saida: Dict[str, Dict[str, Any]] = {}
+    for a in r.get("achados") or []:
+        alvos = [x for x in (a.get("alvos") or []) if x is not None]
+        if not alvos:
+            continue
+        peso = PESO_DO_SELO.get(str(a.get("selo")), 0.2)
+        # razão acima de 1 empurra, abaixo segura -- mas dentro de limites,
+        # para um agente com n pequeno e razão 4x não decidir sozinho
+        raz = a.get("razao")
+        if raz:
+            peso *= min(1.6, max(0.5, float(raz)))
+        nome = str(a.get("agente") or "M??")
+        anterior = saida.get(nome)
+        if anterior and anterior["peso"] >= peso:
+            continue
+        saida[nome] = {"alvos": [str(x) for x in alvos],
+                       "peso": round(peso, 3),
+                       "achado": str(a.get("achado") or ""),
+                       "selo": a.get("selo"), "p": a.get("p")}
+    return saida
+
+
 # ------------------------------------------------------------- previsão
 def prever(jogo: str, historico: List[dict],
            k: int = None) -> Dict[str, Any]:
@@ -412,11 +474,23 @@ def prever(jogo: str, historico: List[dict],
         wl = peso_da_lente(jogo, nome)
         for i, n in enumerate(palpite):
             votos[str(n)] += wl / (1 + i * 0.3)
-    consenso = [n for n, _ in sorted(votos.items(), key=lambda x: -x[1])][:k]
+    # os quinze agentes estatísticos votam junto -- eles também são caçadores,
+    # e até aqui o que eles achavam só virava linha de log
+    por_agente = votos_dos_agentes(historico)
+    for nome, dado in por_agente.items():
+        for i, n in enumerate(dado["alvos"][:k]):
+            votos[str(n)] += dado["peso"] / (1 + i * 0.3)
+
+    consenso = [n for n, _ in sorted(votos.items(),
+                                     key=lambda x: (-x[1], str(x[0])))][:k]
     quantas = {n: sum(1 for p in por_ia.values() if str(n) in [str(x) for x in p])
                for n in consenso}
+    quantos_agentes = {n: sum(1 for d in por_agente.values()
+                              if str(n) in d["alvos"])
+                       for n in consenso}
     return {
         "jogo": jogo, "tem": True, "consenso": consenso, "por_ia": por_ia,
+        "por_agente": por_agente, "quantos_agentes": quantos_agentes,
         "quantas_ias": quantas, "n_rodadas": len(rds),
         "com_sorteio": sum(1 for r in rds if r["premiados"]),
     }

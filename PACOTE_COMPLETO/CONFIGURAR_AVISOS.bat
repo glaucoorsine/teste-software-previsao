@@ -1,6 +1,8 @@
 @echo off
-chcp 65001 >nul
+chcp 65001 >nul 2>&1
 cd /d "%~dp0"
-where python >nul 2>&1 && (python CONFIGURAR_AVISOS.py) || (py CONFIGURAR_AVISOS.py)
+title Configurar avisos
+call "%~dp0_PYTHON.bat" || exit /b 1
+%CMD% CONFIGURAR_AVISOS.py
 echo.
 pause

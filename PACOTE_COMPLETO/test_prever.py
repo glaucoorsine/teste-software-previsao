@@ -63,14 +63,37 @@ for k in (5, 8, 10):
     checa(len(set(p["numeros"])) == k, f"sem repetir ({k})", p["numeros"])
     checa(all(str(x).isdigit() and 0 <= int(x) <= 36 for x in p["numeros"]),
           f"todos são casas da roleta ({k})", p["numeros"])
-    checa(all(p["quem"].get(x) for x in p["numeros"]),
-          f"e cada um diz quem votou nele ({k})")
+    # QUEM ENTREGA O NÚMERO É O CAÇADOR — inclusive aqui.
+    #
+    # Este teste cobrava `p["quem"]`, que é o mapa das famílias dos PDFs. Era
+    # o contrato antigo, de quando este arquivo decidia sozinho. Ele mandou
+    # deixar "somente o Caçador de Multiplicador escolhendo os números para
+    # todos os jogos", então o contrato mudou: os PDFs continuam calculando
+    # tudo (e o `numeros_pdfs` prova que continuam), mas o entregue é o dele.
+    checa(bool(p.get("cacador")), f"e diz de onde veio o número ({k})",
+          p.get("cacador"))
+    checa(len(p.get("numeros_pdfs") or []) == k,
+          f"os PDFs continuam calculando a lista deles ({k})",
+          p.get("numeros_pdfs"))
 
+# Crazy Time SEM tags: não há rodada de multiplicador, então o Caçador não
+# fala -- e sem ele não sai número. Cair para a lista dos PDFs seria régua
+# reserva, que é o que ele mandou tirar.
 pct = P.prever([{"n": rnd.randrange(8), "event_id": f"c{i}"} for i in range(300)],
                "crazy_time", 3)
-checa(len(pct["numeros"]) == 3, "no Crazy Time entrega 3", pct["numeros"])
-checa(all(0 <= int(x) <= 7 for x in pct["numeros"]),
-      "e dentro dos 8 segmentos", pct["numeros"])
+checa(pct["numeros"] == [],
+      "sem rodada de multiplicador, o Crazy Time não entrega número",
+      pct["numeros"])
+checa(bool(pct.get("numeros_pdfs")),
+      "mas os PDFs seguem apontando (só não decidem)", pct.get("numeros_pdfs"))
+
+# com o sorteio do top slot presente, ele fala
+_ct = [{"n": str(rnd.randrange(8)), "event_id": f"d{i}",
+        "tags": [{"top": {"simbolo": str(rnd.randrange(8)), "x": 5}}]}
+       for i in range(300)]
+pct2 = P.prever(_ct, "crazy_time", 3)
+checa(len(pct2["numeros"]) <= 3 and bool(pct2["numeros"]),
+      "com rodada de sorteio, o Caçador entrega até 3", pct2["numeros"])
 
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n[2] o carimbo impede creditar giro que já existia")

@@ -114,6 +114,46 @@ def normalizar_evento(raw: dict, dataset_id: str) -> Optional[dict]:
         "event_id": event_key(dataset_id, s, settled),
     }
 
+def _fundir_tags(velho: dict, novo: dict) -> list:
+    """Junta as marcas do giro em vez de deixar a última leitura apagar as outras.
+
+    O APAGAMENTO SILENCIOSO
+    -----------------------
+    `merge` fazia `by_id[eid] = norm` -- o evento novo substituía o antigo
+    inteiro. Parece certo (é o mesmo giro, o dado é o mesmo), mas não é: as
+    marcas não vêm todas da mesma leitura.
+
+    O anúncio da Mega Fire (`fire_nums`) só aparece na resposta ao vivo. Numa
+    releitura de histórico, o MESMO giro volta sem `tags`. Como o event_id é
+    `jogo|valor|settled`, ele bate com o que já estava guardado -- e a versão
+    pobre sobrescrevia a rica.
+
+    O efeito é o que ele viu: o Caçador lê 254 rodadas e diz "sem palpite". O
+    anúncio tinha sido capturado, guardado, e apagado depois pela releitura.
+    Sem erro nenhum: o giro continua lá, com o número certo e o horário certo.
+    Só o que interessa é que sumiu.
+
+    Aqui as duas listas se somam, sem repetir marca idêntica.
+    """
+    a = [t for t in (velho.get("tags") or []) if isinstance(t, dict)]
+    b = [t for t in (novo.get("tags") or []) if isinstance(t, dict)]
+    if not a:
+        return b
+    if not b:
+        return a
+    juntas, vistas = [], set()
+    for t in a + b:
+        try:
+            chave = json.dumps(t, sort_keys=True, ensure_ascii=False)
+        except (TypeError, ValueError):
+            chave = repr(t)
+        if chave in vistas:
+            continue
+        vistas.add(chave)
+        juntas.append(t)
+    return juntas
+
+
 def merge(path: Path, dataset_id: str, novos: List[dict], max_keep: int = 500) -> dict:
     """
     Merge seguro. Se lock falhar, NÃO grava (não apaga conteúdo anterior).
@@ -134,8 +174,15 @@ def merge(path: Path, dataset_id: str, novos: List[dict], max_keep: int = 500) -
             if norm is None:
                 rejected += 1
                 continue
-            if norm["event_id"] not in by_id:
+            anterior = by_id.get(norm["event_id"])
+            if anterior is None:
                 added += 1
+            else:
+                # o giro já estava guardado: preserva o que a leitura de agora
+                # não trouxe (anúncio, top slot) em vez de substituir o evento
+                norm["tags"] = _fundir_tags(anterior, norm)
+                if not norm.get("settled"):
+                    norm["settled"] = anterior.get("settled")
             by_id[norm["event_id"]] = norm
         events = list(by_id.values())
         events.sort(key=lambda e: sort_key_ts(e.get("settled")), reverse=True)  # recente primeiro

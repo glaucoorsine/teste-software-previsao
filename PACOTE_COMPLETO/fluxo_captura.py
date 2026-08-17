@@ -97,19 +97,123 @@ _ULTIMA_PROCURA: dict = {}
 _ultimo_head_html: dict = {}
 
 
+# a mesma coisa, mas em disco: sem isto, reabrir o programa fazia a primeira
+# leitura parecer giro novo sempre, e a mesa contava um giro que nao houve
+_HEADS_HTML = ROOT / "Logs" / "heads_html.json"
+# os identificadores que ja foram dados a cada giro desta pagina, na ordem em
+# que ela devolveu na ultima leitura
+_ids_html: dict = {}
+_seq_html: dict = {}
+
+
+def _gravar_json(destino: Path, dados: dict) -> None:
+    """Grava trocando o arquivo pronto pelo antigo, nunca escrevendo por cima.
+
+    ESCREVER POR CIMA É PERDER TUDO QUANDO DÁ ERRADO.
+    -------------------------------------------------
+    `write_text` trunca o arquivo antes de escrever. Se o programa for fechado,
+    a máquina desligar ou o disco encher no meio, o que fica no lugar é um JSON
+    cortado — e `json.loads` falha na próxima leitura.
+
+    Aqui isso não é um arquivo qualquer: é a memória de qual endereço funciona
+    em cada mesa. Corrompido, TODAS as mesas voltam a procurar endereço do
+    zero, e a procura é cara e lenta. Um fechamento infeliz custaria a
+    descoberta inteira.
+
+    Escrevendo ao lado e trocando no fim (`os.replace` é atômico), ou o arquivo
+    novo está inteiro, ou o antigo continua lá. Nunca meio.
+    """
+    tmp = destino.with_suffix(destino.suffix + ".tmp")
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    tmp.write_text(json.dumps(dados, ensure_ascii=False, indent=1),
+                   encoding="utf-8")
+    os.replace(str(tmp), str(destino))
+
+
+def _gravar_head_html(dataset_id: str, hid: str) -> None:
+    try:
+        d = {}
+        if _HEADS_HTML.is_file():
+            d = json.loads(_HEADS_HTML.read_text(encoding="utf-8")) or {}
+        if d.get(dataset_id) == hid:
+            return
+        d[dataset_id] = hid
+        _gravar_json(_HEADS_HTML, d)
+    except Exception:
+        pass
+
+
+def _head_html_salvo(dataset_id: str):
+    try:
+        import json as _j
+        if _HEADS_HTML.is_file():
+            return (_j.loads(_HEADS_HTML.read_text(encoding="utf-8"))
+                    or {}).get(dataset_id)
+    except Exception:
+        pass
+    return None
+
+
+def _identidade_html(dataset_id: str, linhas: List[dict]) -> tuple:
+    """A digital da página e um identificador estável para cada giro dela.
+
+    A PÁGINA NÃO TEM HORÁRIO NEM ID — E O RESTO DO SOFTWARE PRECISA DE UM.
+    ---------------------------------------------------------------------
+    Sem identificador por giro, a marca de acerto do histórico (`✓`/`✗`) nunca
+    aparecia nesta fonte: `_marca_do_giro` procura pela chave do giro, a chave
+    vinha de `settled`, e aqui `settled` é `None` para todos. Todos caíam na
+    mesma chave vazia, então nenhum casava.
+
+    Dar `posição` como identidade não resolve: o giro que hoje é o primeiro
+    amanhã é o segundo, e perderia a marca junto com a posição.
+
+    O que dá para fazer com honestidade é seguir a SEQUÊNCIA. A página devolve
+    do mais novo para o mais velho; entre duas leituras, o que mudou foi
+    entrar giro na frente. Achando quantos entraram, os que já existiam
+    mantêm o identificador que receberam antes, e só os novos ganham um
+    número novo. Nada é inventado: a única suposição é a de que o histórico
+    anda para frente, que é o que histórico faz.
+    """
+    import hashlib as _hl
+    vals = [str(r.get("n")) for r in linhas]
+    hid = "html:" + _hl.sha1("|".join(vals).encode("utf-8")).hexdigest()[:16]
+
+    antes_vals = _ids_html.get(dataset_id, {}).get("vals") or []
+    antes_ids = _ids_html.get(dataset_id, {}).get("ids") or []
+    # quantos entraram na frente: o menor deslocamento que faz o resto casar
+    novos = len(vals)
+    for d in range(0, min(len(vals), len(antes_vals)) + 1):
+        if vals[d:d + len(antes_vals)] == antes_vals[:len(vals) - d]:
+            novos = d
+            break
+    seq = int(_seq_html.get(dataset_id, 0))
+    ids = []
+    for i in range(novos):
+        seq += 1
+        ids.append(f"{hid[:11]}:{dataset_id}:{seq}")
+    _seq_html[dataset_id] = seq
+    ids.extend(antes_ids[:len(vals) - novos])
+    while len(ids) < len(vals):
+        # primeira leitura (ou histórico que encolheu): completa o que falta
+        seq += 1
+        ids.append(f"{hid[:11]}:{dataset_id}:{seq}")
+    _seq_html[dataset_id] = seq
+    _ids_html[dataset_id] = {"vals": vals, "ids": ids}
+    return hid, ids
+
+
 def _lembrar_fonte(dataset_id: str, url: str) -> None:
     """Grava o endereco que respondeu, para nao procurar de novo."""
     try:
-        import json as _j
         d = {}
         if FONTES_OK.is_file():
-            d = _j.loads(FONTES_OK.read_text(encoding="utf-8"))
+            d = json.loads(FONTES_OK.read_text(encoding="utf-8")) or {}
         if d.get(dataset_id) == url:
             return
         d[dataset_id] = url
-        FONTES_OK.parent.mkdir(parents=True, exist_ok=True)
-        FONTES_OK.write_text(_j.dumps(d, ensure_ascii=False, indent=1),
-                             encoding="utf-8")
+        # troca atômica: este arquivo é a memória de qual endereço funciona em
+        # cada mesa, e corrompê-lo custa a descoberta de todas elas
+        _gravar_json(FONTES_OK, d)
     except Exception:
         pass
 
@@ -266,7 +370,19 @@ def _purge_invalid(events: List[dict], dataset_id: str) -> List[dict]:
         e["valor"] = v
         e["settled"] = settled
         e["event_id"] = eid
-        if dataset_id != "crazy_time" and v.isdigit():
+        # A COMPARAÇÃO ERA `!= "crazy_time"`, E ISSO QUEBRAVA A CRAZY TIME A.
+        #
+        # Os setores numéricos dela ("1", "2", "5", "10") voltavam a virar
+        # inteiro aqui, enquanto "CoinFlip" e "Pachinko" continuavam texto. O
+        # histórico saía misturado -- [5, "CoinFlip", 2, "Pachinko"] -- e do
+        # outro lado `ia_modulos` compara com `CT_SETORES`, que é tudo texto.
+        # Resultado: metade dos giros da mesa era invisível para as
+        # inteligências, sem erro nenhum aparecer.
+        #
+        # É a mesma raiz do `DOMAIN` sem `crazy_time_a`: o nome da mesa nova
+        # não é `crazy_time`, é `crazy_time_a`. Toda comparação exata com o
+        # nome antigo esquece a mesa nova. Por isso agora é prefixo.
+        if not dataset_id.startswith("crazy_time") and v.isdigit():
             e["n"] = int(v)
         else:
             e["n"] = v
@@ -682,11 +798,28 @@ def capturar(
             # A pagina nao tem identificador, mas TEM conteudo: a sequencia dos
             # ultimos resultados. Se ela nao mudou, nao houve giro. O head_id
             # passa a ser a impressao digital dessa sequencia.
-            import hashlib as _hl
-            _assinatura = "|".join(str(r.get("n")) for r in _html[:12])
-            _hid = "html:" + _hl.sha1(_assinatura.encode("utf-8")).hexdigest()[:16]
+            # DOZE VALORES NAO SAO IMPRESSAO DIGITAL NO CRAZY TIME.
+            #
+            # A assinatura usava so `_html[:12]`. Numa roleta isso e' quase
+            # unico; no Crazy Time, nao: sao 8 simbolos, e o "1" sozinho ocupa
+            # 21 das 54 casas. Doze posicoes com esse alfabeto repetem sozinhas
+            # com frequencia -- e quando repetem, uma pagina NOVA tem a mesma
+            # assinatura da anterior e o giro e' descartado como se fosse
+            # releitura.
+            #
+            # Agora a assinatura e' a pagina inteira. Nao custa nada (e um
+            # sha1 de duzentos valores) e para de perder giro.
+            _hid, _ids = _identidade_html(dataset_id, _html)
+            for _r, _eid in zip(_html, _ids):
+                _r["event_id"] = _eid
+            # a memoria era so de processo: reabrindo o programa, a MESMA
+            # pagina voltava a valer como giro novo e a mesa contava um giro
+            # que nao aconteceu. Agora a digital anterior tambem vem do disco.
             _antes = _ultimo_head_html.get(dataset_id)
+            if _antes is None:
+                _antes = _head_html_salvo(dataset_id)
             _ultimo_head_html[dataset_id] = _hid
+            _gravar_head_html(dataset_id, _hid)
             return {"rows": _html, "novo_head": _hid != _antes,
                     "head_id": _hid, "err": None, "mults": [],
                     "fonte": "gamblingcounting"}
@@ -783,20 +916,52 @@ def capturar(
             "event_id": e.get("event_id"),
         }
         rows.append(row)
+        # O MESMO PREMIO ENTRAVA DUAS VEZES NO MESMO GIRO.
+        #
+        # Um giro premiado costuma trazer as duas coisas: a tag solta
+        # `{"x": 500}` e a lista `{"lucky": [{"n": 20, "x": 500}]}`. Sao duas
+        # descricoes do MESMO sorteio, e as duas eram acrescentadas.
+        #
+        # Quem consome `mults` soma o `x` por numero (`mult_hits[n] += x`).
+        # Contado duas vezes, o numero premiado sai com o dobro do peso, e o
+        # dobro nao veio de evidencia nenhuma -- veio de a resposta descrever a
+        # mesma coisa em dois lugares. O `visto` abaixo conta uma vez so.
+        _visto = set()
+
+        def _por(n, x):
+            try:
+                _x = int(float(x))
+            except (TypeError, ValueError):
+                return
+            # NAO forcar int no numero: no Crazy Time o "n" e' simbolo
+            # ("CoinFlip", "Pachinko"), e o int() estourava. O anuncio da mesa
+            # inteira caia fora por causa dessa conversao.
+            _n = n
+            if isinstance(_n, str) and _n.strip().lstrip("-").isdigit():
+                _n = int(_n)
+            chave = (str(_n), _x)
+            if chave in _visto:
+                return
+            _visto.add(chave)
+            mults.append({"n": _n, "x": _x})
+
         for t in e.get("tags") or []:
-            if "x" in t:
-                mults.append({"n": e.get("n"), "x": t["x"]})
+            if not isinstance(t, dict):
+                continue
+            if "x" in t and not isinstance(t.get("x"), (dict, list)):
+                _por(e.get("n"), t["x"])
             # `mults` so era montado das tags "x" -- o anuncio inteiro, que
             # vive em `lucky` e `fire_nums`, nao chegava a interface nem as
             # analises. Na Mega Fire isso zerava o canal do multiplicador.
             for _ch in ("lucky", "fire_nums"):
                 for _it in (t.get(_ch) or []):
                     if isinstance(_it, dict) and _it.get("x"):
-                        try:
-                            mults.append({"n": int(_it.get("n")),
-                                          "x": int(_it["x"])})
-                        except (TypeError, ValueError):
-                            pass
+                        _por(_it.get("n"), _it["x"])
+            # o top slot do Crazy Time tambem e' anuncio: sorteia simbolo e
+            # multiplicador todo giro, pagando ou nao
+            _top = t.get("top")
+            if isinstance(_top, dict) and _top.get("x"):
+                _por(_top.get("simbolo", _top.get("n")), _top["x"])
 
     head_id = rows[0]["event_id"] if rows else None
 
