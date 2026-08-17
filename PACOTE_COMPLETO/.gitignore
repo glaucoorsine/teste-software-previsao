@@ -17,3 +17,19 @@ crash_*.txt
 # se calam, e a ligacao com os PDFs deixa de existir.
 !tratados/
 !tratados/*.pdf
+
+# ESTADO QUE O PROPRIO SOFTWARE ESCREVE — nunca entra no pacote.
+#
+# Estes dois apareceram porque eu rodei os testes: a biblioteca de estudos do
+# lightning e o tribunal da academia foram gravados as 13:00 de hoje, com
+# vereditos calculados sobre historico sintetico.
+#
+# E o mesmo defeito do achado 26 dele, noutra pasta: o ZIP chegava na maquina
+# dele carregando decisoes de teste que o software depois trataria como
+# historico proprio. Um veredito "descartada_pelo_tribunal" calculado em cima
+# de dado inventado ia barrar uma teoria de verdade.
+biblioteca_estudos_*.json
+academia_autonoma/data/
+a6_calibracao.json
+*_state.json
+ciclo_ativo_*.json
