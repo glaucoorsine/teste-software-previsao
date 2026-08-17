@@ -12,3 +12,8 @@ __pycache__/
 *.tmp
 *.lock
 crash_*.txt
+
+# Os tres tratados ENTRAM no pacote: sem eles as familias do Livro
+# se calam, e a ligacao com os PDFs deixa de existir.
+!tratados/
+!tratados/*.pdf
