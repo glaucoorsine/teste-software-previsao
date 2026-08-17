@@ -9,6 +9,10 @@ from tela_segura import bombear, depois  # after que nao quebra ao fechar a jane
 class CentralIAs(ctk.CTk):
     def __init__(self):
         super().__init__()
+        # a thread da interface se identifica e a bomba comeca a rodar: sem
+        # isto, `depois()` chamado de thread de fundo toca no Tk de fora da
+        # thread dele -- a corrida que trava a janela. Ver tela_segura.py.
+        bombear(self)
         self.title("CENTRAL DAS IAS — Academia compartilhada")
         self.geometry("1280x860")
         ctk.set_appearance_mode("dark")

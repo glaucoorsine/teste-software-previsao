@@ -309,6 +309,11 @@ checa(_feito == ["x"], "a interface é quem executa", _feito)
 T.depois(_j, 0, lambda: _feito.append("y"))
 checa(_j.thread_do_after == threading.get_ident() and _feito == ["x", "y"],
       "da própria thread da interface continua direto", _feito)
+# e todas as janelas precisam LIGAR a bomba, senão a fila enche e nada roda
+for _arq in ("CENTRAL.py", "central_ias.py", "mega_fire_combo.py",
+             "lightning_combo.py", "crazy_time_combo.py"):
+    _t4 = (RAIZ / _arq).read_text(encoding="utf-8")
+    checa("bombear(self)" in _t4, f"{_arq}: liga a bomba da interface")
 
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n[10] o Caçador decide também fora da CENTRAL")
