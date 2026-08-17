@@ -104,6 +104,11 @@ FONTES_OK = ROOT / "Logs" / "fontes_que_funcionam.json"
 
 # quando cada mesa procurou endereco pela ultima vez (a procura e cara)
 _ULTIMA_PROCURA: dict = {}
+# a descoberta pela pagina baixa o pacote de scripts inteiro: cara, e inutil
+# repetir a cada volta. Cinco minutos e frequente o bastante para uma mesa que
+# acabou de perder a fonte e raro o bastante para nao comer o orcamento.
+_ULTIMA_PAGINA: dict = {}
+INTERVALO_PAGINA_S = 300.0
 
 # a assinatura da ultima pagina HTML lida, por mesa -- e ela que diz se houve
 # giro novo numa fonte que nao tem horario nem identificador
@@ -297,6 +302,44 @@ def conferir_mesas_distintas(dataset_id: str, rows: list) -> Optional[str]:
     return None
 
 
+def limpar_fontes_alheias() -> list:
+    """Apaga fonte gravada que NAO e da mesa. Roda na abertura.
+
+    ISTO CONSERTA O QUE JA ESTA NA MAQUINA DELE
+    ───────────────────────────────────────────
+    O arquivo de fontes que ele mandou tem:
+
+        "lightning": ".../api/megaroulette"
+
+    Mega Roulette e outro jogo. O crivo novo impede que isso ACONTECA de novo,
+    mas nao desfaz o que ja esta gravado -- e enquanto estiver gravado, o
+    Lightning continua lendo a mesa errada, porque a fonte lembrada e sempre o
+    primeiro candidato. Correcao que nao limpa o estado antigo nao conserta nada
+    na pratica, e isso ele ja me disse uma vez.
+
+    A duplicada (`crazy_time_a` -> crazytime) nem chegou a ser gravada: o crivo
+    antigo barrava a gravacao. Por isso ela nao aparece no arquivo dele, e mesmo
+    assim as duas mesas mostravam o mesmo historico -- o dado entrava pelo uso.
+    """
+    apagadas = []
+    try:
+        if not FONTES_OK.is_file():
+            return apagadas
+        d = json.loads(FONTES_OK.read_text(encoding="utf-8")) or {}
+        mudou = False
+        for mesa, u in list(d.items()):
+            ok, motivo = identidade_ok(mesa, str(u))
+            if not ok:
+                d.pop(mesa, None)
+                apagadas.append(f"{mesa} ({motivo})")
+                mudou = True
+        if mudou:
+            _gravar_json(FONTES_OK, d)
+    except Exception as _e:
+        engolido("fluxo_captura/limpar_fontes_alheias", _e)
+    return apagadas
+
+
 def limpar_fontes_duplicadas() -> list:
     """Apaga a memoria de fonte quando duas mesas ficaram com o mesmo endereco.
 
@@ -395,6 +438,78 @@ def fonte_de_outra_mesa(dataset_id: str, url: str) -> Optional[str]:
     return None
 
 
+# ═══════════════════ DE QUEM É ESTE ENDEREÇO — a regra que faltava
+#
+# O QUE OS LOGS DELE MOSTRARAM, E QUE É PIOR DO QUE EU TINHA ADMITIDO
+# ───────────────────────────────────────────────────────────────────
+#     lightning:    VALIDADO .../api/megaroulette      ← mesa ERRADA
+#     mega_fire:    VALIDADO .../api/megaroulette      ← a MESMA do lightning
+#     crazy_time:   VALIDADO .../api/crazytime
+#     crazy_time_a: VALIDADO .../api/crazytime         ← a MESMA do crazy_time
+#
+# As páginas do casinoscores carregam o MESMO pacote de scripts, e nele estão os
+# endereços de TODAS as mesas -- por isso o log diz "17 endereço(s)" igual para
+# as quatro. O descobridor validava perguntando "isto devolve giros que meu
+# parser reconhece?", e `megaroulette` devolve giros de roleta perfeitamente
+# válidos. Passa no crivo com louvor, para qualquer mesa de roleta.
+#
+# EU JÁ HAVIA ESCRITO QUE O CRIVO QUE FALTAVA ERA DE IDENTIDADE, não de formato.
+# Escrevi isso no comentário de `fonte_de_outra_mesa`, e aí está o meu erro: eu
+# apliquei o crivo só na hora de GRAVAR a fonte. O log prova a consequência --
+# `FONTE_DUPLICADA crazy_time_a tentou usar o endereco de crazy_time` -- e mesmo
+# assim as duas mesas mostraram a mesma sequência, porque o laço de captura USA
+# os itens e só depois recusa gravar. Recusar a memória sem recusar o dado não
+# conserta nada: a tela enche igual, com dado alheio, e ele me disse com todas as
+# letras que eu não tinha consertado.
+#
+# Agora a regra é uma só, neste lugar, e vale nos quatro pontos: descobrir, USAR,
+# gravar e limpar o que já está gravado errado.
+#
+# POR QUE EXIGIR O NOME E NÃO SÓ PROIBIR O DOS OUTROS
+# ───────────────────────────────────────────────────
+# Proibir o nome das outras mesas não pega o caso do Lightning: `megaroulette`
+# não é nenhuma das quatro, é um terceiro jogo. Só a exigência positiva -- "o
+# endereço do Lightning tem de dizer lightning" -- fecha esse caso.
+IDENTIDADE = {
+    "lightning": ("lightningroulette", "lightning"),
+    "mega_fire": ("megafireblazeroulette", "megafireblaze", "fireblaze",
+                  "megafire"),
+    "crazy_time": ("crazytime",),
+    "crazy_time_a": ("crazytimea", "crazytime2", "crazytimeatable",
+                     "crazytimearoulette"),
+    "immersive": ("immersiveroulette", "immersive"),
+}
+
+# quando o nome de uma mesa é PREFIXO do da outra, exigir não basta: `crazytime`
+# está dentro de `crazytimea`, então o endereço do A satisfaria o comum. É a
+# mesma armadilha de prefixo que já derrubou o parser, o DOMAIN e a limpeza de
+# fontes duplicadas neste arquivo.
+IDENTIDADE_RECUSA = {
+    "crazy_time": ("crazytimea", "crazytime2", "crazytimeatable",
+                   "crazytimearoulette"),
+}
+
+
+def _normal(url: str) -> str:
+    return str(url).replace("-", "").replace("_", "").lower()
+
+
+def identidade_ok(dataset_id: str, url: str):
+    """Este endereço é DESTA mesa? Devolve (ok, motivo)."""
+    chave = str(dataset_id)
+    exige = IDENTIDADE.get(chave)
+    if not exige:
+        return True, ""            # mesa que eu não conheço: não julgo
+    u = _normal(url)
+    for proibido in IDENTIDADE_RECUSA.get(chave, ()):
+        if proibido in u:
+            return False, (f"o endereco diz '{proibido}', que e de outra mesa")
+    if any(t in u for t in exige):
+        return True, ""
+    return False, (f"o endereco nao diz nenhum de {list(exige)} — nao da para "
+                   f"afirmar que e de {chave}")
+
+
 def _endereco_e_da_mesa(dataset_id: str, url: str) -> bool:
     """O nome DESTA mesa aparece no endereço?
 
@@ -425,6 +540,11 @@ def _lembrar_fonte(dataset_id: str, url: str) -> None:
         if FONTES_OK.is_file():
             d = json.loads(FONTES_OK.read_text(encoding="utf-8")) or {}
         if d.get(dataset_id) == url:
+            return
+        _ok_grava, _motivo_grava = identidade_ok(dataset_id, url)
+        if not _ok_grava:
+            engolido(f"fluxo_captura/ENDERECO_ALHEIO {dataset_id} nao grava "
+                     f"{url}: {_motivo_grava}", None)
             return
         _outra = fonte_de_outra_mesa(dataset_id, url)
         if _outra:
@@ -1047,21 +1167,49 @@ def parse_items_roulette(items: List[dict]) -> List[dict]:
                 tags.append({"fire": True})
                 if isinstance(_boost, (dict, list)):
                     tags.append({"fire_bruto": _boost})
-                _fn = res.get("fireNumbers") or d.get("fireNumbers") or []
-                _lista = []
-                for fb in (_fn if isinstance(_fn, list) else []):
-                    try:
-                        if isinstance(fb, dict):
-                            _num = int(fb.get("number", fb.get("n")))
-                            _mx = fb.get("roundedMultiplier") or fb.get("multiplier")
-                            _lista.append({"n": _num,
-                                           "x": int(_mx) if _mx else None})
-                        else:
-                            _lista.append({"n": int(fb), "x": None})
-                    except (TypeError, ValueError):
-                        pass
-                # o campo declarado vem primeiro: ele traz o multiplicador
-                _anunciar(_lista)
+
+            # O CAMPO DECLARADO SE LE SEMPRE -- ELE E QUEM TRAZ O MULTIPLICADOR.
+            #
+            # EU CONSERTEI ISTO PELA METADE, e ele viu o resultado: o site
+            # mostrando 74X no 30 e 132X no 8 na mesma meia hora, e o software
+            # dizendo "0% de multiplicador, seca de 97 giros". Os NUMEROS batiam
+            # -- 5, 19, 28, 30, 22, 2, 34 -- entao a captura estava viva; so o
+            # valor sumia.
+            #
+            # O comentario aqui em cima chega a dizer "antes tudo isto vivia
+            # dentro do if _boost". Saiu dali a busca generica; a leitura do
+            # campo declarado FICOU. E `superBoost` marca a rodada especial, nao
+            # o anuncio -- entao nos giros que pagaram sem ser rodada especial o
+            # valor nunca era lido. A busca generica achava os numeros (dai "97
+            # rodadas com sorteio em 217") mas sem `x`, e sem `x` nada paga.
+            #
+            # E o mesmo erro pela terceira vez neste arquivo, escrito de outro
+            # jeito: guardar o anuncio so quando ele pagou.
+            _fn = None
+            for _campo in ("fireNumbers", "fireNumbersList", "blazeNumbers",
+                           "fireBlazeNumbers", "fireballNumbers", "hotNumbers",
+                           "fireNumberList"):
+                _fn = res.get(_campo) or d.get(_campo)
+                if _fn:
+                    break
+            _lista = []
+            for fb in (_fn if isinstance(_fn, list) else []):
+                try:
+                    if isinstance(fb, dict):
+                        _num = fb.get("number", fb.get("n", fb.get("value")))
+                        if _num is None:
+                            continue
+                        _mx = (fb.get("roundedMultiplier") or fb.get("multiplier")
+                               or fb.get("x") or fb.get("mult"))
+                        _lista.append({"n": int(_num),
+                                       "x": int(float(_mx)) if _mx else None})
+                    else:
+                        _lista.append({"n": int(fb), "x": None})
+                except (TypeError, ValueError):
+                    pass
+            # o campo declarado vem primeiro: ele traz o multiplicador, e a
+            # busca generica so completa o que faltar
+            _anunciar(_lista)
 
             if not _sorteados:
                 _anunciar(_anunciados_no_giro(res) or _anunciados_no_giro(d))
@@ -1259,7 +1407,20 @@ def capturar(
     # rapida e mais rica (traz o anuncio de multiplicador, que a pagina nao
     # traz). O atalho e para destravar mesa nova -- que e' o caso da Crazy
     # Time A desde o comeco.
-    if not fonte_lembrada(dataset_id):
+    # A DESCOBERTA PELA PAGINA TEM INTERVALO — O LOG DELE MOSTROU POR QUE.
+    #
+    #   16:10:18 crazy_time_a: depois dos scripts, 17 endereco(s)
+    #   16:11:28 crazy_time_a: depois dos scripts, 17 endereco(s)
+    #   16:12:38 crazy_time_a: depois dos scripts, 17 endereco(s)
+    #   16:13:38, 16:14:48, 16:15:49 ... uma vez por volta, para sempre
+    #
+    # Cada uma custa ~60s do orcamento de 45s da volta, e a mesa passa a vida
+    # baixando o mesmo pacote de scripts. Enquanto isso ela nao le giro nenhum --
+    # que e a mesa parada que ele viu. Isto ja tinha portao no descobridor de
+    # ultimo recurso e nao tinha aqui.
+    _ult_pag = _ULTIMA_PAGINA.get(dataset_id, 0.0)
+    if not fonte_lembrada(dataset_id) and _t.time() - _ult_pag > INTERVALO_PAGINA_S:
+        _ULTIMA_PAGINA[dataset_id] = _t.time()
         try:
             from descobridor_pela_pagina import procurar as _proc
             for _pag in enderecos_html(dataset_id):
@@ -1268,8 +1429,9 @@ def capturar(
                 _r = _proc(_pag, str(dataset_id),
                            registrar=lambda m: engolido("fluxo_captura/" + m,
                                                         None))
-                if _r.get("api") and not fonte_de_outra_mesa(dataset_id,
-                                                             _r["api"]):
+                if (_r.get("api")
+                        and identidade_ok(dataset_id, _r["api"])[0]
+                        and not fonte_de_outra_mesa(dataset_id, _r["api"])):
                     # a propria pagina disse onde busca; grava e usa
                     _lembrar_fonte(dataset_id, _r["api"])
                     candidatos = [_r["api"]] + [c for c in candidatos
@@ -1283,6 +1445,24 @@ def capturar(
         if _t.time() >= _fim:
             err = err or "prazo da volta esgotado"
             break
+        # O CRIVO DE IDENTIDADE VEM ANTES DE BUSCAR, NAO DEPOIS DE GRAVAR.
+        #
+        # Era so na gravacao, e o log dele mostrou a consequencia: a mesa
+        # recusava MEMORIZAR o endereco alheio e continuava USANDO os giros que
+        # ele devolveu. Crazy Time e Crazy Time A apareceram na tela com a mesma
+        # sequencia deslocada em dois giros, com `FONTE_DUPLICADA` no log o tempo
+        # todo. Recusar a memoria sem recusar o dado nao conserta nada.
+        _ok_id, _motivo_id = identidade_ok(dataset_id, _url)
+        if not _ok_id:
+            engolido(f"fluxo_captura/ENDERECO_ALHEIO {dataset_id} nao usa "
+                     f"{_url}: {_motivo_id}", None)
+            # RECUSAR TEM DE CONTAR COMO FALHA, senao os caminhos de reserva
+            # nao rodam: eles sao guardados por `if err and not items`, e um
+            # candidato pulado nao deixava `err` nenhum. A mesa cujos candidatos
+            # fossem todos alheios devolveria vazio EM SILENCIO -- trocando um
+            # defeito (ler a mesa errada) por outro (nao ler nada e nao dizer).
+            err = err or f"nenhum endereco desta mesa respondeu ({_motivo_id})"
+            continue
         items, err = fetch_paginas(
             _url, HEADERS, page_size=page_size, max_pages=max_pages,
             duration=duration, prazo=_fim)
@@ -1304,6 +1484,8 @@ def capturar(
             for _url in [c for c in candidatos if c != _lembrada]:
                 if _t.time() >= _fim:
                     break
+                if not identidade_ok(dataset_id, _url)[0]:
+                    continue
                 items, err = fetch_paginas(
                     _url, HEADERS, page_size=page_size, max_pages=max_pages,
                     duration=duration, prazo=_fim)
@@ -1351,13 +1533,19 @@ def capturar(
                         _r = _proc(_pag, str(dataset_id),
                                    registrar=lambda m: engolido(
                                        "fluxo_captura/" + m, None))
-                        if _r.get("api"):
+                        if _r.get("api") and identidade_ok(
+                                dataset_id, _r["api"])[0]:
                             _novo = _r["api"]
                             break
                 except Exception as _e:
                     engolido("fluxo_captura/descobrir_pela_pagina", _e)
                 if not _novo:
                     _novo = _descobrir(str(dataset_id))
+                if _novo and not identidade_ok(dataset_id, _novo)[0]:
+                    engolido(f"fluxo_captura/ENDERECO_ALHEIO a descoberta de "
+                             f"{dataset_id} devolveu {_novo}, que nao e desta "
+                             f"mesa — descartado", None)
+                    _novo = None
                 if _novo:
                     items, err = fetch_paginas(
                         _novo, HEADERS, page_size=page_size,

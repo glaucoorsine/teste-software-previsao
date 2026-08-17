@@ -1186,6 +1186,42 @@ class PainelMesa(ctk.CTkFrame):
             else:
                 limpar_ciclo_ativo(self.jogo)
 
+            # A PRIMEIRA VOLTA NAO PODE SER ABANDONADA E REFEITA PARA SEMPRE.
+            #
+            # O log dele:
+            #     16:08:33 lightning PRIMEIRA_VOLTA comecou
+            #     16:13:33 lightning PRIMEIRA_VOLTA sem resposta em 300s
+            # e a tela, minutos depois: "preparando o cerebro — 617s de ate 300s".
+            # Passou dos 300s, desistiu, mandou OUTRO pedido, e seguiu preparando.
+            #
+            # Isso nao termina nunca, e a causa e o proprio mecanismo de pedido:
+            # `resposta_de` so aceita a resposta do pedido ATUAL. Quando o cerebro
+            # conclui a carga e responde o pedido #1, a mesa ja espera o #2 -- e a
+            # resposta boa e descartada como atrasada. O log mostra isso
+            # acontecendo no crazy_time: "RESPOSTA_ATRASADA descartada (era
+            # crazy_time#2, esperava crazy_time#3)". Cada carga concluida era
+            # jogada fora pela desistencia da volta anterior.
+            #
+            # Entao, enquanto a primeira volta nao voltar, as voltas seguintes
+            # ESPERAM O MESMO PEDIDO em vez de mandar outro. Sem prazo artificial:
+            # termina quando o modelo carregar, e a tela mostra ha quanto tempo.
+            if self.primeira and getattr(self, "_esperando_1a", False):
+                _faz = int(time.time() - getattr(self, "_t_primeira", time.time()))
+                self._estado(f"preparando o cérebro — {_faz}s (esperando o "
+                             f"MESMO pedido; reiniciar jogaria a carga fora)",
+                             ROXO)
+                _sug = self._resposta_do_cerebro(ESPERA_S)
+                if _sug is None:
+                    return                        # segue esperando na proxima
+                registrar(f"{self.jogo} PRIMEIRA_VOLTA respondeu em {_faz}s")
+                self._esperando_1a = False
+                self.primeira = False
+                self._estado("operacional", VERDE)
+                self.ultimo_resultado = None
+                self._alimentar_academia(rows, cap)
+                depois(self, 0, lambda x=_sug, r=rows: self._aplicar(x, r))
+                return
+
             _pedido = {"nums": [r.get("n") for r in rows],
                               # AS LINHAS CRUAS, COM AS TAGS DE MULTIPLICADOR.
                               #
@@ -1241,8 +1277,10 @@ class PainelMesa(ctk.CTkFrame):
                     registrar(f"{self.jogo} PRIMEIRA_VOLTA comecou "
                               f"(carrega modelo e academia; pode levar minutos)")
                 _faz = int(time.time() - self._t_primeira)
-                self._estado(f"preparando o cérebro — {_faz}s de até "
-                             f"{ESPERA_1A_S}s", ROXO)
+                self._estado(f"preparando o cérebro — {_faz}s", ROXO)
+                # marca que ha um pedido em curso: a partir de agora as voltas
+                # seguintes esperam ESTE, em vez de mandar outro
+                self._esperando_1a = True
             sug = self._resposta_do_cerebro(
                 ESPERA_1A_S if self.primeira else ESPERA_S)
             if sug is None:
@@ -1252,8 +1290,10 @@ class PainelMesa(ctk.CTkFrame):
                     _faz = int(time.time() - getattr(self, "_t_primeira", 0))
                     self._estado(f"cérebro não respondeu em {_faz}s — "
                                  f"tentando de novo", AMARELO)
-                    registrar(f"{self.jogo} PRIMEIRA_VOLTA sem resposta em "
-                              f"{_faz}s — vai tentar de novo na proxima volta")
+                    registrar(f"{self.jogo} PRIMEIRA_VOLTA {_faz}s sem "
+                              f"resposta — CONTINUA esperando o mesmo pedido "
+                              f"(nao reinicia: reiniciar jogava fora a carga "
+                              f"que estava quase pronta)")
                 else:
                     self._estado("cérebro sem resposta", AMARELO)
                 return
@@ -2286,7 +2326,16 @@ class Central(ctk.CTk):
         # desfaz na abertura o que o defeito da versao anterior gravou: se duas
         # mesas ficaram com o mesmo endereco, a que nao e dona volta a procurar
         try:
-            from fluxo_captura import limpar_fontes_duplicadas
+            from fluxo_captura import (limpar_fontes_duplicadas,
+                                       limpar_fontes_alheias)
+            # PRIMEIRO as alheias: o arquivo dele tinha lightning apontando para
+            # megaroulette, que e outro jogo. Enquanto isso ficar gravado, a
+            # fonte lembrada e sempre o primeiro candidato e a mesa continua
+            # lendo a mesa errada, por mais correto que o codigo novo esteja.
+            _alheias = limpar_fontes_alheias()
+            for _a in _alheias:
+                registrar(f"FONTE_ALHEIA apagada: {_a} — esta mesa vai "
+                          f"procurar o endereco dela")
             _lim = limpar_fontes_duplicadas()
             if _lim:
                 registrar(f"FONTES_DUPLICADAS limpas: {_lim} — estas mesas vao "

@@ -68,8 +68,17 @@ for mesa in ("lightning", "mega_fire", "crazy_time", "crazy_time_a"):
           f"{mesa}: a página do provedor vem antes do agregador", e[0])
 
 fonte = (RAIZ / "fluxo_captura.py").read_text(encoding="utf-8")
-checa("if not fonte_lembrada(dataset_id):" in fonte,
+checa("if not fonte_lembrada(dataset_id) and" in fonte,
       "mesa sem fonte conhecida consulta a página ANTES de tentar as grafias")
+# E COM INTERVALO. O log dele mostrou a Crazy Time A refazendo a descoberta a
+# cada volta -- 16:10, 16:11, 16:12, 16:13, 16:14, 16:15 -- e cada uma baixa o
+# pacote de scripts inteiro, ~60s, contra um orçamento de volta de 45s. A mesa
+# passava a vida descobrindo e não lia giro nenhum: era a mesa parada que ele viu.
+checa("_ULTIMA_PAGINA" in fonte and "INTERVALO_PAGINA_S" in fonte,
+      "e a descoberta pela página tem intervalo, não roda a cada volta")
+checa(F.INTERVALO_PAGINA_S >= 120,
+      "com intervalo suficiente para não comer o orçamento da captura",
+      f"{F.INTERVALO_PAGINA_S}s")
 
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n[2] os giros são lidos mesmo bem aninhados")

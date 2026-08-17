@@ -229,9 +229,14 @@ def test_crazy_time_a_viva():
     guardado = F.FONTES_OK
     try:
         F.FONTES_OK = _pl.Path(tempfile.mkdtemp()) / "fontes.json"
-        F._lembrar_fonte("crazy_time_a", "https://exemplo/funciona")
-        assert F.fonte_lembrada("crazy_time_a") == "https://exemplo/funciona"
-        assert F.enderecos_para("crazy_time_a")[0] == "https://exemplo/funciona"
+        # o endereco de teste precisa NOMEAR a mesa: desde que o crivo de
+        # identidade passou a valer no uso e na gravacao, um endereco generico
+        # como "https://exemplo/funciona" e recusado -- e recusar e o correto,
+        # foi o que deixou o Crazy Time A lendo a mesa errada.
+        _falso = "https://exemplo/crazy-time-a/funciona"
+        F._lembrar_fonte("crazy_time_a", _falso)
+        assert F.fonte_lembrada("crazy_time_a") == _falso
+        assert F.enderecos_para("crazy_time_a")[0] == _falso
     finally:
         F.FONTES_OK = guardado
     print("  ok   crazy time A: enderecos, parser e memoria da fonte")
@@ -270,8 +275,8 @@ def test_crazy_time_a_volta_depois_de_cair():
         F._FALHAS_FONTE.clear()
 
         # ── 1. a fonte morta e esquecida depois de N falhas, nao antes ──
-        F._lembrar_fonte("crazy_time_a", "https://morreu/api")
-        assert F.fonte_lembrada("crazy_time_a") == "https://morreu/api"
+        F._lembrar_fonte("crazy_time_a", "https://morreu/crazy-time-a/api")
+        assert F.fonte_lembrada("crazy_time_a") == "https://morreu/crazy-time-a/api"
         for i in range(F.FALHAS_ATE_ESQUECER - 1):
             assert F._fonte_falhou("crazy_time_a") is False, i
             assert F.fonte_lembrada("crazy_time_a"), \
@@ -284,32 +289,37 @@ def test_crazy_time_a_volta_depois_de_cair():
         assert not F.fonte_lembrada("crazy_time_a")
 
         # ── e uma resposta boa zera o contador ──────────────────────────
-        F._lembrar_fonte("crazy_time_a", "https://voltou/api")
+        F._lembrar_fonte("crazy_time_a", "https://voltou/crazy-time-a/api")
         F._fonte_falhou("crazy_time_a")
         F._fonte_funcionou("crazy_time_a")
         assert F._FALHAS_FONTE.get("crazy_time_a") is None
         for _ in range(F.FALHAS_ATE_ESQUECER - 1):
             F._fonte_falhou("crazy_time_a")
-        assert F.fonte_lembrada("crazy_time_a") == "https://voltou/api", \
+        assert F.fonte_lembrada("crazy_time_a") == "https://voltou/crazy-time-a/api", \
             "o contador tem que zerar quando a fonte responde"
 
-        # ── 2. o dono legitimo toma o endereco de volta ─────────────────
+        # ── 2. o engano de uma versao ANTIGA e desfeito ─────────────────
+        #
+        # Antes o crivo era so na gravacao, e por posse. Hoje `_lembrar_fonte`
+        # nem deixa o Crazy Time comum gravar o endereco do A -- a identidade
+        # barra na origem. Entao o cenario aqui e o que EXISTE na maquina dele:
+        # o engano ja gravado por uma versao anterior.
         F.FONTES_OK.unlink(missing_ok=True)
         F._FALHAS_FONTE.clear()
         proprio = "https://api-cs.casino.org/svc/crazy-time-a"
-        # o Crazy Time comum gravou, por engano, o endereco que e do A
-        F._lembrar_fonte("crazy_time", proprio)
-        assert F.fonte_lembrada("crazy_time") == proprio
-        # antes: o A ficava barrado do PROPRIO endereco, para sempre
+        alheio = "https://api-cs.casino.org/svc/crazytime"
+        F._gravar_json(F.FONTES_OK, {"crazy_time": proprio})
+        assert F.fonte_lembrada("crazy_time") == proprio, "(cenario)"
+        # a limpeza da abertura desfaz: aquele endereco nao e do crazy_time
+        apagadas = F.limpar_fontes_alheias()
+        assert any("crazy_time" in a for a in apagadas), apagadas
+        assert F.fonte_lembrada("crazy_time") is None
+        # e agora o dono legitimo pode grava-lo
         F._lembrar_fonte("crazy_time_a", proprio)
-        assert F.fonte_lembrada("crazy_time_a") == proprio, \
-            "o dono legitimo (nome no endereco) tem que tomar o endereco"
-        assert F.fonte_lembrada("crazy_time") is None, \
-            "e quem gravou por engano volta a procurar o proprio"
+        assert F.fonte_lembrada("crazy_time_a") == proprio
 
         # ── e o guarda continua guardando o caso de verdade ─────────────
         F.FONTES_OK.unlink(missing_ok=True)
-        alheio = "https://api-cs.casino.org/svc/crazy-time"
         F._lembrar_fonte("crazy_time", alheio)
         F._lembrar_fonte("crazy_time_a", alheio)
         assert F.fonte_lembrada("crazy_time_a") is None, \
@@ -357,6 +367,128 @@ def test_crazy_time_a_volta_depois_de_cair():
     print("  ok   crazy time A volta depois de cair -- fonte morta e esquecida")
 
 
+def test_identidade_do_endereco():
+    """Os logs dele provaram que o crivo de identidade faltava onde importa.
+
+    O QUE ESTAVA GRAVADO NA MAQUINA DELE
+    ------------------------------------
+        lightning:    .../api/megaroulette      <- mesa ERRADA
+        mega_fire:    .../api/megaroulette      <- a MESMA do lightning
+        crazy_time:   .../api/crazytime
+        crazy_time_a: .../api/crazytime         <- a MESMA do crazy_time
+
+    As paginas do casinoscores carregam o MESMO pacote de scripts, com os
+    enderecos de TODAS as mesas -- o log diz "17 endereco(s)" igual para as
+    quatro. O descobridor validava por FORMATO ("isto devolve giros que meu
+    parser reconhece?"), e megaroulette devolve giros de roleta validos.
+
+    Eu ja tinha escrito que o crivo que faltava era de IDENTIDADE. O erro foi
+    aplicar so na hora de GRAVAR: o log mostra `FONTE_DUPLICADA crazy_time_a
+    tentou usar o endereco de crazy_time` e, ainda assim, as duas mesas
+    apareceram na tela com a mesma sequencia deslocada em dois giros -- porque o
+    laco USA os itens e so depois recusa gravar.
+    """
+    import fluxo_captura as F
+
+    # nenhum endereco que eu ja declarava pode ser derrubado pela regra nova
+    for mesa in ("lightning", "mega_fire", "crazy_time", "crazy_time_a"):
+        for u in F.enderecos_para(mesa):
+            ok, motivo = F.identidade_ok(mesa, u)
+            assert ok, f"a regra derrubou fonte que funciona: {mesa} {u} ({motivo})"
+
+    # os casos exatos do log dele
+    for mesa in ("lightning", "mega_fire", "crazy_time", "crazy_time_a"):
+        ok, _ = F.identidade_ok(mesa, "https://x/api/megaroulette")
+        assert not ok, f"megaroulette nao e de {mesa}"
+
+    assert F.identidade_ok("crazy_time", "https://x/api/crazytime")[0]
+    assert not F.identidade_ok("crazy_time_a", "https://x/api/crazytime")[0], \
+        "o A NAO pode aceitar o endereco do Crazy Time comum"
+    assert F.identidade_ok("crazy_time_a", "https://x/api/crazy-time-a")[0]
+    assert not F.identidade_ok("crazy_time", "https://x/api/crazy-time-a")[0], \
+        "e o comum nao pode aceitar o do A (crazytime esta DENTRO de crazytimea)"
+    assert F.identidade_ok("lightning", "https://x/api/lightningroulette")[0]
+    assert not F.identidade_ok("mega_fire", "https://x/api/lightningroulette")[0]
+
+    # mesa que eu nao conheco: nao julgo em vez de recusar tudo
+    assert F.identidade_ok("mesa_nova", "https://x/api/qualquer")[0]
+
+    # ── a GRAVACAO recusa endereco alheio ────────────────────────────────
+    import tempfile, pathlib as _pl
+    guardado = F.FONTES_OK
+    try:
+        F.FONTES_OK = _pl.Path(tempfile.mkdtemp()) / "fontes.json"
+        F._lembrar_fonte("lightning", "https://x/api/megaroulette")
+        assert F.fonte_lembrada("lightning") is None, \
+            "megaroulette nao pode ser gravado como fonte do lightning"
+        F._lembrar_fonte("lightning", "https://x/api/lightningroulette")
+        assert F.fonte_lembrada("lightning") == "https://x/api/lightningroulette"
+
+        # ── e a limpeza da abertura apaga o que JA esta gravado errado ───
+        F._gravar_json(F.FONTES_OK, {
+            "lightning": "https://api-cs.casino.org/svc/megaroulette",
+            "crazy_time": "https://api-cs.casino.org/svc/crazytime"})
+        apagadas = F.limpar_fontes_alheias()
+        assert any("lightning" in a for a in apagadas), apagadas
+        assert F.fonte_lembrada("lightning") is None, \
+            "correcao que nao limpa o estado antigo nao conserta nada na pratica"
+        assert F.fonte_lembrada("crazy_time"), \
+            "e a fonte certa das outras mesas nao pode ser tocada"
+    finally:
+        F.FONTES_OK = guardado
+    print("  ok   endereco de outra mesa e recusado ao usar, gravar e limpar")
+
+
+def test_mega_fire_capta_multiplicador_sem_super_boost():
+    """"a v118 nao capta multiplicadores do mega fire" -- correcao minha, pela metade.
+
+    O site mostrava 74X no 30, 132X no 8 e 67X no 21 em meia hora. O software, na
+    mesma janela: "multiplicador escasso: 0% contra 22% do normal" e "seca de 97
+    giros". Os numeros batiam, so o valor sumia.
+
+    A leitura de `fireNumbers` -- o campo que carrega o multiplicador -- estava
+    dentro de `if _boost:`. `superBoost` marca a rodada especial, nao o anuncio,
+    entao nos giros que pagaram sem ser rodada especial o valor nunca era lido.
+    """
+    import fluxo_captura as F
+    from NUCLEO.situacao import _mult_do_giro
+
+    giro = [{"data": {"settledAt": "2026-08-17T16:05:00Z",
+                      "result": {"outcome": {"number": 30},
+                                 "fireNumbers": [{"number": 30, "multiplier": 74},
+                                                 {"number": 7, "multiplier": 12}]}}}]
+    r = F.parse_items_roulette(giro)
+    pago, anunciados = _mult_do_giro(r[0])
+    assert pago == 74, f"o 74X do giro 30 tem que chegar; pagou {pago}"
+    assert anunciados >= 2, anunciados
+
+    # anuncia e nao paga continua sendo anuncio, nao premio
+    outro = [{"data": {"settledAt": "2026-08-17T16:06:00Z",
+                       "result": {"outcome": {"number": 19},
+                                  "fireNumbers": [{"number": 30, "multiplier": 74}]}}}]
+    r2 = F.parse_items_roulette(outro)
+    pago2, anun2 = _mult_do_giro(r2[0])
+    assert pago2 == 0 and anun2 >= 1, (pago2, anun2)
+
+    # com superBoost o caminho antigo continua valendo
+    cb = [{"data": {"settledAt": "2026-08-17T15:51:00Z", "superBoost": True,
+                    "result": {"outcome": {"number": 8},
+                               "fireNumbers": [{"number": 8,
+                                                "roundedMultiplier": 132}]}}}]
+    r3 = F.parse_items_roulette(cb)
+    assert _mult_do_giro(r3[0])[0] == 132, r3[0]
+    assert sum(1 for t in r3[0]["tags"] if "fire_nums" in t) == 1, \
+        "UMA tag de anuncio por giro -- duas dobravam a contagem de premiados"
+
+    # outras grafias, porque o provedor ja renomeou antes
+    for campo in ("blazeNumbers", "fireBlazeNumbers", "hotNumbers"):
+        g = [{"data": {"settledAt": "2026-08-17T16:07:00Z",
+                       "result": {"outcome": {"number": 5},
+                                  campo: [{"number": 5, "multiplier": 50}]}}}]
+        assert _mult_do_giro(F.parse_items_roulette(g)[0])[0] == 50, campo
+    print("  ok   mega fire capta multiplicador sem depender do super boost")
+
+
 if __name__ == "__main__":
     test_parser_legacy_and_lists()
     test_zero_purge()
@@ -372,4 +504,6 @@ if __name__ == "__main__":
     test_links_dele_sao_fonte_de_captura()
     test_crazy_time_a_viva()
     test_crazy_time_a_volta_depois_de_cair()
+    test_identidade_do_endereco()
+    test_mega_fire_capta_multiplicador_sem_super_boost()
     print("FLUXO_TESTES_OK")
