@@ -2683,6 +2683,9 @@ class PipelinePerceptivo:
             # fórmula dele existe para NÃO ser.
             from academia_autonoma.inteligencias_livro import (
                 consenso_ia12 as _ia12)
+            from NUCLEO.procedencia import autoridade as _autoridade
+            _aut = _autoridade()
+            _mudas: list = []
             _perdas = dict(getattr(self, "_perdas_tratado", {}) or {})
             _ag12 = _ia12(_rt.get("pesos") or {}, _perdas,
                           k=max(6, self.k_max))
@@ -2694,21 +2697,61 @@ class PipelinePerceptivo:
                              if str(x).isdigit() and int(x) in MAP_IDX_TO_CT]
                     if not _nums:
                         continue
+                # O PORTAO DE PROCEDENCIA: sem ficha no PDF, nao roda.
+                #
+                # Ele cobrou, e com razao: "as funcoes do livro de 1.000
+                # paginas sao algoritmos Python escritos manualmente" e "a
+                # ligacao aos PDFs e indireta, parcial e nao verificavel".
+                #
+                # Agora cada uma destas doze declara qual ficha do tratado ela
+                # implementa (NUCLEO/procedencia.CONTRATO), e sem essa ficha no
+                # indice -- PDF ausente, trocado, ou familia sem formula
+                # legivel -- a inteligencia se CALA. Nao cai para a minha
+                # transcricao por tras, que era o defeito.
+                #
+                # Da para quebrar de proposito: tire os PDFs de tratados/ e as
+                # doze emudecem. E assim que alegacao vira coisa testavel.
+                if not _aut.autorizada(_nome, self.jogo):
+                    _mudas.append(_nome)
+                    continue
                 _guardar[_nome] = list(_nums)
                 # o peso do tratado agora é o peso 2,4 MODULADO pela IA12
                 _w = float(_w12.get(_nome, 1.0))
+                _fi = _aut.ficha(_nome, self.jogo)
                 hips.append({"nome": _nome, "nums": _nums,
-                             "peso": round(2.4 * max(0.25, min(2.0, _w)), 3)})
+                             "peso": round(2.4 * max(0.25, min(2.0, _w)), 3),
+                             "procedencia": (f"{_fi['arquivo']} p.{_fi['pagina']}"
+                                             if _fi else None)})
             # e a agregação dela entra como voz própria, com o nome dela
             _ord12 = list(_ag12.get("ordem") or [])
             if self.is_ct:
                 _ord12 = [MAP_IDX_TO_CT[int(x)] for x in _ord12
                           if str(x).isdigit() and int(x) in MAP_IDX_TO_CT]
-            if _ord12:
+            # A IA12 TAMBEM PASSA PELO PORTAO.
+            #
+            # O teste destrutivo pegou isto: com os PDFs fora da pasta, as onze
+            # emudeciam e a IA12 continuava votando -- porque ela e
+            # acrescentada FORA do laco que confere. Ou seja, meu proprio
+            # portao tinha um vao, e sem tirar os PDFs de proposito eu nao teria
+            # visto.
+            #
+            # A agregacao dele e a formulacao F12 do Livro; sem ficha, ela cala
+            # como as outras.
+            if _ord12 and _aut.autorizada("IA12_AGREGACAO", self.jogo):
+                _f12 = _aut.ficha("IA12_AGREGACAO", self.jogo)
                 hips.append({"nome": "IA12_AGREGACAO",
-                             "nums": _ord12[:self.k_max], "peso": 2.4})
+                             "nums": _ord12[:self.k_max], "peso": 2.4,
+                             "procedencia": (f"{_f12['arquivo']} p.{_f12['pagina']}"
+                                             if _f12 else None)})
+            elif _ord12:
+                _mudas.append("IA12_AGREGACAO")
             # guardado para cobrar a perda quando o resultado deste giro vier
             self._palpites_tratado = _guardar
+            for _l in _aut.linhas(self.jogo):
+                msgs.append(_l)
+            for _m in _mudas[:4]:
+                msgs.append(f"[Procedência] {_m} calada — "
+                            f"{_aut.motivo(_m, self.jogo)}")
             msgs.append(f"[Tratado] {_rt.get('opinaram')} das "
                         f"{_rt.get('total')} inteligências leram a mesa"
                         + (f" · IA12 agrega com {len(_perdas)} perda(s) "
