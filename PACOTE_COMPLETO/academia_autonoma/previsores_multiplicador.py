@@ -405,22 +405,63 @@ PESO_DO_SELO = {"confirmado": 1.0, "em_observacao": 0.55, "indicio": 0.2}
 MIN_GIROS_AGENTES = 60
 
 
-def votos_dos_agentes(historico: List[dict]) -> Dict[str, Dict[str, Any]]:
+# OS QUINZE SÃO CAROS, E A RESPOSTA DELES MUDA DEVAGAR.
+#
+# Cada um relê o histórico inteiro e vários fazem reordenação. `ciclo_academia`
+# já os rodava só a cada 15 ciclos, e pelo motivo certo: eles respondem sobre a
+# FORMA do histórico, não sobre o último giro.
+#
+# Chamá-los a cada giro deixou a previsão lenta o bastante para aparecer --
+# a suíte de teste passou de quatro minutos para mais de doze. Num giro real
+# isso é a mesa perdendo a volta.
+#
+# Então o resultado fica guardado por mesa e é recalculado a cada N chamadas.
+# Não é economia à custa de exatidão: quinze giros não mudam a resposta deles,
+# e é exatamente o intervalo que a academia já usava.
+RECALCULAR_A_CADA = 15
+_cache_agentes: Dict[str, Dict[str, Any]] = {}
+_contador_agentes: Dict[str, int] = {}
+
+
+def votos_dos_agentes(historico: List[dict],
+                      chave: str = "") -> Dict[str, Dict[str, Any]]:
     """O que cada agente estatístico aponta, com o peso do selo dele.
 
     Devolve `{nome_do_agente: {"alvos": [...], "peso": float, "achado": str}}`.
     Agente sem `alvos` não entra -- ele mediu ritmo ou intervalo, não número,
     e forçá-lo a apontar seria inventar palpite que ele não deu.
     """
+    ident = str(chave or "geral")
+    # A CAUDA DIZ SE É O MESMO HISTÓRICO OU OUTRO.
+    #
+    # Guardar por mesa e só contar chamadas dá resposta errada quando dois
+    # históricos DIFERENTES da mesma mesa passam por aqui -- é o que acontece
+    # num backtest, num replay, ou em dois testes seguidos. O segundo receberia
+    # o retrato calculado sobre o primeiro, e isso não é lentidão: é resultado
+    # inventado.
+    #
+    # Ao vivo o histórico cresce pela FRENTE: giro novo entra no começo e a
+    # cauda (os mais antigos) fica igual. Então a cauda distingue as duas
+    # situações sem custo -- mesma cauda é a mesma mesa andando, cauda outra é
+    # outro histórico, e aí recalcula na hora.
+    cauda = tuple(str((e or {}).get("n", (e or {}).get("sec")))
+                  for e in (historico or [])[-20:] if isinstance(e, dict))
+    n = _contador_agentes.get(ident, 0)
+    _contador_agentes[ident] = n + 1
+    guardado = _cache_agentes.get(ident)
+    if (guardado is not None and guardado.get("cauda") == cauda
+            and n % RECALCULAR_A_CADA):
+        return guardado["votos"]
     try:
         from .agentes_multiplicador import cacar_multiplicadores
     except Exception:
-        return {}
+        return (_cache_agentes.get(ident) or {}).get("votos", {})
     try:
         r = cacar_multiplicadores(historico or [])
     except Exception:
-        return {}
+        return (_cache_agentes.get(ident) or {}).get("votos", {})
     if r.get("erro"):
+        _cache_agentes[ident] = {"cauda": cauda, "votos": {}}
         return {}
     saida: Dict[str, Dict[str, Any]] = {}
     for a in r.get("achados") or []:
@@ -441,6 +482,7 @@ def votos_dos_agentes(historico: List[dict]) -> Dict[str, Dict[str, Any]]:
                        "peso": round(peso, 3),
                        "achado": str(a.get("achado") or ""),
                        "selo": a.get("selo"), "p": a.get("p")}
+    _cache_agentes[ident] = {"cauda": cauda, "votos": saida}
     return saida
 
 
@@ -476,7 +518,7 @@ def prever(jogo: str, historico: List[dict],
             votos[str(n)] += wl / (1 + i * 0.3)
     # os quinze agentes estatísticos votam junto -- eles também são caçadores,
     # e até aqui o que eles achavam só virava linha de log
-    por_agente = votos_dos_agentes(historico)
+    por_agente = votos_dos_agentes(historico, chave=str(jogo))
     for nome, dado in por_agente.items():
         for i, n in enumerate(dado["alvos"][:k]):
             votos[str(n)] += dado["peso"] / (1 + i * 0.3)

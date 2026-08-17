@@ -95,7 +95,26 @@ def extrair(eventos: List[dict]) -> Tuple[List[int], List[int], List[List[dict]]
     """
     nums, batido, rodada = [], [], []
     for e in eventos:
-        v = str(e.get("valor"))
+        # SÓ `valor` ERA LIDO, E A CAPTURA AO VIVO NÃO MANDA `valor`.
+        #
+        # As linhas que a captura entrega são `{"n":.., "sec":.., "settled":..,
+        # "tags":.., "event_id":..}` — sem `valor` nenhum. `str(None)` vira
+        # "None", `"None".isdigit()` é falso, e TODO evento era pulado.
+        #
+        # O efeito: `len(nums) < 60` sempre, então `cacar_multiplicadores`
+        # devolvia "histórico curto" e os quinze agentes nunca rodavam com o
+        # dado real. Eles funcionavam perfeitamente nos testes, que montam os
+        # eventos com `valor` na mão, e não rodavam uma única vez na máquina
+        # dele.
+        #
+        # É o mesmo tipo de defeito que ele já tinha rastreado três vezes: o
+        # dado existe, está certo, e morre numa chave com o nome errado.
+        v = e.get("valor")
+        if v is None:
+            v = e.get("n")
+        if v is None:
+            v = e.get("sec")
+        v = str(v)
         if not v.lstrip("-").isdigit():
             continue
         nums.append(int(v))

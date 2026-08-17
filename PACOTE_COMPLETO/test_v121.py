@@ -404,7 +404,58 @@ checa(len(_mults) == 1,
       "a tag solta e a lista descrevem o MESMO sorteio: conta uma vez", _mults)
 
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n[13] erro engolido deixa rastro")
+print("\n[13] os quinze agentes caçadores rodam com o dado REAL")
+
+from academia_autonoma.agentes_multiplicador import extrair  # noqa: E402
+from academia_autonoma.previsores_multiplicador import (  # noqa: E402
+    votos_dos_agentes)
+
+
+def _hist_viciado(semente, alvo, n=300):
+    """No formato que a CAPTURA entrega: `n`/`sec`, sem `valor`."""
+    r = random.Random(semente)
+    return [{"n": r.randrange(37), "sec": None,
+             "tags": [{"lucky": [{"n": alvo if r.random() < 0.5
+                                  else r.randrange(37), "x": 50}
+                                 for _ in range(r.randint(1, 4))]}]}
+            for _ in range(n)]
+
+
+# `extrair` só lia a chave `valor`. As linhas da captura não têm `valor`:
+# str(None) vira "None", nada é numérico, e TODO evento era pulado. Os quinze
+# funcionavam nos testes (que montam `valor` na mão) e nunca na máquina dele.
+_nums, _bat, _rod = extrair([{"n": 7, "tags": [{"lucky": [{"n": 7, "x": 100}]}]},
+                             {"sec": 12, "tags": []},
+                             {"valor": "3", "tags": []}])
+checa(_nums == [7, 12, 3], "lê o giro venha ele como n, sec ou valor", _nums)
+checa(_bat[0] == 100, "e o multiplicador que bateu continua saindo", _bat)
+
+_va = votos_dos_agentes(_hist_viciado(1, 5), chave="lightning")
+_vb = votos_dos_agentes(_hist_viciado(2, 22), chave="lightning")
+checa(bool(_va), "com o formato da captura, os agentes falam", _va)
+checa(_va != _vb, "e históricos diferentes não compartilham resposta",
+      ({k: v["alvos"] for k, v in _va.items()},
+       {k: v["alvos"] for k, v in _vb.items()}))
+checa(any("5" in v["alvos"] for v in _va.values()),
+      "cada um acha o vício do SEU histórico",
+      {k: v["alvos"] for k, v in _va.items()})
+checa(any("22" in v["alvos"] for v in _vb.values()),
+      "e o do outro também", {k: v["alvos"] for k, v in _vb.items()})
+
+# ao vivo o histórico cresce pela frente: a cauda não muda, e o guardado serve
+import time as _time  # noqa: E402
+
+_vivo = _hist_viciado(1, 5)
+_t0 = _time.time()
+for _ in range(30):
+    _vivo.insert(0, {"n": random.randrange(37), "tags": []})
+    votos_dos_agentes(_vivo, chave="lightning")
+_gasto = _time.time() - _t0
+checa(_gasto < 6.0, f"trinta voltas ao vivo em {_gasto:.1f}s (os quinze são "
+                    f"caros e não podem rodar a cada giro)", _gasto)
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n[14] erro engolido deixa rastro")
 
 from engolido import ARQUIVO, engolido as _eng  # noqa: E402
 
