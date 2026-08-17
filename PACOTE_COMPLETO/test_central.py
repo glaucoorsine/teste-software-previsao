@@ -115,7 +115,9 @@ class MesaFalsa(CENTRAL.PainelMesa):
         self.ok = self.err = self.ok_num = self.err_num = 0
         self.escolhas = []
         self.restantes = 0
-        self.vistos = set()
+        # dict, nao set: a classe real precisa de ORDEM para o corte
+        # dos 200 ultimos guardar os ultimos de verdade
+        self.vistos = {}
         self.janela_hit = False
         self.ultima_janela = 0
         self.ultimas_escolhas = []

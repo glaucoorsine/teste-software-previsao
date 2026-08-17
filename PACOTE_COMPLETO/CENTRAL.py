@@ -561,7 +561,17 @@ class PainelMesa(ctk.CTkFrame):
         self.ok_num = self.err_num = 0
         self.escolhas: list = []
         self.restantes = 0
-        self.vistos: set = set()
+        # ORDEM IMPORTA: o corte guarda os 200 ULTIMOS.
+        #
+        # Era `set`, e o salvamento fazia `list(self.vistos)[-200:]`. Um `set`
+        # nao tem ordem, entao isso guardava 200 chaves QUAISQUER -- podia
+        # descartar as recentes e manter as velhas. Chave recente descartada faz
+        # o giro ser validado DE NOVO na volta seguinte, e ai o mesmo giro entra
+        # duas vezes no placar. Achado 34/98 dele, aqui na pratica.
+        #
+        # `dict` guarda ordem de insercao desde o Python 3.7, e serve de conjunto
+        # com ordem sem custo nenhum.
+        self.vistos: dict = {}
         self.acertos_keys: set = set()
         self.erros_keys: set = set()
         self.janela_hit = False
@@ -785,7 +795,7 @@ class PainelMesa(ctk.CTkFrame):
                 self.err = int(st.get("err") or 0)
                 self.ok_num = int(st.get("ok_num") or 0)
                 self.err_num = int(st.get("err_num") or 0)
-                self.vistos = set(st.get("vistos") or [])
+                self.vistos = dict.fromkeys(st.get("vistos") or [])
                 # Mesmos nomes que o combo daquela mesa já usava: o histórico
                 # de acertos que ele acumulou aparece de volta na tela.
                 self.acertos_keys = set(st.get("acertos_keys") or [])
@@ -802,9 +812,44 @@ class PainelMesa(ctk.CTkFrame):
         try:
             from fluxo_captura import carregar_ciclo_ativo
             cyc = carregar_ciclo_ativo(self.jogo)
+            # A JANELA RESTAURADA PODE TER PERDIDO A VEZ DELA.
+            #
+            # Ele perguntou por que as primeiras leituras depois de abrir sao
+            # "muito precisas". Uma das causas e esta: a janela que estava aberta
+            # quando o software fechou volta viva, e e julgada contra o giro mais
+            # NOVO de agora -- pulando todos os que aconteceram enquanto o
+            # programa esteve fechado.
+            #
+            # Uma janela contabilizada como "3 giros" ganha, na pratica, tantas
+            # chances quantos giros passaram. Se ficou fechado uma hora, sao
+            # dezenas de chances cobradas como tres. O placar fica bom no inicio
+            # por construcao, e nao por acerto.
+            #
+            # Sem saber em que giro ela foi aberta, nao da para julga-la com
+            # honestidade -- entao ela e ABANDONADA, nao contada como erro nem
+            # como acerto. Perder uma janela e melhor que pontuar uma que teve
+            # mais chances do que declarou.
             if cyc and cyc.get("escolhas") and int(cyc.get("restantes") or 0) > 0:
-                self.escolhas = list(cyc["escolhas"])
-                self.restantes = int(cyc["restantes"])
+                _hd = str(cyc.get("head_id") or "")
+                _hoje = ""
+                try:
+                    from fluxo_captura import head_atual_do_buffer
+                    _hoje = head_atual_do_buffer(self.jogo) or ""
+                except Exception:
+                    _hoje = ""
+                if _hd and _hoje and _hd != _hoje:
+                    registrar(f"{self.jogo} JANELA_ABANDONADA {cyc.get('escolhas')} "
+                              f"— a mesa andou enquanto o software esteve fechado; "
+                              f"julga-la agora daria a ela mais chances do que "
+                              f"as {cyc.get('restantes')} que ela declarou")
+                    try:
+                        from fluxo_captura import limpar_ciclo_ativo
+                        limpar_ciclo_ativo(self.jogo)
+                    except Exception:
+                        pass
+                else:
+                    self.escolhas = list(cyc["escolhas"])
+                    self.restantes = int(cyc["restantes"])
                 self.janela_hit = bool(cyc.get("janela_hit"))
                 registrar(f"{self.jogo} CICLO_RESTAURADO {self.escolhas} "
                           f"rest={self.restantes}")
@@ -816,7 +861,7 @@ class PainelMesa(ctk.CTkFrame):
             PASTA.mkdir(parents=True, exist_ok=True)
             dados = {"ok": self.ok, "err": self.err,
                      "ok_num": self.ok_num, "err_num": self.err_num,
-                     "vistos": list(self.vistos)[-200:],
+                     "vistos": list(self.vistos)[-200:],   # agora SAO os 200 ultimos
                      "acertos_keys": list(self.acertos_keys)[-200:],
                      "erros_keys": list(self.erros_keys)[-200:],
                      "escolhas": list(self.escolhas),
@@ -886,7 +931,7 @@ class PainelMesa(ctk.CTkFrame):
                 self.seq_giro += 1
         if chave in self.vistos:
             return
-        self.vistos.add(chave)
+        self.vistos[chave] = True
         if not self.escolhas:
             self._salvar()
             return

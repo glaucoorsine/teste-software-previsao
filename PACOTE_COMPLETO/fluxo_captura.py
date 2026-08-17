@@ -336,6 +336,26 @@ def limpar_fontes_duplicadas() -> list:
     return apagadas
 
 
+def head_atual_do_buffer(dataset_id: str) -> Optional[str]:
+    """O identificador do giro mais recente JA SALVO, sem tocar na rede.
+
+    Serve para a CENTRAL saber, na abertura, se a mesa andou enquanto o software
+    esteve fechado. Se andou, a janela que estava aberta nao pode ser julgada:
+    ela teria mais chances do que declarou.
+    """
+    try:
+        evs = (load(buffer_path(dataset_id)).get("events") or [])
+        if not evs:
+            return None
+        e0 = evs[0] or {}
+        return str(e0.get("event_id")
+                   or event_key(dataset_id, e0.get("valor") or e0.get("n"),
+                                e0.get("settled")))
+    except Exception as _e:
+        engolido("fluxo_captura/head_atual_do_buffer", _e)
+        return None
+
+
 def fonte_de_outra_mesa(dataset_id: str, url: str) -> Optional[str]:
     """Alguma OUTRA mesa já usa este endereco? Devolve o nome dela.
 
@@ -1492,7 +1512,15 @@ def estado_ciclo_path(dataset_id: str) -> Path:
 
 
 def salvar_ciclo_ativo(dataset_id: str, escolhas, restantes, janela_hit, ok, err):
-    """Persiste ciclo em andamento para restaurar após restart."""
+    """Persiste ciclo em andamento para restaurar apos restart.
+
+    Grava tambem EM QUE GIRO a janela estava. Sem isso, ao reabrir o software a
+    janela e julgada contra o giro mais novo de agora -- pulando todos os que
+    aconteceram enquanto o programa esteve fechado. Uma janela contabilizada como
+    "3 giros" ganharia tantas chances quantos giros passaram, e o placar ficaria
+    bom no inicio por construcao. Com o head gravado, a CENTRAL sabe que a mesa
+    andou e abandona a janela em vez de pontua-la.
+    """
     p = estado_ciclo_path(dataset_id)
     data = {
         "escolhas": list(escolhas or []),
@@ -1500,6 +1528,7 @@ def salvar_ciclo_ativo(dataset_id: str, escolhas, restantes, janela_hit, ok, err
         "janela_hit": bool(janela_hit),
         "ok": int(ok or 0),
         "err": int(err or 0),
+        "head_id": head_atual_do_buffer(dataset_id),
     }
     tmp = p.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
