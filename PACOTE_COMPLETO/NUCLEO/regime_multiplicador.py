@@ -47,7 +47,20 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 # a janela que ELE usa para contar, e o limiar que ELE observou
 JANELA_DELE = 500
-LIMIAR_DELE = 45
+
+
+def _ajuste(nome: str, padrao: float) -> float:
+    try:
+        from NUCLEO import automelhoria
+        return automelhoria.valor(nome, padrao)
+    except Exception:
+        return padrao
+
+
+# O 45 E DELE, DECLARADO POR ELE. A automelhoria pode PROCURAR o ponto desta mesa
+# quando o 45 nao se confirmar aqui -- e o resultado da busca fica registrado, com
+# o valor anterior, para poder voltar. O ponto dele nao e apagado: e testado.
+LIMIAR_DELE = int(_ajuste("regime_multiplicador.LIMIAR_DELE", 45))
 
 MIN_PARA_MEDIR_LIMIAR = 3        # janelas de 500 necessárias para testar o 45
 MIN_PREMIOS_MAGNITUDE = 20       # prêmios necessários para falar de magnitude

@@ -2212,6 +2212,34 @@ class Central(ctk.CTk):
                           f"procurar endereco proprio")
         except Exception:
             pass
+        # ONDE A MEMORIA MORA -- DITO NA ABERTURA, TODA VEZ.
+        #
+        #   "memoria inteligente salva em c: documentos, pois independente de
+        #    atualizacoes a memoria sempre sera resgatada"
+        #
+        # Vai para o log na abertura porque perder memoria em silencio e
+        # exatamente o problema: se o lar cair na pasta do programa por falta de
+        # permissao, ele fica sabendo NA HORA, e nao tres versoes depois quando o
+        # aprendizado tiver sumido.
+        try:
+            from NUCLEO import lar as _lar
+            for _l in _lar.resumo():
+                registrar(_l)
+        except Exception as _e:
+            registrar(f"MEMORIA lar indisponivel: {type(_e).__name__}")
+        # A PESQUISA NA INTERNET, EM THREAD PROPRIA.
+        #
+        # Fora do laco de captura de proposito: a captura tem orcamento de tempo
+        # por volta, e foi isso que resolveu o travamento de 13 minutos. Uma busca
+        # na internet dentro daquele laco traria o travamento de volta por outra
+        # porta. E o que ela traz vira PROPOSTA para ele ler -- nada do que vem da
+        # internet e aplicado por conta propria.
+        try:
+            from NUCLEO import pesquisa_livre as _pq
+            if _pq.pesquisar_em_thread(registrar) is None:
+                registrar("PESQUISA ainda no intervalo — nada a buscar agora")
+        except Exception as _e:
+            registrar(f"PESQUISA nao iniciou: {type(_e).__name__}")
         self.title("Laboratório — as quatro mesas ao vivo")
         self.geometry("1280x860")
         ctk.set_appearance_mode("dark")

@@ -841,13 +841,34 @@ class Memoria:
         #
         # Com LAB_MEMORIA_DIR, o teste escreve numa pasta temporaria e some com
         # ela. Sem a variavel, nada muda para quem esta rodando ao vivo.
+        # E A MEMORIA NAO PODE MORRER A CADA VERSAO QUE EU MANDO.
+        #
+        #   "memoria inteligente salva em c: documentos, pois independente de
+        #    atualizacoes a memoria sempre sera resgatada"
+        #
+        # Isto gravava em ROOT -- a pasta do pacote. Cada versao minha e uma
+        # pasta nova, e a memoria ficava para tras na velha: decisoes avaliadas,
+        # placar, pesos aprendidos, o que cada teoria rendeu. O autoexame precisa
+        # de 12 janelas fechadas por teoria antes de julgar qualquer uma; com a
+        # memoria zerando a cada entrega, ele nunca chegava as 12. O aprendizado
+        # nao estava lento, estava sendo apagado por mim.
+        #
+        # `NUCLEO/lar.py` resolve o lugar (Documentos, com o caso do OneDrive
+        # tratado) e traz o que ja existe na pasta antiga.
         _dir = os.environ.get("LAB_MEMORIA_DIR")
-        _base = Path(_dir) if _dir else ROOT
-        try:
-            _base.mkdir(parents=True, exist_ok=True)
-        except OSError:
-            _base = ROOT
-        self.path = str(_base / f"memoria_{jogo}.json")
+        if _dir:
+            _base = Path(_dir)
+            try:
+                _base.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                _base = ROOT
+            self.path = str(_base / f"memoria_{jogo}.json")
+        else:
+            try:
+                from NUCLEO import lar as _lar
+                self.path = str(_lar.arquivo(f"memoria_{jogo}.json"))
+            except Exception:
+                self.path = str(ROOT / f"memoria_{jogo}.json")
         self.d = {
             "decisoes_pendentes": [], "avaliadas": [], "novidades": [], "modulos": [], "calib": [],
             "versoes": [], "negativo": {}, "modelo_ativo": True, "modelo_ativo_v": {}, "n_aguardando_total": 0, "ultimo_aguardando_settled": None,
@@ -1122,6 +1143,20 @@ class Memoria:
             self.d["calib"] = self.d["calib"][-200:]
             self.d.setdefault("avaliadas", []).append(copy.deepcopy(ult))
             self.d["avaliadas"] = self.d["avaliadas"][-100:]
+            # ── o ensaio da automelhoria recebe esta janela ─────────────────
+            #
+            # Creditada ao lado que estava valendo quando a janela ABRIU, nao
+            # agora: e o unico jeito de o placar do candidato ser o do candidato.
+            try:
+                from NUCLEO import automelhoria as _amJ
+                _est = _amJ.carregar()
+                if _est.get("ensaios"):
+                    _amJ.anotar_janela(
+                        _est, acertou_janela,
+                        (ult.get("contexto") or {}).get("lado"))
+                    _amJ.gravar(_est)
+            except Exception:
+                pass
             # acumula p_esperado da JANELA que fechou (mesma escala de y)
             try:
                 from metricas_honestas import p_esperado_para
@@ -2046,6 +2081,18 @@ class PipelinePerceptivo:
         # lista. Eu escrevi `len(janela)` e derrubei o motor em tres suites; o k
         # da aposta vem de `alvos`, que e quem tem tamanho.
         ctx = {"em_hora": datetime.now().hour}
+        # DE QUE LADO ESTA VOLTA ESTA.
+        #
+        # A automelhoria alterna: uma volta com o valor do titular, a seguinte com
+        # o do candidato. O lado tem de ficar gravado NA JANELA, porque a janela
+        # abre agora e fecha tres giros depois -- quando fechar, o lado atual ja
+        # virou, e creditar o placar pelo lado de entao trocaria os dois. Trocar
+        # os placares faria a automelhoria aplicar exatamente o que piorou.
+        try:
+            from NUCLEO import automelhoria as _amL
+            ctx["lado"] = _amL.lado()
+        except Exception:
+            pass
         try:
             if janela is not None:
                 ctx["janela"] = int(janela)
@@ -2079,6 +2126,33 @@ class PipelinePerceptivo:
         if st.get("fala"):
             ctx["razao_parecidos"] = st.get("razao")
         return ctx
+
+    def _placar_por_cor(self) -> dict:
+        """O verde rendeu mais que o resto? A pergunta que julga o semáforo.
+
+        Um semáforo que nunca abre não informa nada, e um que abre sempre também
+        não. Esta é a medida que diz em qual dos dois ele está -- e é o que
+        justifica a automelhoria mexer na exigência do verde, em vez de eu chutar
+        um número novo.
+        """
+        verde_ok = verde_n = resto_ok = resto_n = 0
+        for r in (self.mem.d.get("avaliadas") or []):
+            if not isinstance(r, dict):
+                continue
+            res = r.get("resultado") or {}
+            if res.get("acertou") is None:
+                continue
+            cor = str((r.get("contexto") or {}).get("cor") or "")
+            if cor == "VERDE":
+                verde_n += 1
+                verde_ok += 1 if res.get("acertou") else 0
+            elif cor:
+                resto_n += 1
+                resto_ok += 1 if res.get("acertou") else 0
+        return {"n_verde": verde_n, "n_resto": resto_n,
+                "n_total": verde_n + resto_n,
+                "taxa_verde": (verde_ok / verde_n) if verde_n else None,
+                "taxa_resto": (resto_ok / resto_n) if resto_n else None}
 
     def _perda_do_tratado(self, saiu) -> None:
         """Cobra de cada inteligência o palpite que ela deu na volta passada.
@@ -3081,6 +3155,43 @@ class PipelinePerceptivo:
                 msgs.append(_l)
         except Exception as _e:
             msgs.append(f"[Em uso] {type(_e).__name__}: {_e}")
+
+        # ── A AUTOMELHORIA: propor, ensaiar medindo, aplicar o que ganhou ──
+        #
+        #   "auto executoriedade de melhorias" / "auto sugestao para
+        #    acertividade" / "auto percepcoes novas" / "auto de aplicacao de
+        #    tudo que for bom"
+        #
+        # Auto-execucao aqui tem quatro etapas e nenhuma pode ser saltada:
+        # propor a partir de MEDIDA, ensaiar em sombra, julgar contra o titular
+        # NAS MESMAS janelas, e so entao aplicar. Sem a terceira etapa, mexer
+        # sempre "melhora" no curto prazo porque o ruido concorda com quem mexeu
+        # -- e depois de vinte mudancas assim o software esta pior com um
+        # registro dizendo que cada passo foi bom.
+        #
+        # O estado vive no lar (Documentos), entao o que ela aprendeu a ajustar
+        # nao morre na proxima versao que eu mandar.
+        try:
+            from NUCLEO import automelhoria as _am
+            _am.virar_lado()          # uma vez por volta, antes de decidir
+            _placar_cor = self._placar_por_cor()
+            _est, _linhas_am = _am.girar(
+                autoexame=getattr(self, "_autoexame", None),
+                semaforo_placar=_placar_cor,
+                regime=getattr(self, "_regime", None),
+                eixos=(getattr(self, "_situacao", None) or {}).get("medida_eixos"),
+                padroes={"semaforo.MIN_MOTIVOS_VERDE": 2,
+                         "semaforo.D_MINIMO": 0.25,
+                         "semaforo.REPETE_DEMAIS": 4,
+                         "situacao.K_VIZINHOS": 40,
+                         "situacao.SEPARACAO": 5,
+                         "regime_multiplicador.LIMIAR_DELE": 45,
+                         "autoexame.D_MINIMO": 0.45})
+            for _l in _linhas_am:
+                msgs.append(_l)
+            self._automelhoria = _est
+        except Exception as _e:
+            msgs.append(f"[Automelhoria] {type(_e).__name__}: {_e}")
         msgs.append(f"[Hipóteses] {[h['nome'] for h in hips]}")
         msgs.append(f"[Crítico] multi-fonte={aprovados[:8]} p0={p0:.3f}")
         # placar da votação: por que cada número entrou

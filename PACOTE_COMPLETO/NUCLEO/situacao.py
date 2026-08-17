@@ -60,11 +60,20 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 # quantos momentos parecidos são necessários para haver opinião
 MIN_VIZINHOS = 12
 # quantos vizinhos a busca considera, no máximo
-K_VIZINHOS = 40
+def _ajuste(nome: str, padrao: float) -> float:
+    """O numero que a automelhoria mediu para esta mesa, ou o meu padrao."""
+    try:
+        from NUCLEO import automelhoria
+        return automelhoria.valor(nome, padrao)
+    except Exception:
+        return padrao
+
+
+K_VIZINHOS = _ajuste("situacao.K_VIZINHOS", 40)
 # distância mínima entre o momento consultado e um vizinho, em giros. Vizinho
 # colado é quase o mesmo momento: aumenta o `n` sem trazer informação nova, e
 # infla a confiança (é a mesma armadilha do N efetivo da ficha 226 dele).
-SEPARACAO = 5
+SEPARACAO = _ajuste("situacao.SEPARACAO", 5)
 
 
 # ─────────────────────────────────────────────────────────────── os eixos

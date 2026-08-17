@@ -58,7 +58,20 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 RAIZ = Path(__file__).resolve().parent.parent
-ARQUIVO = RAIZ / "Logs" / "forca_dos_eixos.json"
+
+
+def _arquivo() -> Path:
+    """Os pesos aprendidos moram no lar, não na pasta do programa.
+
+    Estes pesos são o resultado de horas de mesa -- é o que a mesa ENSINOU sobre
+    o que importa nela. Deixá-los ao lado do executável fazia com que cada versão
+    minha jogasse fora o aprendizado e recomeçasse do peso neutro.
+    """
+    try:
+        from NUCLEO import lar as _lar
+        return _lar.arquivo("forca_dos_eixos.json")
+    except Exception:
+        return RAIZ / "Logs" / "forca_dos_eixos.json"
 
 # quantas observações em CADA grupo antes de aprender qualquer coisa
 MIN_PARA_APRENDER = 30
@@ -150,8 +163,9 @@ def medir(momentos: Sequence[Any], linhas: Sequence[dict],
 # ────────────────────────────────────────────────────── memória por mesa
 def carregar(jogo: str) -> Dict[str, float]:
     try:
-        if ARQUIVO.is_file():
-            d = json.loads(ARQUIVO.read_text(encoding="utf-8")) or {}
+        arq = _arquivo()
+        if arq.is_file():
+            d = json.loads(arq.read_text(encoding="utf-8")) or {}
             p = (d.get(str(jogo)) or {}).get("pesos")
             if isinstance(p, dict) and p:
                 return {e: float(p.get(e, 1.0)) for e in EIXOS}
@@ -162,16 +176,17 @@ def carregar(jogo: str) -> Dict[str, float]:
 
 def gravar(jogo: str, medida: Dict[str, Any]) -> None:
     try:
+        arq = _arquivo()
         d = {}
-        if ARQUIVO.is_file():
-            d = json.loads(ARQUIVO.read_text(encoding="utf-8")) or {}
+        if arq.is_file():
+            d = json.loads(arq.read_text(encoding="utf-8")) or {}
         d[str(jogo)] = medida
-        ARQUIVO.parent.mkdir(parents=True, exist_ok=True)
-        tmp = ARQUIVO.with_suffix(".tmp")
+        arq.parent.mkdir(parents=True, exist_ok=True)
+        tmp = arq.with_suffix(".tmp")
         tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1),
                        encoding="utf-8")
         import os
-        os.replace(tmp, ARQUIVO)
+        os.replace(tmp, arq)
     except Exception:
         pass
 

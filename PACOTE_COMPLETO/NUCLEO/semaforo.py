@@ -47,12 +47,29 @@ from typing import Any, Dict, List, Optional, Sequence
 
 VERDE, AMARELO, VERMELHO = "VERDE", "AMARELO", "VERMELHO"
 
-# quantos motivos medidos são necessários para o verde
-MIN_MOTIVOS_VERDE = 2
-# `d` mínimo para um eixo poder virar motivo (abaixo disso ele quase não separa)
-D_MINIMO = 0.25
-# quantas repetições da mesma aposta antes de reclamar
-REPETE_DEMAIS = 4
+# OS TRES NUMEROS ABAIXO SAO O MEU PADRAO, NAO A ULTIMA PALAVRA.
+#
+# Eram constantes minhas -- eu decidindo que o verde exige dois motivos e que um
+# eixo precisa de d=0,25. Numa mesa o verde pode nunca abrir com essa exigencia
+# (e um semaforo que nunca abre nao informa nada); noutra pode abrir demais.
+# `automelhoria.py` mede isso na mesa DELE, ensaia em sombra e troca o numero se
+# a troca ganhar alem do ruido. Estes ficam como o ponto de partida.
+_MIN_MOTIVOS_VERDE_PADRAO = 2
+_D_MINIMO_PADRAO = 0.25
+_REPETE_DEMAIS_PADRAO = 4
+
+
+def _ajuste(nome: str, padrao: float) -> float:
+    try:
+        from NUCLEO import automelhoria
+        return automelhoria.valor(nome, padrao)
+    except Exception:
+        return padrao
+
+
+MIN_MOTIVOS_VERDE = _ajuste("semaforo.MIN_MOTIVOS_VERDE", _MIN_MOTIVOS_VERDE_PADRAO)
+D_MINIMO = _ajuste("semaforo.D_MINIMO", _D_MINIMO_PADRAO)
+REPETE_DEMAIS = _ajuste("semaforo.REPETE_DEMAIS", _REPETE_DEMAIS_PADRAO)
 
 
 def _forte(medida: Optional[dict], eixo: str) -> Optional[float]:

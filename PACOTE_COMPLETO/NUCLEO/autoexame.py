@@ -68,7 +68,15 @@ MIN_JANELAS = 12
 # acertos E erros mínimos antes de procurar causa no contexto
 MIN_POR_LADO = 5
 # separação mínima para apontar um eixo como causa
-D_MINIMO = 0.45
+def _ajuste(nome: str, padrao: float) -> float:
+    try:
+        from NUCLEO import automelhoria
+        return automelhoria.valor(nome, padrao)
+    except Exception:
+        return padrao
+
+
+D_MINIMO = _ajuste("autoexame.D_MINIMO", 0.45)
 # razão contra o acaso a partir da qual "dá para usar mais vezes"
 RAZAO_BOA = 1.20
 RAZAO_RUIM = 0.85
