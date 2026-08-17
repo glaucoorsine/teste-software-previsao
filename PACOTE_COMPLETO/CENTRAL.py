@@ -44,6 +44,7 @@ from pathlib import Path
 import customtkinter as ctk
 
 from worker_process import process_cerebro
+from tela_segura import depois  # after que nao quebra ao fechar a janela
 
 RAIZ = Path(__file__).resolve().parent
 PASTA = RAIZ / "Logs"
@@ -522,7 +523,7 @@ class TelaConfig(ctk.CTkFrame):
                         msg, cor = (f"Não foi: {err}", VERMELHO)
             except Exception as e:
                 msg, cor = (f"{type(e).__name__}: {e}", VERMELHO)
-            self.after(0, lambda: (self.aviso.configure(text=msg, text_color=cor),
+            depois(self, 0, lambda: (self.aviso.configure(text=msg, text_color=cor),
                                    self.bt_testar.configure(
                                        state="normal", text="Testar agora")))
 
@@ -591,7 +592,7 @@ class PainelMesa(ctk.CTkFrame):
                                    args=(self.entrada, self.saida, jogo),
                                    daemon=True)
         self.processo.start()
-        self.after(1200 + ordem * ATRASO_ENTRE_MESAS_S * 1000, self.rodar)
+        depois(self, 1200 + ordem * ATRASO_ENTRE_MESAS_S * 1000, self.rodar)
 
     # ------------------------------------------------------------- interface
     def _montar(self):
@@ -899,7 +900,7 @@ class PainelMesa(ctk.CTkFrame):
             return
         if not self.ocupado:
             threading.Thread(target=self._trabalhar, daemon=True).start()
-        self.after(PERIODO_S * 1000, self.rodar)
+        depois(self, PERIODO_S * 1000, self.rodar)
 
     def _trabalhar(self):
         self.ocupado = True
@@ -942,7 +943,7 @@ class PainelMesa(ctk.CTkFrame):
             if not mudou:
                 # Mesmo giro de antes: só redesenha. Reenviar ao cérebro
                 # contaria o mesmo evento duas vezes e sujaria o placar.
-                self.after(0, lambda r=rows: self._desenhar_hist(r))
+                depois(self, 0, lambda r=rows: self._desenhar_hist(r))
                 return
 
             self._ver_publico()
@@ -1012,7 +1013,7 @@ class PainelMesa(ctk.CTkFrame):
                     marcar_snapshot_processado(self.jogo, cap["head_id"])
                 except Exception:
                     pass
-            self.after(0, lambda s=sug, r=rows: self._aplicar(s, r))
+            depois(self, 0, lambda s=sug, r=rows: self._aplicar(s, r))
         except Exception as e:
             registrar(f"{self.jogo}: {type(e).__name__}: {e}")
             self._estado(f"erro: {type(e).__name__}", VERMELHO)
@@ -1023,7 +1024,7 @@ class PainelMesa(ctk.CTkFrame):
     # ------------------------------------------------------------- desenho
     def _estado(self, texto, cor):
         self.ultimo_estado = texto
-        self.after(0, lambda: self.st.configure(text=texto, text_color=cor))
+        depois(self, 0, lambda: self.st.configure(text=texto, text_color=cor))
 
     def _desenhar_hist(self, rows):
         """Cada giro: o número, se estava na aposta, e o multiplicador.
@@ -1239,7 +1240,7 @@ class PainelMesa(ctk.CTkFrame):
                     self.mesa_cheia = (c.get("faixa") == "cheia")
                     registrar(f"{self.jogo} PUBLICO {self.jogadores} "
                               f"faixa={c.get('faixa')} ({c.get('conselho')})")
-                    self.after(0, lambda t=c: self.publico.configure(
+                    depois(self, 0, lambda t=c: self.publico.configure(
                         text=f"mesa: {t['jogadores']} pessoas · {t['rotulo']} — "
                              f"{t['conselho']}",
                         text_color={"cheia": VERDE, "media": AMARELO,
@@ -1300,7 +1301,7 @@ class PainelMesa(ctk.CTkFrame):
                 texto = f"{type(e).__name__}: {e}"
             finally:
                 self.lendo_academia = False
-            self.after(0, lambda: (self.academia.delete("1.0", "end"),
+            depois(self, 0, lambda: (self.academia.delete("1.0", "end"),
                                    self.academia.insert("1.0", texto)))
 
         threading.Thread(target=tarefa, daemon=True).start()
@@ -1464,7 +1465,7 @@ class Laboratorio(ctk.CTkFrame):
                              f"veja Logs/central_log.txt", text_color=VERMELHO)
             except Exception:
                 pass
-        self.after(3000, self._tick)
+        depois(self, 3000, self._tick)
 
     # -------------------------------------------------------------- captador
     def _captador(self):
@@ -1533,7 +1534,7 @@ class Laboratorio(ctk.CTkFrame):
                 erro = None
             except Exception as e:
                 novos, erro = [], f"{type(e).__name__}: {e}"
-            self.after(0, lambda: self._cap_mostrar(jogo, novos, erro))
+            depois(self, 0, lambda: self._cap_mostrar(jogo, novos, erro))
 
         threading.Thread(target=tarefa, daemon=True).start()
 
@@ -1643,7 +1644,7 @@ class Laboratorio(ctk.CTkFrame):
                 texto = "\n".join(L)
             except Exception as e:
                 texto = f"não foi possível ler a academia: {type(e).__name__}: {e}"
-            self.after(0, lambda: (self.ia_box.delete("1.0", "end"),
+            depois(self, 0, lambda: (self.ia_box.delete("1.0", "end"),
                                    self.ia_box.insert("1.0", texto)))
 
         threading.Thread(target=tarefa, daemon=True).start()
@@ -1669,7 +1670,7 @@ class Laboratorio(ctk.CTkFrame):
         # banco; mais uma thread a cada poucos segundos sem esperar a anterior
         # era o que sobrecarregava.
         if self.lendo_conversa:
-            self.after(8000, self._tick_conversa)
+            depois(self, 8000, self._tick_conversa)
             return
         self.lendo_conversa = True
 
@@ -1687,11 +1688,11 @@ class Laboratorio(ctk.CTkFrame):
                 texto = f"{type(e).__name__}: {e}"
             finally:
                 self.lendo_conversa = False
-            self.after(0, lambda: (self.conversa_box.delete("1.0", "end"),
+            depois(self, 0, lambda: (self.conversa_box.delete("1.0", "end"),
                                    self.conversa_box.insert("1.0", texto)))
 
         threading.Thread(target=tarefa, daemon=True).start()
-        self.after(8000, self._tick_conversa)
+        depois(self, 8000, self._tick_conversa)
 
     # ------------------------------------------------------------- progresso
     def _progresso(self):
@@ -1724,7 +1725,7 @@ class Laboratorio(ctk.CTkFrame):
                     texto = r.stdout or r.stderr or "(sem saída)"
                 except Exception as e:
                     texto = f"não foi possível montar: {type(e).__name__}: {e}"
-                self.after(0, lambda: (cx.delete("1.0", "end"),
+                depois(self, 0, lambda: (cx.delete("1.0", "end"),
                                        cx.insert("1.0", texto)))
 
             threading.Thread(target=tarefa, daemon=True).start()
@@ -1771,7 +1772,7 @@ class Laboratorio(ctk.CTkFrame):
                 except Exception as e:
                     linhas.append(f"{type(e).__name__}: {e}")
                 texto = "\n".join(linhas) or "(nenhum site respondeu)"
-                self.after(0, lambda: (cx.delete("1.0", "end"),
+                depois(self, 0, lambda: (cx.delete("1.0", "end"),
                                        cx.insert("1.0", texto),
                                        bt.configure(
                                            state="normal",
@@ -1836,7 +1837,7 @@ class Laboratorio(ctk.CTkFrame):
                 txt = notificador.testar()
             except Exception as e:
                 txt = f"{type(e).__name__}: {e}"
-            self.after(0, lambda: self.av_box.configure(text=txt))
+            depois(self, 0, lambda: self.av_box.configure(text=txt))
 
         threading.Thread(target=tarefa, daemon=True).start()
 

@@ -4,6 +4,7 @@ import customtkinter as ctk
 import threading, traceback
 from academia_agentes import get_academia, feed_tail, snapshot_somente_leitura, PROTOCOLO
 import academia_db as DB
+from tela_segura import depois  # after que nao quebra ao fechar a janela
 
 class CentralIAs(ctk.CTk):
     def __init__(self):
@@ -15,8 +16,8 @@ class CentralIAs(ctk.CTk):
         self.agente_sel = None
         self.running = True
         self._build()
-        self.after(800, self.refresh_all)
-        self.after(5000, self.auto_refresh)
+        depois(self, 800, self.refresh_all)
+        depois(self, 5000, self.auto_refresh)
 
     def _build(self):
         top = ctk.CTkFrame(self); top.pack(fill="x", padx=10, pady=8)
@@ -92,7 +93,7 @@ class CentralIAs(ctk.CTk):
                         msg += str(m)[:120] + "\n"
             except Exception as e:
                 msg = "erro: %s\n%s" % (e, traceback.format_exc()[:300])
-            self.after(0, lambda: self._cmd_done(msg))
+            depois(self, 0, lambda: self._cmd_done(msg))
         threading.Thread(target=work, daemon=True).start()
 
     def cmd_reavaliar(self):
@@ -121,7 +122,7 @@ class CentralIAs(ctk.CTk):
                         msg += str(m)[:120] + "\n"
             except Exception as e:
                 msg = "erro: %s\n%s" % (e, traceback.format_exc()[:300])
-            self.after(0, lambda: self._cmd_done(msg))
+            depois(self, 0, lambda: self._cmd_done(msg))
         threading.Thread(target=work, daemon=True).start()
 
     def _cmd_done(self, msg):
@@ -150,7 +151,7 @@ class CentralIAs(ctk.CTk):
     def auto_refresh(self):
         if self.running:
             self.refresh_all()
-            self.after(5000, self.auto_refresh)
+            depois(self, 5000, self.auto_refresh)
 
     def _render_cards(self, snap):
         for w in self.cards_host.winfo_children():
@@ -253,7 +254,7 @@ class CentralIAs(ctk.CTk):
                 explicacao = self._llm_explica(aid, q, base_txt)
             except Exception as e:
                 explicacao = f"erro: {e}"
-            self.after(0, lambda: self._chat_result(explicacao))
+            depois(self, 0, lambda: self._chat_result(explicacao))
         threading.Thread(target=work, daemon=True).start()
 
     def _chat_result(self, texto):

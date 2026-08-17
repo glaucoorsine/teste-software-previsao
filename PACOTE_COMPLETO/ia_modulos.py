@@ -295,8 +295,29 @@ class ModeloEstatistico:
             CT_OBJETIVO, 1.0)
         for s,g in (feats.get("gaps_ratio") or {}).items():
             sc[s] += float(g) * gap_w * max(1.0, w_isol)
+        # A FREQUENCIA ENTRA NORMALIZADA, SENAO ELA MANDA NO PLACAR.
+        #
+        # Era `sc[s] += c * 0.3` com a CONTAGEM CRUA. Medido num historico de
+        # 170 giros:
+        #
+        #     termo de frequencia   1,2 a 18,0
+        #     termo de atraso       0,0 a  6,0
+        #
+        # A frequencia crua pesava tres vezes mais que o atraso -- e a roda tem
+        # 54 fatias desiguais, entao o "1" (21 fatias) recebia 18 pontos so por
+        # ser comum, enquanto o CrazyBonus (1 fatia) recebia 1,2 por ser raro.
+        # O placar virava um ranking de quem sai mais, que e o oposto do que ele
+        # mandou: "sinal para o crazy time e somente o que ta muito tempo sem
+        # vir".
+        #
+        # Agora entra como RAZAO sobre o esperado da propria fatia -- 1,0 e o
+        # normal do simbolo, e so o excedente conta. Fica na mesma escala do
+        # atraso, e o atraso volta a mandar, que e o que ele pediu.
+        _n_ct = sum((feats.get("freq") or {}).values()) or 1
         for s,c in (feats.get("freq") or {}).items():
-            sc[s] += c * 0.3
+            _esp = _n_ct * CT_P.get(s, 1.0 / len(CT_P))
+            if _esp > 0:
+                sc[s] += max(0.0, c / _esp - 1.0) * 0.3
         ranked = sorted(sc, key=lambda s: -sc[s])
         total = sum(sc.values()) or 1
         conf = (sc[ranked[0]]/total) if ranked else 0
@@ -384,7 +405,21 @@ class GeradorHipoteses:
         if fr_ct:
             quentes = [s for s, _ in fr_ct.most_common(4)]
             if quentes:
-                hips.append({"nome": "CT_FREQUENTE", "nums": quentes, "peso": 1.8})
+                # AS VOZES DE FREQUENCIA SEGUEM O OBJETIVO DA MESA.
+                #
+                # Ele foi explicito e repetiu: "sinal para o crazy time e
+                # somente o que ta muito tempo sem vir". Com CT_OBJETIVO em
+                # "atraso", uma voz que aponta os simbolos MAIS COMUNS esta
+                # puxando contra a regra dele. Medido: CT_FREQUENTE votava "1"
+                # e "2" em 13 de 14 historicos -- as duas maiores fatias da
+                # roda, 21 e 13 de 54.
+                #
+                # Nao e podada (ele mandou nao barrar): pesa menos quando o
+                # objetivo e atraso, e volta ao peso cheio se ele trocar o
+                # objetivo para "acerto".
+                _w_freq = 1.8 * (0.45 if CT_OBJETIVO == "atraso" else 1.0)
+                hips.append({"nome": "CT_FREQUENTE", "nums": quentes,
+                             "peso": _w_freq})
         seq = feats.get("seq") or []
         if len(seq) >= 40:
             atual = str(seq[0])
@@ -1483,6 +1518,12 @@ class MetaSupervisora:
             msg = f"Taxa janela {taxa:.1f}% (n={n_avaliadas})."
             ref_n = n_avaliadas
         else:
+            # `ok` e `err` sao CONTAGENS, mas nem todo chamador tem essa
+            # disciplina -- um deles passava o sucesso da captura (booleano) e
+            # a mensagem de erro (None). `True + None` estoura, e o estouro
+            # levava o ciclo inteiro da mesa junto.
+            ok = int(ok or 0) if not isinstance(ok, bool) else int(ok)
+            err = int(err or 0) if not isinstance(err, bool) else int(err)
             total = ok + err
             taxa = (ok/total*100) if total else 100.0
             msg = f"Taxa evento {taxa:.1f}% ({ok}/{total}) [provisório]."
@@ -2352,9 +2393,28 @@ class PipelinePerceptivo:
             from academia_autonoma.inteligencias_livro import (
                 consultar as _tratado, formula_de as _formula,
                 texto_citacao as _citar)
+            # NO CRAZY TIME OS SIMBOLOS PRECISAM VIRAR INDICE, E VOLTAR.
+            #
+            # As leituras trabalham com classes 0..N-1. Passando os simbolos
+            # crus, o `int()` delas descartava CoinFlip, CashHunt, Pachinko e
+            # CrazyBonus -- que nao sao numeros -- e o "10" caia fora do
+            # dominio de 8 classes. Sobravam 1, 2 e 5, e as inteligencias
+            # votavam em "0", "3", "4": indices que a mesa NAO TEM.
+            #
+            # Foi visto medindo quem vota: IA01_TEMPO apontando 0, 3 e 4 em dez
+            # de dez historicos. Voto em simbolo inexistente nao aparece na
+            # tela -- ele some no consenso e leva junto o peso 2,4 daquela
+            # leitura. Silencioso, que e o pior tipo.
+            _hist_leitura = ([MAP_CT_TO_IDX[x] for x in hist
+                              if x in MAP_CT_TO_IDX] if self.is_ct else hist)
             _ctx_t = {"mults": mults, "jogo": self.jogo}
-            _rt = _tratado(hist, self.n_classes, _ctx_t)
+            _rt = _tratado(_hist_leitura, self.n_classes, _ctx_t)
             for _nome, _nums in (_rt.get("palpites") or {}).items():
+                if self.is_ct:
+                    _nums = [MAP_IDX_TO_CT[int(x)] for x in _nums
+                             if str(x).isdigit() and int(x) in MAP_IDX_TO_CT]
+                    if not _nums:
+                        continue
                 hips.append({"nome": _nome, "nums": _nums, "peso": 2.4})
             msgs.append(f"[Tratado] {_rt.get('opinaram')} das "
                         f"{_rt.get('total')} inteligências leram a mesa")

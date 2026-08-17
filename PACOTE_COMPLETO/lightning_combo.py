@@ -23,6 +23,7 @@ import customtkinter as ctk
 import threading, requests, time, os, json, traceback
 import multiprocessing as mp
 from worker_process import process_cerebro
+from tela_segura import depois  # after que nao quebra ao fechar a janela
 
 GAME = "lightning"
 API = "https://api-cs.casino.org/svc-evolution-game-events/api/lightningroulette"
@@ -446,12 +447,12 @@ class App(ctk.CTk):
         if self.busy: return
         self.busy=True
         try:
-            self.after(0, lambda: self.st.configure(text="Capturando...", text_color="#eab308"))
+            depois(self, 0, lambda: self.st.configure(text="Capturando...", text_color="#eab308"))
             from fluxo_captura import capturar, marcar_snapshot_processado, salvar_ciclo_ativo, limpar_ciclo_ativo
             cap = capturar(GAME, page_size=50, max_pages=2)
             if cap.get("err") and not cap.get("rows"):
                 log(f"API offline: {cap['err']}")
-                self.after(0, lambda e=cap["err"]: self.st.configure(text=f"API: {e}"[:80], text_color="#ef4444"))
+                depois(self, 0, lambda e=cap["err"]: self.st.configure(text=f"API: {e}"[:80], text_color="#ef4444"))
                 return
             rows = cap.get("rows") or []
             mults = cap.get("mults") or []
@@ -460,21 +461,21 @@ class App(ctk.CTk):
             _off = bool(cap.get("offline"))
             if _off:
                 log(f"API instavel ({cap.get('err')}) - seguindo com historico salvo")
-                self.after(0, lambda: self.st.configure(
+                depois(self, 0, lambda: self.st.configure(
                     text="API instável — analisando histórico salvo",
                     text_color="#eab308"))
             if not rows:
-                self.after(0, lambda: self.st.configure(text="Sem dados", text_color="#ef4444")); return
+                depois(self, 0, lambda: self.st.configure(text="Sem dados", text_color="#ef4444")); return
 
             # Idempotência: mesmo head já processado → só redesenha, não reenvia ao motor
             head_id = cap.get("head_id")
             if not cap.get("novo_head") and self.escolhas and self.restantes > 0:
                 # ainda atualiza UI do histórico, mas não valida de novo o mesmo evento
-                self.after(0, lambda: (self.st.configure(text=("API instável — histórico salvo" if _off else "Operacional (mesmo snapshot)"), text_color=("#eab308" if _off else "#22c55e")), self.desenhar_hist(rows)))
+                depois(self, 0, lambda: (self.st.configure(text=("API instável — histórico salvo" if _off else "Operacional (mesmo snapshot)"), text_color=("#eab308" if _off else "#22c55e")), self.desenhar_hist(rows)))
                 return
             if not cap.get("novo_head") and not self.escolhas:
                 # mesmo snapshot, sem ciclo: só redesenha — NÃO consulta motor de novo
-                self.after(0, lambda: (self.st.configure(text=("API instável — histórico salvo" if _off else "Operacional"), text_color=("#eab308" if _off else "#22c55e")), self.desenhar_hist(rows)))
+                depois(self, 0, lambda: (self.st.configure(text=("API instável — histórico salvo" if _off else "Operacional"), text_color=("#eab308" if _off else "#22c55e")), self.desenhar_hist(rows)))
                 return
 
             mudou = bool(cap.get("novo_head"))
@@ -507,14 +508,14 @@ class App(ctk.CTk):
                 sug=self.out_q.get(timeout=45)
             except _queue.Empty:
                 # timeout: NÃO apaga last_result — próxima tentativa reenvia
-                self.after(0, lambda: self.st.configure(text="Timeout motor", text_color="#ef4444"))
+                depois(self, 0, lambda: self.st.configure(text="Timeout motor", text_color="#ef4444"))
                 return
             except Exception as e:
                 err=str(e)[:60]
-                self.after(0, lambda err=err: self.st.configure(text=f"Falha fila: {err}", text_color="#ef4444"))
+                depois(self, 0, lambda err=err: self.st.configure(text=f"Falha fila: {err}", text_color="#ef4444"))
                 return
             if not sug:
-                self.after(0, lambda: self.st.configure(text="Resposta vazia do motor", text_color="#ef4444"))
+                depois(self, 0, lambda: self.st.configure(text="Resposta vazia do motor", text_color="#ef4444"))
                 # NÃO marca snapshot — permite reprocessar
             else:
                 if mudou and head_id:
@@ -524,17 +525,17 @@ class App(ctk.CTk):
                         log(f"snap mark: {e}")
                 if mudou:
                     self.last_result = None  # só após sucesso
-                self.after(0, lambda: (self._aplicar_validacao_ui(), self.st.configure(text="Operacional", text_color="#22c55e"), self.aplicar(sug), self.desenhar_hist(rows)))
+                depois(self, 0, lambda: (self._aplicar_validacao_ui(), self.st.configure(text="Operacional", text_color="#22c55e"), self.aplicar(sug), self.desenhar_hist(rows)))
         except Exception as e:
             log(f"Falha worker: {type(e).__name__}: {e}")
-            self.after(0, lambda err=str(e): self.st.configure(text=f"Falha: {err}"[:80], text_color="#ef4444"))
+            depois(self, 0, lambda err=str(e): self.st.configure(text=f"Falha: {err}"[:80], text_color="#ef4444"))
         finally:
             self.busy=False
 
     def loop(self):
         if self.running:
             threading.Thread(target=self.worker, daemon=True).start()
-            self.after(10000, self.loop)
+            depois(self, 10000, self.loop)
 
 def main():
     mp.freeze_support()
