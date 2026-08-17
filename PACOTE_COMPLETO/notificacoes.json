@@ -1,0 +1,9 @@
+{
+ "canal": "nenhum",
+ "topico": "",
+ "token": "",
+ "chat_id": "",
+ "telefone": "",
+ "apikey": "",
+ "_ajuda": "canal: 'whatsapp', 'ntfy', 'telegram' ou 'nenhum'. WhatsApp (CallMeBot): salve +34 644 51 95 23 nos contatos, mande 'I allow callmebot to send me messages', copie a apikey que ele responder e preencha telefone (com codigo do pais, ex 5531999998888) e apikey aqui. ntfy: instale o app ntfy, escolha um topico unico e assine ele. telegram: crie um bot no @BotFather."
+}

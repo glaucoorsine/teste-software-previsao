@@ -18,3 +18,8 @@ pyflakes
 # levava um ImportError sem explicacao -- a dependencia existia so na cabeca
 # de quem escreveu o arquivo.
 pypdf
+
+# OPCIONAL — a mesa ao vivo DENTRO do software, em vez de abrir o navegador.
+# Sem ele o botao "ver a mesa" continua funcionando: cai para o navegador e diz
+# na tela que caiu. No Windows usa o WebView2, que ja vem com o Edge.
+pywebview

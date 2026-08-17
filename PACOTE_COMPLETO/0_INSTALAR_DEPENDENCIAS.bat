@@ -26,7 +26,7 @@ echo.
 echo ----------------------------------------------------------
 echo  [1/2] Essenciais - o software funciona so com estes
 echo ----------------------------------------------------------
-%CMD% -m pip install customtkinter requests numpy psutil Pillow pyflakes pypdf
+%CMD% -m pip install customtkinter requests numpy psutil Pillow pyflakes pypdf pywebview
 if %errorlevel% neq 0 (
   echo.
   echo   FALHOU nos essenciais. Mande um print desta janela.

@@ -631,6 +631,21 @@ class PainelMesa(ctk.CTkFrame):
         self.publico = ctk.CTkLabel(topo, text="", font=("Arial", 13, "bold"),
                                     text_color=FRACO)
         self.publico.pack(side="left", padx=10)
+        # A MESA AO VIVO, UMA POR JOGO.
+        #
+        #     "coloque os videos ao vivo para rodar dentro do software,
+        #      cada jogo com seu video"
+        #
+        # O Tkinter nao decodifica video -- nao existe widget disso nele. Entao
+        # "dentro do software" e uma janela DO software com motor de navegador
+        # (pywebview), em processo proprio: os dois lacos principais no mesmo
+        # processo brigariam e a tela congelaria, que e o travamento que ele ja
+        # fotografou. Sem pywebview, cai para o navegador e diz que caiu.
+        self.bt_video = ctk.CTkButton(
+            topo, text="▶ ver a mesa", width=118, height=26,
+            font=("Arial", 12), fg_color="#1e3a5f", hover_color="#2b5486",
+            command=self._abrir_video)
+        self.bt_video.pack(side="right", padx=4)
 
         corpo = ctk.CTkFrame(self, fg_color="transparent")
         corpo.pack(fill="both", expand=True, padx=16, pady=6)
@@ -1038,6 +1053,21 @@ class PainelMesa(ctk.CTkFrame):
                 registrar(f"{self.jogo} CAPTURA_LENTA {_gasto:.0f}s "
                           f"(fonte: {cap.get('fonte') or 'api'})")
             rows = cap.get("rows") or []
+            # DUAS MESAS COM O MESMO GIRO NAO SAO DUAS MESAS.
+            #
+            # Ele viu Crazy Time e Crazy Time A mostrando historico identico. Um
+            # aviso vale mais que a tela cheia de dado alheio: sem ele, as duas
+            # "concordam" e isso parece confirmacao.
+            try:
+                from fluxo_captura import conferir_mesas_distintas
+                _av = conferir_mesas_distintas(self.jogo, rows)
+                if _av:
+                    registrar(f"{self.jogo} {_av}")
+                    self._estado("mesa duplicada — ver o log", VERMELHO)
+                    self.aviso_geral(self.jogo, "mesa duplicada: mesmo giro "
+                                                "de outra mesa")
+            except Exception:
+                pass
             if not rows:
                 # FALHAR CALADO FOI O QUE DEIXOU O CRAZY TIME A INVISIVEL.
                 #
@@ -1187,6 +1217,23 @@ class PainelMesa(ctk.CTkFrame):
         """
         return _resposta_de(self, self.saida, prazo,
                             registrar=lambda m: registrar(f"{self.jogo} {m}"))
+
+    def _abrir_video(self):
+        """Abre a mesa ao vivo desta aba.
+
+        Em thread, porque abrir um processo e consultar o `pywebview` pode
+        demorar o suficiente para a tela piscar -- e `depois()` garante que o
+        retorno volte na thread da interface.
+        """
+        def tarefa():
+            try:
+                from video_mesa import abrir
+                como = abrir(self.jogo, registrar=lambda m: registrar(m))
+            except Exception as e:
+                como = f"erro: {type(e).__name__}"
+            depois(self, 0, lambda: self._estado(f"mesa ao vivo — {como}",
+                                                 AZUL))
+        threading.Thread(target=tarefa, daemon=True).start()
 
     # ------------------------------------------------------------- academia
     # de quantos em quantos giros a academia recebe trabalho. Ela relê o
@@ -2082,6 +2129,16 @@ class Central(ctk.CTk):
         # Tk de fora da thread dele -- que é a corrida que travava a janela
         # sem deixar rastro. Ver tela_segura.py.
         bombear(self)
+        # desfaz na abertura o que o defeito da versao anterior gravou: se duas
+        # mesas ficaram com o mesmo endereco, a que nao e dona volta a procurar
+        try:
+            from fluxo_captura import limpar_fontes_duplicadas
+            _lim = limpar_fontes_duplicadas()
+            if _lim:
+                registrar(f"FONTES_DUPLICADAS limpas: {_lim} — estas mesas vao "
+                          f"procurar endereco proprio")
+        except Exception:
+            pass
         self.title("Laboratório — as quatro mesas ao vivo")
         self.geometry("1280x860")
         ctk.set_appearance_mode("dark")

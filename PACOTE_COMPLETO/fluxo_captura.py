@@ -264,6 +264,110 @@ def _identidade_html(dataset_id: str, linhas: List[dict]) -> tuple:
     return hid, ids
 
 
+# o head de cada mesa na ultima captura -- para detectar mesas gemeas
+_HEAD_POR_MESA: dict = {}
+
+
+def conferir_mesas_distintas(dataset_id: str, rows: list) -> Optional[str]:
+    """Esta mesa esta mostrando o giro de outra? Devolve o aviso, ou None.
+
+    O crivo de identidade no `_lembrar_fonte` impede o caso conhecido, mas nao
+    todos: o provedor pode servir a mesma mesa em dois enderecos diferentes, e
+    ai os dois passariam. Este confere o SINTOMA em vez da causa -- se duas
+    mesas trazem o mesmo giro no mesmo horario, sao a mesma mesa, seja qual for
+    o endereco.
+
+    E o sintoma e o que ele viu na tela: "crazy time normal e crazy time A estao
+    puxando a mesma api". Duas mesas concordando em tudo nao e consenso, e
+    duplicata -- e sem este aviso passa por coincidencia feliz.
+    """
+    if not rows:
+        return None
+    r0 = rows[0] or {}
+    chave = f"{r0.get('n')}|{r0.get('settled')}"
+    if not r0.get("settled"):
+        return None
+    _HEAD_POR_MESA[dataset_id] = chave
+    iguais = [m for m, c in _HEAD_POR_MESA.items()
+              if m != dataset_id and c == chave]
+    if iguais:
+        return (f"MESA_DUPLICADA {dataset_id} traz o MESMO giro de "
+                f"{', '.join(iguais)} ({chave}) — sao a mesma mesa, e o "
+                f"historico de uma esta aparecendo como o da outra")
+    return None
+
+
+def limpar_fontes_duplicadas() -> list:
+    """Apaga a memoria de fonte quando duas mesas ficaram com o mesmo endereco.
+
+    O crivo novo impede que isso ACONTECA, mas nao desfaz o que ja esta gravado
+    na maquina dele -- e la ja esta: a Crazy Time A gravou o endereco da Crazy
+    Time comum e vai continuar lendo dela enquanto o arquivo disser isso.
+    Correcao que nao limpa o estado antigo nao conserta nada na pratica.
+
+    Roda uma vez, na abertura. A mesa que perdeu a fonte volta a procurar.
+    """
+    apagadas = []
+    try:
+        if not FONTES_OK.is_file():
+            return apagadas
+        d = json.loads(FONTES_OK.read_text(encoding="utf-8")) or {}
+        por_url: dict = {}
+        for mesa, u in list(d.items()):
+            por_url.setdefault(str(u), []).append(mesa)
+        mudou = False
+        for u, mesas in por_url.items():
+            if len(mesas) < 2:
+                continue
+            # quem fica: a mesa cujo nome aparece no proprio endereco; se
+            # nenhuma, a primeira em ordem -- e as outras voltam a procurar
+            fica = next((m for m in sorted(mesas)
+                         if m.replace("_", "") in u.replace("-", "").lower()),
+                        sorted(mesas)[0])
+            for m in mesas:
+                if m != fica:
+                    d.pop(m, None)
+                    apagadas.append(m)
+                    mudou = True
+        if mudou:
+            _gravar_json(FONTES_OK, d)
+    except Exception as _e:
+        engolido("fluxo_captura/limpar_fontes_duplicadas", _e)
+    return apagadas
+
+
+def fonte_de_outra_mesa(dataset_id: str, url: str) -> Optional[str]:
+    """Alguma OUTRA mesa já usa este endereco? Devolve o nome dela.
+
+    DUAS MESAS LENDO A MESMA API E O PIOR DEFEITO POSSIVEL.
+    -------------------------------------------------------
+    Ele viu: Crazy Time e Crazy Time A mostrando o MESMO historico, o mesmo
+    palpite, os mesmos giros. E foi eu que causei -- a descoberta pela pagina
+    valida o endereco perguntando "isto devolve giros que o parser reconhece?",
+    e a API do Crazy Time comum devolve giros perfeitamente validos de Crazy
+    Time. Passa no crivo com louvor, e a mesa nova passa a ler a mesa velha.
+
+    Ele ja tinha apontado a raiz disso no achado 6: "uma resposta nao vazia,
+    mesmo contendo lixo, e memorizada como fonte valida". Eu tratei o "lixo" e
+    deixei passar o caso pior, que e dado BOM da mesa ERRADA -- porque esse nao
+    parece defeito nenhum: a tela enche, os numeros sao plausiveis, e as duas
+    mesas concordam. Concordam porque sao a mesma.
+
+    O crivo que faltava nao e sobre o formato: e sobre IDENTIDADE. Um endereco
+    pertence a uma mesa so.
+    """
+    try:
+        d = {}
+        if FONTES_OK.is_file():
+            d = json.loads(FONTES_OK.read_text(encoding="utf-8")) or {}
+        for mesa, u in d.items():
+            if mesa != dataset_id and str(u) == str(url):
+                return str(mesa)
+    except Exception as _e:
+        engolido("fluxo_captura/fonte_de_outra_mesa", _e)
+    return None
+
+
 def _lembrar_fonte(dataset_id: str, url: str) -> None:
     """Grava o endereco que respondeu, para nao procurar de novo."""
     try:
@@ -271,6 +375,13 @@ def _lembrar_fonte(dataset_id: str, url: str) -> None:
         if FONTES_OK.is_file():
             d = json.loads(FONTES_OK.read_text(encoding="utf-8")) or {}
         if d.get(dataset_id) == url:
+            return
+        _outra = fonte_de_outra_mesa(dataset_id, url)
+        if _outra:
+            # nao grava, e deixa rastro: e mais honesto a mesa ficar sem fonte
+            # do que ler a fonte de outra e mostrar historico alheio como seu
+            engolido(f"fluxo_captura/FONTE_DUPLICADA {dataset_id} tentou usar "
+                     f"o endereco de {_outra}: {url}", None)
             return
         d[dataset_id] = url
         # troca atômica: este arquivo é a memória de qual endereço funciona em
@@ -1017,7 +1128,8 @@ def capturar(
                 _r = _proc(_pag, str(dataset_id),
                            registrar=lambda m: engolido("fluxo_captura/" + m,
                                                         None))
-                if _r.get("api"):
+                if _r.get("api") and not fonte_de_outra_mesa(dataset_id,
+                                                             _r["api"]):
                     # a propria pagina disse onde busca; grava e usa
                     _lembrar_fonte(dataset_id, _r["api"])
                     candidatos = [_r["api"]] + [c for c in candidatos
