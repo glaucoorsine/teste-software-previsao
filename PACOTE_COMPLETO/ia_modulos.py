@@ -2060,6 +2060,48 @@ class PipelinePerceptivo:
             saida.append(melhor)
         return saida
 
+    def _formacao_da_decisao(self, hips, sig=None, aprovados=None) -> dict:
+        """COMO esta previsao foi formada. A pergunta dele, na autopsia:
+
+            "opa, espera ai, eu errei essa previsao aqui. Ela entrou num
+             consenso, nao foi num consenso, usei teoria unica, usei consenso de
+             vinte teorias diferentes, mas as vinte faziam sentido nessa questao"
+
+        Sao duas perguntas e as duas se medem. Quantas teorias formaram a decisao
+        e -- a que interessa -- se aquelas teorias eram as adequadas AQUELE
+        momento. Consenso de vinte teorias que nao servem para o momento e vinte
+        vozes erradas, e na tela aparece como consenso forte.
+
+        "Servia" aqui tem definicao: a tabela condicional, montada com a memoria,
+        da a essa teoria peso acima de 1 na condicao de agora. Teoria sem celula
+        suficiente nao conta nem a favor nem contra -- nao saber nao e o mesmo
+        que saber que e ruim.
+        """
+        nomes = [str(h.get("nome")) for h in (hips or [])
+                 if isinstance(h, dict) and h.get("nums")]
+        out = {"n_teorias": len(nomes)}
+        try:
+            fam = set()
+            for n in nomes:
+                fam.add(self.crit._familia(n) if hasattr(self.crit, "_familia") else n)
+            out["n_familias"] = len(fam)
+        except Exception:
+            pass
+        cond = getattr(self, "_condicional", None) or {}
+        pesos = ((cond.get("escolha") or {}).get("pesos") or {})
+        if pesos:
+            out["votantes_em_condicao"] = sum(
+                1 for n in nomes if float(pesos.get(n, 1.0)) > 1.0)
+            out["votantes_contra_condicao"] = sum(
+                1 for n in nomes if float(pesos.get(n, 1.0)) < 0.9)
+        if sig and aprovados:
+            try:
+                out["votos_do_primeiro"] = int(
+                    (sig.get(aprovados[0]) or {}).get("votos_teoria") or 0)
+            except Exception:
+                pass
+        return out
+
     def _contexto_do_momento(self, jogadores=None, janela=None) -> dict:
         """O estado do momento em que a decisão está sendo tomada.
 
@@ -2125,6 +2167,10 @@ class PipelinePerceptivo:
         st = getattr(self, "_situacao", None) or {}
         if st.get("fala"):
             ctx["razao_parecidos"] = st.get("razao")
+        # COMO a decisao foi formada, gravado junto do contexto: sem isto a
+        # autopsia dele -- "foi consenso ou teoria unica?" -- nao tem resposta
+        # depois, porque a lista de quem votou naquela volta nao se reconstroi.
+        ctx.update(getattr(self, "_formacao", None) or {})
         return ctx
 
     def _placar_por_cor(self) -> dict:
@@ -3139,7 +3185,63 @@ class PipelinePerceptivo:
         except Exception as _e:
             msgs.append(f"[Autoexame] {type(_e).__name__}: {_e}")
 
+        # ── A TABELA CONDICIONAL: qual teoria serve NESTA situacao ─────────
+        #
+        #   "tal teoria funciona aqui mas nao funcionou aqui, entao so quando
+        #    isso aqui acontecer que eu vou usar ela. Mas tal teoria aqui onde
+        #    essa nao funcionou, funcionou, entao aqui nesse tipo de situacao eu
+        #    uso essa outra"
+        #
+        # O autoexame diz que uma teoria erra e em qual eixo. Isto faz a
+        # SUBSTITUICAO: na condicao de agora, quem sobe e quem desce.
+        #
+        # E vem com a prova fora da amostra ao lado, sempre. Teoria x condicao e o
+        # lugar mais propenso a overfitting deste software -- muitas celulas,
+        # pouca janela em cada -- e escolher a melhor de cada celula na mesma
+        # amostra que mediu devolve numero esplendido e falso. A metade antiga da
+        # memoria escolhe; a metade recente mede; o numero que vai para a tela e
+        # o da segunda.
+        try:
+            from NUCLEO import condicional as _cd
+            # `janela` so e decidida umas quinhentas linhas abaixo -- aqui ela
+            # ainda nao existe, e o lint pegou isso antes de rodar. Nao faz falta:
+            # o que a tabela condicional precisa e a CONDICAO do momento (publico,
+            # seca, densidade, magnitude, hora), nao o tamanho da aposta.
+            _ctx_agora = self._contexto_do_momento(jogadores, None)
+            _cond = _cd.ler(self.mem.d.get("avaliadas") or [], self.n_classes,
+                            contexto_agora=_ctx_agora)
+            for _l in _cd.resumo(_cond):
+                msgs.append(_l)
+            self._condicional = _cond
+            # os pesos condicionais entram no voto -- mas so quando a validacao
+            # fora da amostra disse que a escolha vale. Sem isso eu estaria
+            # deixando uma tabela nao validada mandar na sugestao dele.
+            _v = _cond.get("validacao") or {}
+            _pc = ((_cond.get("escolha") or {}).get("pesos") or {})
+            if _pc and _v.get("vale"):
+                _mex = []
+                for _h in hips:
+                    _w = _pc.get(str(_h.get("nome")))
+                    if _w and abs(_w - 1.0) > 0.05:
+                        _a = float(_h.get("peso") or 1.0)
+                        _h["peso"] = round(_a * _w, 3)
+                        _mex.append(f"{_h['nome']} {_a:.2f}→{_h['peso']:.2f}")
+                if _mex:
+                    msgs.append("[Condicional→voto] " + " | ".join(_mex[:6]))
+            elif _pc:
+                msgs.append(f"[Condicional→voto] NAO aplicado: a escolha "
+                            f"condicional ainda nao provou valer fora da amostra "
+                            f"({_v.get('nota') or 'razao ' + str(_v.get('razao_recomendada')) + 'x contra ' + str(_v.get('razao_geral')) + 'x do geral'})")
+        except Exception as _e:
+            msgs.append(f"[Condicional] {type(_e).__name__}: {_e}")
+
         aprovados, probs, fontes, score, sig, p0 = self.crit.consenso(hips, self.n_classes, self.k_alvos, minimo=2)
+        # como esta decisao foi formada, para a autopsia de amanha
+        try:
+            self._formacao = self._formacao_da_decisao(
+                hips, sig, aprovados[:self.k_alvos])
+        except Exception:
+            self._formacao = None
         # ── qual teoria esta em uso AGORA ─────────────────────────────────
         #
         #   "qual teoria que esta sendo utilizada naquele momento com base nos
@@ -3862,6 +3964,8 @@ class PipelinePerceptivo:
             "regime": getattr(self, "_regime", None),
             # o que cada teoria rendeu e em que contexto ela erra
             "autoexame": getattr(self, "_autoexame", None),
+            # qual teoria serve nesta situacao, com a prova fora da amostra
+            "condicional": getattr(self, "_condicional", None),
             "pad5": pad_ui, "anti5": [], "janela": janela, "msgs": msgs,
             "device": str(self.lstm.device), "modo": _modo_final, "conf": conf,
             "probs": {str(k): round(float(v),4) for k,v in top_p},

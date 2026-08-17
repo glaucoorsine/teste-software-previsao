@@ -964,6 +964,50 @@ _curta = _PC.opinar([1, 2, 3])
 checa(_curta == {} or all(v for v in _curta.values()),
       "com historico curto, calar e resposta", _curta)
 
+# ══════════════════════════════════════════════════════════════════════════
+print("\n[31] o semaforo tem que APARECER NA TELA, com os porques")
+#
+#   "nao vi onde diz se esta bom ou ruim para entrar, semaforo"
+#
+# O defeito era exatamente este: a cor era medida, ia para o log e calava o
+# ntfy -- mas nao aparecia na tela. A unica pessoa que precisa da resposta era
+# a unica que nao a via. Este teste chama o pintor com cada cor e confere o que
+# ele escreveria, sem precisar abrir janela Tk.
+import re as _re
+_src = open("CENTRAL.py", encoding="utf-8").read()
+
+checa("self.semaforo = ctk.CTkLabel(" in _src,
+      "existe um rotulo de semaforo na tela")
+checa(_src.index("self.semaforo = ctk.CTkLabel(") < _src.index("self.caixas = []"),
+      "e ele fica ACIMA das caixas de numeros -- a pergunta 'e bom momento?' "
+      "vem antes de 'quais numeros'")
+checa("self._mostrar_semaforo((sug or {}).get(\"semaforo\"))" in _src,
+      "e e repintado a cada volta, nao so quando abre janela nova")
+_pos_pintar = _src.index("self._mostrar_semaforo((sug or {}).get")
+_pos_if_pad = _src.index("if pad and not (self.escolhas")
+checa(_pos_pintar < _pos_if_pad,
+      "a repintura acontece FORA do 'if pad' -- senao a luz congelaria na "
+      "ultima janela aberta e diria 'bom momento' horas depois")
+
+# o texto de cada cor, extraido do proprio codigo do pintor
+_corpo = _src[_src.index("def _mostrar_semaforo"):]
+_corpo = _corpo[:_corpo.index("\n    def ", 10)]
+for _cor, _esperado in (("VERDE", "BOM MOMENTO PARA ENTRAR"),
+                        ("VERMELHO", "MOMENTO RUIM"),
+                        ("AMARELO", "MOMENTO COMUM")):
+    checa(_esperado in _corpo,
+          f"a cor {_cor} diz claramente o que fazer: '{_esperado}'")
+checa("celular calado" in _corpo and "aviso enviado" in _corpo,
+      "e a linha diz se o aviso foi ao celular -- tela e celular nao podem "
+      "discordar sem ele saber qual acreditar")
+checa("self.semaforo_porque" in _corpo,
+      "os porques aparecem junto da cor -- cor sozinha e oraculo")
+checa("motivos" in _corpo and "contra" in _corpo and "observacoes" in _corpo,
+      "e mostra razoes, contra-razoes e observacoes")
+checa("nao entrar" not in _corpo.lower() or "pad" not in _corpo,
+      "o vermelho nao apaga a previsao -- 'pode ficar prevendo, mas so envia "
+      "quando for verde'")
+
 print()
 if falhas:
     print("FALHAS:", falhas)

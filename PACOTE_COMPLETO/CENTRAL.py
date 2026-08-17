@@ -703,6 +703,30 @@ class PainelMesa(ctk.CTkFrame):
                              else K_MAX_ROLETA)
         except Exception:
             _n_caixas = 3 if str(self.jogo).startswith("crazy_time") else 10
+        # ── O SEMÁFORO, ACIMA DOS NÚMEROS ────────────────────────────────
+        #
+        #   "nao vi onde diz se esta bom ou ruim para entrar, semaforo"
+        #
+        # Ele tem razao e o defeito era meu: eu media a cor, mandava para o log e
+        # usava para calar o ntfy -- mas na tela nao aparecia nada. Ou seja, a
+        # unica pessoa que precisa da resposta era a unica que nao a via.
+        #
+        # Fica ACIMA das caixas de proposito. A pergunta "e bom momento?" vem
+        # antes de "quais numeros"; embaixo, ele leria os numeros primeiro e a
+        # cor viraria legenda do que ja decidiu.
+        self.semaforo = ctk.CTkLabel(
+            linha, text="🟡 medindo o momento…", anchor="w", justify="left",
+            font=("Arial", 15, "bold"), text_color=AMARELO,
+            fg_color="#1f2937", corner_radius=8, wraplength=430,
+            padx=10, pady=6)
+        self.semaforo.pack(anchor="w", fill="x", pady=(0, 6))
+        # e os porques, miudos, embaixo da cor: a cor sozinha e um oraculo, e ele
+        # pediu "e um momento bom por isso por isso por isso"
+        self.semaforo_porque = ctk.CTkLabel(
+            linha, text="", anchor="w", justify="left", font=("Arial", 11),
+            text_color=FRACO, wraplength=430)
+        self.semaforo_porque.pack(anchor="w", pady=(0, 6))
+
         self.caixas = []
         _por_linha = 10
         _larg = 56 if _n_caixas <= 7 else (44 if _n_caixas <= 10 else 40)
@@ -1327,6 +1351,56 @@ class PainelMesa(ctk.CTkFrame):
         self.ultimo_estado = texto
         depois(self, 0, lambda: self.st.configure(text=texto, text_color=cor))
 
+    def _mostrar_semaforo(self, sem):
+        """A resposta a "e bom momento para entrar?", na tela, com os porques.
+
+        A COR E O AVISO SAO A MESMA DECISAO, E TEM DE PARECER A MESMA
+        ────────────────────────────────────────────────────────────
+        O verde e o unico que manda no celular. Se a tela dissesse uma coisa e o
+        celular outra, ele nao teria como saber qual das duas acreditar -- entao
+        a propria linha diz se o aviso saiu.
+
+        E o vermelho nao esconde a previsao. Ele foi explicito: "pode ficar
+        prevendo, mas so envia quando for verde". Os numeros continuam nas caixas
+        em qualquer cor; o que muda e a leitura de cima.
+        """
+        if not sem:
+            return
+        cor = sem.get("cor")
+        tinta = {"VERDE": VERDE, "AMARELO": AMARELO, "VERMELHO": VERMELHO}.get(
+            cor, AMARELO)
+        marca = {"VERDE": "🟢", "AMARELO": "🟡", "VERMELHO": "🔴"}.get(cor, "🟡")
+        titulo = {"VERDE": "BOM MOMENTO PARA ENTRAR",
+                  "AMARELO": "MOMENTO COMUM — previsão sem base para entrar",
+                  "VERMELHO": "MOMENTO RUIM — não entrar"}.get(
+                      cor, "medindo o momento…")
+        rodape = ("  · aviso enviado ao celular" if sem.get("avisar")
+                  else "  · celular calado")
+        motivos = sem.get("motivos") or []
+        contra = sem.get("contra") or []
+        obs = sem.get("observacoes") or []
+        linhas = []
+        for m in motivos[:3]:
+            linhas.append(f"✓ {m}")
+        for c in contra[:3]:
+            linhas.append(f"✗ {c}")
+        if not linhas:
+            for o in obs[:2]:
+                linhas.append(f"· {o}")
+        if not linhas:
+            linhas.append("ainda sem medida que sustente qualquer razão — "
+                          "por isso não é verde")
+        texto_p = "\n".join(linhas)
+
+        def pintar():
+            try:
+                self.semaforo.configure(text=f"{marca} {titulo}{rodape}",
+                                        text_color=tinta)
+                self.semaforo_porque.configure(text=texto_p)
+            except Exception:
+                pass
+        depois(self, 0, pintar)
+
     def _desenhar_hist(self, rows):
         """Cada giro: o número, se estava na aposta, e o multiplicador.
 
@@ -1369,6 +1443,13 @@ class PainelMesa(ctk.CTkFrame):
     def _aplicar(self, sug, rows):
         self.ultimas_linhas = list(rows or [])
         modo = sug.get("modo") or ""
+        # A COR SOBE A CADA VOLTA, NAO SO QUANDO ABRE JANELA.
+        #
+        # Se ficasse dentro do `if pad`, a luz congelaria na leitura da ultima
+        # janela aberta e continuaria dizendo "bom momento" horas depois de a
+        # mesa ter virado. A pergunta dele -- "esta bom ou ruim para entrar
+        # AGORA?" -- so tem resposta se a resposta for recalculada agora.
+        self._mostrar_semaforo((sug or {}).get("semaforo"))
         pad = sug.get("pad5") or []
         # JANELA_ATIVA é o cérebro devolvendo a janela que JÁ estava aberta —
         # é eco, não decisão nova. Se a janela fechou nesta mesma volta, o eco
