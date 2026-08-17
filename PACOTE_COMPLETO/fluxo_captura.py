@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from time_utils import canonical_ts, event_key, sort_key_ts
 from hist_buffer import merge, load, normalizar_evento, DOMAIN
 from fetch_historico import fetch_paginas
+from engolido import engolido
 
 ROOT = Path(__file__).resolve().parent
 BUF_DIR = ROOT / "Logs" / "hist_buffers"
@@ -139,8 +140,8 @@ def _gravar_head_html(dataset_id: str, hid: str) -> None:
             return
         d[dataset_id] = hid
         _gravar_json(_HEADS_HTML, d)
-    except Exception:
-        pass
+    except Exception as _e:
+        engolido("fluxo_captura/_gravar_head_html", _e)
 
 
 def _head_html_salvo(dataset_id: str):
@@ -149,8 +150,8 @@ def _head_html_salvo(dataset_id: str):
         if _HEADS_HTML.is_file():
             return (_j.loads(_HEADS_HTML.read_text(encoding="utf-8"))
                     or {}).get(dataset_id)
-    except Exception:
-        pass
+    except Exception as _e:
+        engolido("fluxo_captura/_head_html_salvo", _e)
     return None
 
 
@@ -214,8 +215,8 @@ def _lembrar_fonte(dataset_id: str, url: str) -> None:
         # troca atômica: este arquivo é a memória de qual endereço funciona em
         # cada mesa, e corrompê-lo custa a descoberta de todas elas
         _gravar_json(FONTES_OK, d)
-    except Exception:
-        pass
+    except Exception as _e:
+        engolido("fluxo_captura/_lembrar_fonte", _e)
 
 
 def fonte_lembrada(dataset_id: str):
@@ -224,8 +225,8 @@ def fonte_lembrada(dataset_id: str):
         if FONTES_OK.is_file():
             return (_j.loads(FONTES_OK.read_text(encoding="utf-8"))
                     or {}).get(dataset_id)
-    except Exception:
-        pass
+    except Exception as _e:
+        engolido("fluxo_captura/fonte_lembrada", _e)
     return None
 
 
@@ -561,8 +562,8 @@ def parse_items_roulette(items: List[dict]) -> List[dict]:
                         _sorteados.append({"n": num, "x": int(mult)})
                         if num == n:
                             tags.append({"x": mult})
-                except Exception:
-                    pass
+                except Exception as _e:
+                    engolido("fluxo_captura/parse_items_roulette", _e)
             if _sorteados:
                 tags.append({"lucky": _sorteados})
             # MEGA FIRE BLAZE — guardar o que veio dentro, não só o sim/não.
@@ -612,7 +613,8 @@ def parse_items_roulette(items: List[dict]) -> List[dict]:
                 if _lista:
                     tags.append({"fire_nums": _lista})
             rows.append({"n": n, "settled": settled, "tags": tags})
-        except Exception:
+        except Exception as _e:
+            engolido("fluxo_captura/parse_items_roulette", _e)
             continue
     return rows
 
@@ -692,10 +694,11 @@ def parse_items_ct(items: List[dict]) -> List[dict]:
                         tags.append({"top": {"simbolo": simbolo, "x": mult}})
                     if mult:
                         tags.append({"x": mult})
-            except Exception:
-                pass
+            except Exception as _e:
+                engolido("fluxo_captura/parse_items_ct", _e)
             rows.append({"n": s, "sec": s, "settled": settled, "tags": tags})
-        except Exception:
+        except Exception as _e:
+            engolido("fluxo_captura/parse_items_ct", _e)
             continue
     return rows
 
@@ -729,8 +732,8 @@ def capturar(
         _ja = _lembradas_desc().get(str(dataset_id))
         if _ja:
             candidatos = [_ja] + [u for u in candidatos if u != _ja]
-    except Exception:
-        pass
+    except Exception as _e:
+        engolido("fluxo_captura/capturar", _e)
 
     if not candidatos:
         return {"rows": [], "novo_head": False, "head_id": None, "err": "dataset desconhecido", "mults": []}
@@ -777,8 +780,8 @@ def capturar(
                         max_pages=max_pages, duration=duration)
                     if items:
                         _lembrar_fonte(dataset_id, _novo)
-        except Exception:
-            pass
+        except Exception as _e:
+            engolido("fluxo_captura/capturar", _e)
 
     if err and not items:
         # TERCEIRA FONTE: a pagina que ele mandou. So chega aqui quando as duas
@@ -902,8 +905,8 @@ def capturar(
                     _atomic_write(bp, data)
                 finally:
                     _release(bp)
-        except Exception:
-            pass
+        except Exception as _e:
+            engolido("fluxo_captura/capturar", _e)
 
     rows = []
     mults = []

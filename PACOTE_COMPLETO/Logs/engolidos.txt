@@ -1,0 +1,2 @@
+2026-08-17 02:33:41  teste_v121/rastro  ValueError: defeito de mentira, para o teste
+2026-08-17 02:34:05  teste_v121/rastro  ValueError: defeito de mentira, para o teste

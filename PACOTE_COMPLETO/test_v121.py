@@ -364,6 +364,72 @@ checa(_txt({"n": 7, "tags": [{"fire_nums": [{"n": 12, "x": 500}]}]}) == "",
 checa(_txt({"n": 20, "tags": [{"lucky": [{"n": 20, "x": 500}]}]}) == "×500",
       "e o lucky continua funcionando")
 
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n[12] o multiplicador chega no formato que cada consumidor espera")
+
+# a IA de intensidade do tratado faz zip(giros, mults) e float(m): ela quer um
+# valor POR GIRO. A captura monta a lista de ANÚNCIOS, {"n":.., "x":..}. Passar
+# um pelo outro deixava a metade da magnitude do modelo hurdle sempre vazia.
+_lin = [{"n": 7, "tags": [{"fire_nums": [{"n": 7, "x": 100},
+                                         {"n": 12, "x": 50}]}]},
+        {"n": 3, "tags": [{"fire_nums": [{"n": 9, "x": 200}]}]},
+        {"n": 20, "tags": [{"lucky": [{"n": 20, "x": 500}]}]},
+        {"n": 5, "tags": []},
+        {"n": "CoinFlip", "tags": [{"top": {"simbolo": "CoinFlip", "x": 7}}]},
+        {"n": "1", "tags": [{"top": {"simbolo": "5", "x": 3}}]}]
+_mg = M.PipelinePerceptivo._mult_por_giro(_lin, 6)
+checa(_mg == [100.0, 0.0, 500.0, 0.0, 7.0, 0.0],
+      "um valor por giro, e só o que PAGOU", _mg)
+checa(len(_mg) == len(_lin), "alinhado giro a giro", (len(_mg), len(_lin)))
+
+# e a lista de anúncios não conta o mesmo prêmio duas vezes
+_ev = [{"n": 20, "settled": "2026-08-17T10:00:00Z",
+        "tags": [{"x": 500}, {"lucky": [{"n": 20, "x": 500}]}]}]
+_vistos, _mults = set(), []
+for _e2 in _ev:
+    _vistos.clear()
+    for _t3 in _e2["tags"]:
+        if "x" in _t3 and not isinstance(_t3["x"], (dict, list)):
+            _k = (str(_e2["n"]), int(_t3["x"]))
+            if _k not in _vistos:
+                _vistos.add(_k)
+                _mults.append({"n": _e2["n"], "x": int(_t3["x"])})
+        for _c2 in ("lucky", "fire_nums"):
+            for _it2 in (_t3.get(_c2) or []):
+                _k = (str(_it2["n"]), int(_it2["x"]))
+                if _k not in _vistos:
+                    _vistos.add(_k)
+                    _mults.append({"n": _it2["n"], "x": int(_it2["x"])})
+checa(len(_mults) == 1,
+      "a tag solta e a lista descrevem o MESMO sorteio: conta uma vez", _mults)
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n[13] erro engolido deixa rastro")
+
+from engolido import ARQUIVO, engolido as _eng  # noqa: E402
+
+_antes_tam = ARQUIVO.stat().st_size if ARQUIVO.is_file() else 0
+try:
+    raise ValueError("defeito de mentira, para o teste")
+except ValueError as _e3:
+    _eng("teste_v121/rastro", _e3)
+checa(ARQUIVO.is_file() and ARQUIVO.stat().st_size > _antes_tam,
+      "o erro engolido foi para o arquivo", ARQUIVO)
+_texto = ARQUIVO.read_text(encoding="utf-8", errors="replace")
+checa("teste_v121/rastro" in _texto and "ValueError" in _texto,
+      "com o local e o tipo do erro")
+# e a repetição não enche o disco
+_tam = ARQUIVO.stat().st_size
+for _ in range(50):
+    _eng("teste_v121/rastro", ValueError("de novo"))
+checa(ARQUIVO.stat().st_size == _tam,
+      "o mesmo local não repete a cada volta do laço")
+
+import fluxo_captura as _F2  # noqa: E402
+
+checa("engolido" in (RAIZ / "fluxo_captura.py").read_text(encoding="utf-8"),
+      "e o caminho da captura usa isso — era lá que o dado morria calado")
+
 print()
 if falhas:
     print("FALHAS:", falhas)
