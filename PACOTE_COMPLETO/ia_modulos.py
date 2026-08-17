@@ -2924,12 +2924,37 @@ class PipelinePerceptivo:
                     _pico = (_ANC.get(self.jogo) or {}).get("alto")
                 except Exception:
                     _pico = None
+                # ── O REGIME: as observacoes DELE sobre multiplicador ──────
+                #
+                #   "nas ultimas quinhentas rodadas sairam x numeros
+                #    multiplicados. E eu percebi que quando esta acima de
+                #    quarenta e cinco costumam ficar vindo multiplicadores de
+                #    uma maneira mais facil"
+                #
+                #   "os multiplicadores que vieram recente sao valores altos ou
+                #    baixos? Normalmente quando sao valores baixos, apos um
+                #    tempo comeca a vir multiplicadores altos e vice-versa"
+                #
+                # Ele chamou o semaforo anterior de superficial porque a cor
+                # saia de checagens minhas e estas observacoes -- que tem numero
+                # e direcao -- nao entravam. Entram aqui, medidas, e cada uma
+                # so vira razao para o verde se a propria mesa a confirmar.
+                _reg = None
+                try:
+                    from NUCLEO import regime_multiplicador as _rgm
+                    _reg = _rgm.ler(linhas, _sit._mult_do_giro)
+                    for _l in _rgm.resumo(_reg):
+                        msgs.append(_l)
+                except Exception as _e:
+                    msgs.append(f"[Multiplicadores] {type(_e).__name__}: {_e}")
+                self._regime = _reg
                 _sm = _sem.avaliar(
                     situacao=_rs, publico=jogadores, pico_publico=_pico,
                     ritmo_agora=(_rs.get("pagou") if _rs.get("fala") else None),
                     ritmo_normal=_rs.get("pagou_geral"),
                     ultimas_sugestoes=list(getattr(self, "_ult_sugestoes", [])),
-                    placar_recente=getattr(self, "_placar_recente", None))
+                    placar_recente=getattr(self, "_placar_recente", None),
+                    regime=_reg)
                 for _l in _sem.resumo(_sm):
                     msgs.append(_l)
                 self._semaforo = _sm
@@ -3601,6 +3626,9 @@ class PipelinePerceptivo:
             "semaforo": getattr(self, "_semaforo", None),
             # (o historico e alimentado logo abaixo, depois de pad_ui existir)
             "situacao": getattr(self, "_situacao", None),
+            # as medidas de multiplicador que sustentaram a cor, para a tela
+            # poder mostrar o numero atras de cada razao
+            "regime": getattr(self, "_regime", None),
             "pad5": pad_ui, "anti5": [], "janela": janela, "msgs": msgs,
             "device": str(self.lstm.device), "modo": _modo_final, "conf": conf,
             "probs": {str(k): round(float(v),4) for k,v in top_p},
