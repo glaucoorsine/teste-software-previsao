@@ -107,8 +107,26 @@ def extrair(eventos: List[dict]) -> Tuple[List[int], List[int], List[List[dict]]
                     x = int(t["x"])
                 except (TypeError, ValueError):
                     pass
-            if "lucky" in t and isinstance(t["lucky"], list):
-                luck = [d for d in t["lucky"] if isinstance(d, dict)]
+            # O MEGA FIRE GRAVA `fire_nums`, NAO `lucky`.
+            #
+            # Esta funcao lia so `lucky`, entao para o Cacador toda rodada da
+            # Mega Fire chegava VAZIA -- mesmo com numeros e multiplicadores
+            # gravados no buffer. Nao era defeito da formula dele: o dado
+            # morria aqui, uma funcao antes de ser usado. Era o
+            # "[Multiplicador] mega_fire: sem palpite (254 rodadas lidas)".
+            for _chave in ("lucky", "fire_nums"):
+                if _chave in t and isinstance(t[_chave], list):
+                    luck = luck + [d for d in t[_chave] if isinstance(d, dict)]
+            # o multiplicador que BATEU tambem pode estar dentro da lista,
+            # marcado no proprio numero sorteado
+            if not x and luck:
+                for _d in luck:
+                    try:
+                        if int(_d.get("n")) == int(v) and _d.get("x"):
+                            x = int(_d["x"])
+                            break
+                    except (TypeError, ValueError):
+                        pass
         batido.append(x)
         rodada.append(luck)
     return nums, batido, rodada

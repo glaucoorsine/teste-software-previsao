@@ -13,11 +13,21 @@ from time_utils import canonical_ts, event_key, sort_key_ts
 
 ROULETTE = {str(i) for i in range(37)}  # 0..36
 CT = {"1", "2", "5", "10", "CoinFlip", "CashHunt", "Pachinko", "CrazyBonus"}
+# CRAZY TIME A NAO ESTAVA AQUI, E ISSO APAGAVA A MESA INTEIRA.
+#
+# `_purge_invalid` faz `DOMAIN.get(dataset_id, set())`. Sem a chave, o dominio
+# vinha VAZIO e o filtro descartava todos os eventos -- inclusive um buffer
+# offline valido ja salvo em disco. Ou seja: mesmo com a captura funcionando
+# perfeitamente, o Crazy Time A nunca teria historico.
+#
+# Eu passei semanas atras do endereco da API sem ver que o dado, se chegasse,
+# seria jogado fora tres funcoes depois.
 DOMAIN = {
     "mega_fire": ROULETTE,
     "lightning": ROULETTE,
     "immersive": ROULETTE,
     "crazy_time": CT,
+    "crazy_time_a": CT,
 }
 
 def _lock_path(path: Path) -> Path:

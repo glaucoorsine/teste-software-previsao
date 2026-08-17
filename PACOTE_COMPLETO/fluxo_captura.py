@@ -97,6 +97,10 @@ FONTES_OK = ROOT / "Logs" / "fontes_que_funcionam.json"
 # quando cada mesa procurou endereco pela ultima vez (a procura e cara)
 _ULTIMA_PROCURA: dict = {}
 
+# a assinatura da ultima pagina HTML lida, por mesa -- e ela que diz se houve
+# giro novo numa fonte que nao tem horario nem identificador
+_ultimo_head_html: dict = {}
+
 
 def _lembrar_fonte(dataset_id: str, url: str) -> None:
     """Grava o endereco que respondeu, para nao procurar de novo."""
@@ -671,8 +675,26 @@ def capturar(
         # APIs falharam -- e antes disso a mesa simplesmente morria.
         _html = capturar_html(dataset_id)
         if _html:
-            return {"rows": _html, "novo_head": True,
-                    "head_id": None, "err": None, "mults": [],
+            # O MESMO "5" VIRAVA GIRO NOVO A CADA CONSULTA.
+            #
+            # A pagina do gamblingcounting nao traz horario nem identificador.
+            # Este trecho declarava `novo_head=True` sempre e `head_id=None`,
+            # e a tela, sem horario para usar de chave, inventava `5#s1`,
+            # `5#s2`, `5#s3`... com um contador que so cresce. Resultado: a
+            # mesma leitura estatica era contada como giro novo em toda volta,
+            # e o Crazy Time ficava repetindo o mesmo simbolo -- que foi
+            # exatamente o que ele viu.
+            #
+            # A pagina nao tem identificador, mas TEM conteudo: a sequencia dos
+            # ultimos resultados. Se ela nao mudou, nao houve giro. O head_id
+            # passa a ser a impressao digital dessa sequencia.
+            import hashlib as _hl
+            _assinatura = "|".join(str(r.get("n")) for r in _html[:12])
+            _hid = "html:" + _hl.sha1(_assinatura.encode("utf-8")).hexdigest()[:16]
+            _antes = _ultimo_head_html.get(dataset_id)
+            _ultimo_head_html[dataset_id] = _hid
+            return {"rows": _html, "novo_head": _hid != _antes,
+                    "head_id": _hid, "err": None, "mults": [],
                     "fonte": "gamblingcounting"}
         # A API caiu -- mas o historico ja coletado esta salvo em disco.
         # Devolver rows=[] fazia a tela apagar e o motor parar de analisar por
@@ -770,6 +792,17 @@ def capturar(
         for t in e.get("tags") or []:
             if "x" in t:
                 mults.append({"n": e.get("n"), "x": t["x"]})
+            # `mults` so era montado das tags "x" -- o anuncio inteiro, que
+            # vive em `lucky` e `fire_nums`, nao chegava a interface nem as
+            # analises. Na Mega Fire isso zerava o canal do multiplicador.
+            for _ch in ("lucky", "fire_nums"):
+                for _it in (t.get(_ch) or []):
+                    if isinstance(_it, dict) and _it.get("x"):
+                        try:
+                            mults.append({"n": int(_it.get("n")),
+                                          "x": int(_it["x"])})
+                        except (TypeError, ValueError):
+                            pass
 
     head_id = rows[0]["event_id"] if rows else None
 

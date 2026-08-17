@@ -58,6 +58,7 @@ TESTES = [
     ("test_notificador.py", "NTFY_OK", 200, 4),
     ("test_fluxo_captura.py", "FLUXO_TESTES_OK", 300, 1),
     ("test_descobridor.py", "DESCOBRIDOR_OK", 300, 2),
+    ("test_quatro_falhas.py", "QUATRO_FALHAS_OK", 300, 2),
     ("test_honestidade_gates.py", "HONEST_TESTS_OK", 300, 1),
     ("test_coletor_sites.py", "COLETOR_OK", 300, 1),
     ("teste_a6_ruido.py", None, 900, 1),

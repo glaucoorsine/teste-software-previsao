@@ -558,6 +558,7 @@ class PainelMesa(ctk.CTkFrame):
         self.soma_p = 0.0
         self.ultimo_resultado = None
         self.seq_giro = 0
+        self.head_corrente = ""      # identificador da captura em julgamento
         self.ocupado = False
         self.lendo_academia = False
         self.fontes_da_janela = {}
@@ -805,10 +806,27 @@ class PainelMesa(ctk.CTkFrame):
         if ts:
             chave = str(ts)
         else:
-            # Sem horário, dois giros iguais colidiriam e o segundo sumiria:
-            # a janela deixaria de andar. O contador dá chave própria a cada um.
-            self.seq_giro += 1
-            chave = f"{n}#s{self.seq_giro}"
+            # SEM HORÁRIO, O CONTADOR TRANSFORMAVA REPETIÇÃO EM GIRO NOVO.
+            #
+            # O contador dava chave própria a cada leitura -- inclusive quando
+            # era a MESMA leitura relida. Com a fonte HTML, que não traz
+            # horário, o mesmo "5" da página virava 5#s1, 5#s2, 5#s3... e a
+            # mesa contava um giro novo a cada volta da captura.
+            #
+            # A chave passa a vir do CONTEÚDO: o valor e a posição dele na
+            # sequência devolvida. Repetição relida cai na mesma chave e é
+            # ignorada; giro realmente novo empurra a sequência e muda a
+            # posição de todos, então entra.
+            # A chave vem do IDENTIFICADOR DA CAPTURA, não de um contador.
+            # `validar` só é alcançado quando a captura disse que houve giro
+            # novo, e agora até a fonte HTML tem identificador próprio (a
+            # impressão digital da sequência). Se por algum caminho o mesmo
+            # head chegar duas vezes, a chave repete e o giro é ignorado --
+            # que é o comportamento certo. O contador antigo garantia o
+            # contrário: chave nova para leitura repetida.
+            chave = f"{n}#{getattr(self, 'head_corrente', '') or self.seq_giro}"
+            if not getattr(self, "head_corrente", ""):
+                self.seq_giro += 1
         if chave in self.vistos:
             return
         self.vistos.add(chave)
@@ -947,6 +965,7 @@ class PainelMesa(ctk.CTkFrame):
                 return
 
             self._ver_publico()
+            self.head_corrente = str(cap.get("head_id") or "")
             self.validar(rows[0])
             if self.escolhas and self.restantes > 0:
                 salvar_ciclo_ativo(self.jogo, self.escolhas, self.restantes,
