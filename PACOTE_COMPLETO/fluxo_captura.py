@@ -26,10 +26,18 @@ API_BY_GAME = {
     "mega_fire": "https://api-cs.casino.org/svc-evolution-game-events/api/megafireblazeroulette",
     "lightning": "https://api-cs.casino.org/svc-evolution-game-events/api/lightningroulette",
     "crazy_time": "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime",
-    # Crazy Time A e uma segunda mesa do mesmo jogo. O nome no endpoint nao
-    # da para adivinhar daqui, entao a lista abaixo e tentada em ordem e a
-    # primeira que responder fica valendo.
-    "crazy_time_a": "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimea",
+    # O NOME DA MESA VEIO DA PAGINA QUE ELE MANDOU.
+    #
+    #     "coloque https://www.casino.org/casinoscores/pt-br/crazy-time-a/"
+    #
+    # Eu vinha chutando grafias -- `crazytimea`, `crazytime-a`, `crazytimeA` --
+    # e levando 404 em todas. O endereco dele resolve isso sem chute: as
+    # paginas do casinoscores e os endpoints do svc-evolution usam O MESMO
+    # slug, e a pagina dele diz qual e'. E `crazy-time-a`, com hifens.
+    #
+    # Nao e adivinhacao minha: e o nome que o proprio provedor usa na URL
+    # publica da mesa.
+    "crazy_time_a": "https://api-cs.casino.org/svc-evolution-game-events/api/crazy-time-a",
 }
 
 # Candidatos alternativos por mesa, tentados quando o principal nao responde.
@@ -76,9 +84,12 @@ API_ALTERNATIVAS = {
         "https://api.trackpotapi.com/api/trackersino/crazytime/history",
     ],
     "crazy_time_a": [
+        # o slug da pagina dele, tambem no formato de consulta que algumas
+        # rotas do casinoscores usam
+        "https://api-cs.casino.org/svc-evolution-game-events/api/crazy-time-a",
+        "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimea",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime-a",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimeA",
-        "https://api-cs.casino.org/svc-evolution-game-events/api/crazy-time-a",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime2",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimeatable",
         "https://api.trackpotapi.com/api/trackersino/crazy-time-a/history",
@@ -293,29 +304,70 @@ def fonte_lembrada(dataset_id: str):
 # Agora sao terceira fonte de cada mesa. Ficam DEPOIS das duas de API porque
 # sao pagina HTML (mais fragil, e ja levou 403 de Cloudflare), mas existir como
 # reserva e melhor que a mesa morrer com tres fontes disponiveis.
+# AGORA E UMA LISTA POR MESA, E A PAGINA DELE VEM PRIMEIRO.
+#
+# Era um endereco so por mesa. Com um endereco so, uma fonte fora do ar (ou
+# atras de Cloudflare, que ja aconteceu aqui com 403) mata a mesa inteira -- e
+# foi o caso da Crazy Time A, que levava 404 na API e nao tinha para onde cair.
+#
+# O casinoscores e a pagina oficial do provedor, entao vem na frente do
+# gamblingcounting, que e' agregador. As duas continuam valendo: a segunda so
+# e' consultada se a primeira nao devolver giro.
 FONTES_HTML = {
-    "lightning": "https://gamblingcounting.com/lightning-roulette",
-    "mega_fire": "https://gamblingcounting.com/roulette",
-    "crazy_time": "https://gamblingcounting.com/crazy-time",
-    "crazy_time_a": "https://gamblingcounting.com/crazy-time-a",
+    "lightning": [
+        "https://www.casino.org/casinoscores/pt-br/lightning-roulette/",
+        "https://gamblingcounting.com/lightning-roulette",
+    ],
+    "mega_fire": [
+        "https://www.casino.org/casinoscores/pt-br/mega-fire-blaze-roulette/",
+        "https://gamblingcounting.com/roulette",
+    ],
+    "crazy_time": [
+        "https://www.casino.org/casinoscores/pt-br/crazy-time/",
+        "https://gamblingcounting.com/crazy-time",
+    ],
+    "crazy_time_a": [
+        # o endereco que ele mandou, textual
+        "https://www.casino.org/casinoscores/pt-br/crazy-time-a/",
+        "https://gamblingcounting.com/crazy-time-a",
+    ],
 }
 
 
+def enderecos_html(dataset_id: str) -> List[str]:
+    """As paginas desta mesa, na ordem de tentativa."""
+    v = FONTES_HTML.get(dataset_id)
+    if not v:
+        return []
+    return [v] if isinstance(v, str) else list(v)
+
+
 def capturar_html(dataset_id: str) -> List[dict]:
-    """Os ultimos resultados pela pagina do gamblingcounting.
+    """Os ultimos resultados pelas paginas publicas da mesa.
+
+    Tenta cada endereco em ordem e fica com o primeiro que devolver giro. O
+    leitor e o mesmo para qualquer site: ele procura, no HTML, um bloco JSON
+    com uma lista de resultados e CONFERE cada valor contra o dominio da mesa.
+    E isso que permite trocar de site sem trocar de parser -- e que impede um
+    array qualquer da pagina de virar historico.
 
     Devolve no mesmo formato das outras fontes, para o resto do software nao
     precisar saber de onde veio.
     """
-    url = FONTES_HTML.get(dataset_id)
-    if not url:
+    urls = enderecos_html(dataset_id)
+    if not urls:
         return []
-    try:
-        from fonte_gamblingcounting import coletar
-        d = coletar(dataset_id) or {}
-    except Exception:
-        return []
-    if d.get("erro"):
+    d: Dict[str, Any] = {}
+    for _u in urls:
+        try:
+            from fonte_gamblingcounting import coletar_url
+            d = coletar_url(_u, dataset_id) or {}
+        except Exception as _e:
+            engolido("fluxo_captura/capturar_html", _e)
+            continue
+        if d.get("resultados"):
+            break
+    if not d or d.get("erro") and not d.get("resultados"):
         return []
     saida = []
     for v in (d.get("resultados") or [])[:200]:

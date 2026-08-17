@@ -179,11 +179,19 @@ def test_links_dele_sao_fonte_de_captura():
     assert len(F.FONTES_HTML) == 4, F.FONTES_HTML
     for mesa in ("lightning", "mega_fire", "crazy_time",
                  "crazy_time_a"):
-        assert mesa in F.FONTES_HTML, mesa
-        assert "gamblingcounting.com" in F.FONTES_HTML[mesa]
+        ends = F.enderecos_html(mesa)
+        assert len(ends) >= 2, (mesa, ends)
+        # a pagina do PROVEDOR vem antes do agregador: se as duas responderem,
+        # a que vale e a oficial
+        assert "casino.org/casinoscores" in ends[0], (mesa, ends)
+        assert any("gamblingcounting.com" in u for u in ends), (mesa, ends)
+    # o endereco que ele mandou, textual
+    assert ("https://www.casino.org/casinoscores/pt-br/crazy-time-a/"
+            in F.enderecos_html("crazy_time_a")), F.enderecos_html("crazy_time_a")
     # mesa desconhecida nao inventa fonte
+    assert F.enderecos_html("mesa_que_nao_existe") == []
     assert F.capturar_html("mesa_que_nao_existe") == []
-    print("  ok   os quatro links dele sao fonte de captura, nao so contador")
+    print("  ok   os links dele sao fonte de captura, com o oficial na frente")
 
 
 def test_crazy_time_a_viva():
@@ -200,6 +208,12 @@ def test_crazy_time_a_viva():
     ends = F.enderecos_para("crazy_time_a")
     assert len(ends) >= 4, ends
     assert F.API_BY_GAME["crazy_time_a"] in ends
+    # O SLUG VEM DA PAGINA QUE ELE MANDOU, nao de chute meu.
+    # As grafias que eu inventei (crazytimea, crazytimeA, crazytime2) deram 404
+    # em todas. `crazy-time-a` e o nome que o provedor usa na URL publica.
+    assert F.API_BY_GAME["crazy_time_a"].endswith("/crazy-time-a"), \
+        F.API_BY_GAME["crazy_time_a"]
+    assert ends[0].endswith("/crazy-time-a"), ends[:2]
     assert any("trackpotapi" in u for u in ends), ends
     assert F.enderecos_para("mesa_inexistente") == []
 

@@ -182,10 +182,36 @@ def extrair_resultados(html: str, jogo: str, limite: int = 200) -> List[str]:
 
 
 def coletar(jogo: str) -> Dict[str, Any]:
-    """Jogadores online e últimos resultados desta mesa."""
+    """Jogadores online e últimos resultados desta mesa, na página padrão."""
     url = PAGINAS.get(jogo)
     if not url:
         return {"jogo": jogo, "erro": "mesa sem página neste site"}
+    return coletar_url(url, jogo)
+
+
+def coletar_url(url: str, jogo: str) -> Dict[str, Any]:
+    """A mesma leitura, de QUALQUER página.
+
+    O CASINOSCORES É A PÁGINA DO PROVEDOR, E EU SÓ LIA O AGREGADOR.
+    ---------------------------------------------------------------
+    Este arquivo estava amarrado ao gamblingcounting: `PAGINAS` era um mapa
+    fixo e `coletar()` só sabia ler de lá. Quando ele mandou
+
+        https://www.casino.org/casinoscores/pt-br/crazy-time-a/
+
+    não havia como usar — a função não aceitava endereço, só nome de mesa.
+
+    E não precisava de parser novo: `extrair_resultados` não procura o layout
+    do site, procura um bloco JSON com lista de resultados e confere cada
+    valor contra o domínio da mesa. Isso funciona em qualquer página que
+    embuta o histórico, e recusa o que não for daquela mesa.
+
+    A separação também importa para o número de jogadores: `extrair_jogadores`
+    tem o formato do gamblingcounting, e num site diferente ele devolve None
+    em vez de inventar — que é o certo.
+    """
+    if not url:
+        return {"jogo": jogo, "erro": "sem endereço"}
     if requests is None:
         return {"jogo": jogo, "erro": "biblioteca requests ausente"}
     try:
@@ -204,11 +230,14 @@ def coletar(jogo: str) -> Dict[str, Any]:
     resultados = extrair_resultados(html, jogo)
     pico = PICO.get(jogo)
     return {
-        "jogo": jogo, "jogadores": jogadores, "resultados": resultados,
+        "jogo": jogo, "url": url,
+        "jogadores": jogadores, "resultados": resultados,
         "n_resultados": len(resultados),
         "pico": pico,
         "mesa_cheia": (jogadores >= pico) if (jogadores and pico) else None,
-        "erro": None,
+        # página que respondeu 200 mas sem histórico reconhecível NÃO é
+        # sucesso: quem chamou precisa saber para tentar a próxima
+        "erro": None if resultados else "página sem histórico desta mesa",
     }
 
 
