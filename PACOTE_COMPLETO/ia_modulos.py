@@ -2888,7 +2888,8 @@ class PipelinePerceptivo:
             try:
                 from NUCLEO import situacao as _sit
                 _rs = _sit.ler(linhas, self.n_classes,
-                               publico_agora=jogadores, k_alvos=self.k_alvos)
+                               publico_agora=jogadores, k_alvos=self.k_alvos,
+                               jogo=self.jogo)
                 for _l in _sit.resumo(_rs):
                     msgs.append(_l)
                 if _rs.get("fala") and _rs.get("numeros"):
@@ -2904,6 +2905,34 @@ class PipelinePerceptivo:
                                      "nums": _nums_s,
                                      "peso": round(_pk, 3)})
                     self._situacao = _rs
+                # ── O SEMAFORO: "e bom momento?", com os porques ──────────
+                #
+                #   "a ia tem que saber, olha aqui e um momento bom por isso por
+                #    isso por isso, ai ela preve e da sinal verde. senao ela fica
+                #    dando sinal e eu nunca saberei se e bom momento ou nao"
+                #
+                # Uma tela que sempre mostra numero nao distingue "achei algo" de
+                # "nao achei nada e mostrei o melhor que tinha". Continua
+                # prevendo -- ele pediu isso tambem -- mas agora DIZ.
+                #
+                # E a regra que impede virar astrologia: "mesa cheia" so e motivo
+                # se, NESTA mesa, o publico tiver separado acerto de erro na
+                # medicao. Motivo sem medida entra como observacao, nao razao.
+                from NUCLEO import semaforo as _sem
+                try:
+                    from publico_mesa import ANCORAS as _ANC
+                    _pico = (_ANC.get(self.jogo) or {}).get("alto")
+                except Exception:
+                    _pico = None
+                _sm = _sem.avaliar(
+                    situacao=_rs, publico=jogadores, pico_publico=_pico,
+                    ritmo_agora=(_rs.get("pagou") if _rs.get("fala") else None),
+                    ritmo_normal=_rs.get("pagou_geral"),
+                    ultimas_sugestoes=list(getattr(self, "_ult_sugestoes", [])),
+                    placar_recente=getattr(self, "_placar_recente", None))
+                for _l in _sem.resumo(_sm):
+                    msgs.append(_l)
+                self._semaforo = _sm
             except Exception as _e:
                 msgs.append(f"[Situação] {type(_e).__name__}: {_e}")
 
@@ -3551,6 +3580,10 @@ class PipelinePerceptivo:
         # isso contra k/37 (que é a chance de UM giro) infla tudo: com 7
         # números em 3 giros o acaso já é 46,5%, não 18,9%. Um placar de 54,5%
         # lido contra 18,9% pareceria 2,9x de vantagem quando é 1,17x.
+        # guarda a sugestao desta volta para a proxima poder ver repeticao
+        _uh = list(getattr(self, "_ult_sugestoes", []))
+        _uh.append([str(x) for x in (pad_ui or [])])
+        self._ult_sugestoes = _uh[-12:]
         _k = len(pad_ui) or self.k_alvos
         _j = max(1, int(janela or 1))
         _acaso_k = 1.0 - (1.0 - _k / max(1, self.n_classes)) ** _j
@@ -3563,6 +3596,11 @@ class PipelinePerceptivo:
         return {
             "taxa_acerto": _taxa_acerto, "acertos_aval": _ac, "erros_aval": _er,
             "acaso_k": _acaso_k,
+            # historico curto das sugestoes, para o semaforo saber se esta
+            # repetindo demais -- ele perguntou exatamente isso
+            "semaforo": getattr(self, "_semaforo", None),
+            # (o historico e alimentado logo abaixo, depois de pad_ui existir)
+            "situacao": getattr(self, "_situacao", None),
             "pad5": pad_ui, "anti5": [], "janela": janela, "msgs": msgs,
             "device": str(self.lstm.device), "modo": _modo_final, "conf": conf,
             "probs": {str(k): round(float(v),4) for k,v in top_p},

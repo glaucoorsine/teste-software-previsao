@@ -200,6 +200,142 @@ for d in diz[:3]:
 hip = next((m for m in msgs if m.startswith("[Hipóteses]")), "")
 checa("SITUACAO" in hip, "e vota junto das outras fontes", hip[:90])
 
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n[7] a MESA ensina quanto cada eixo vale — o peso não é meu")
+
+# Ele pegou a incoerência: eu dizia "eixos, não regras minhas" e logo abaixo
+# decretava hora=1.0, repeticao=0.6. O peso É a regra.
+#
+# Aqui a plateia é PERSISTENTE (em blocos), como na vida real -- e ela decide o
+# prêmio. O software tem de descobrir isso sozinho.
+from NUCLEO import forca_dos_eixos as FE  # noqa: E402
+
+
+def mesa_publico_manda(semente=5, giros=700):
+    rnd = random.Random(semente)
+    linhas, pub, gente = [], {}, 200
+    for i in range(giros):
+        if i % 40 == 0:
+            gente = rnd.choice([180, 1300])
+        hora = (i // 25) % 24
+        cheia = gente > 800
+        saiu = (rnd.choice(SETOR) if (cheia and rnd.random() < 0.5)
+                else rnd.randrange(37))
+        paga = rnd.random() < (0.60 if cheia else 0.08)
+        fogo = [{"n": n, "x": (100 if (n == saiu and paga) else None)}
+                for n in rnd.sample(SETOR + [rnd.randrange(37)], 4)]
+        linhas.append({"n": saiu,
+                       "settled": f"2026-08-{1+i//96:02d}T{hora:02d}:{i%60:02d}:00Z",
+                       "tags": [{"lucky": fogo}], "_g": gente})
+    linhas.reverse()
+    for i, l in enumerate(linhas):
+        pub[i] = l["_g"]
+    return linhas, pub
+
+
+ln7, pb7 = mesa_publico_manda()
+r7 = S.ler(ln7, 37, publico_por_giro=pb7, publico_agora=pb7.get(0),
+           k_alvos=6, jogo="_teste_eixos")
+med = r7.get("medida_eixos") or {}
+det = med.get("detalhe") or {}
+checa(bool(med.get("aprendeu")), "a mesa ensinou algum peso", med.get("aprendeu"))
+for l in FE.resumo("_teste_eixos", med):
+    print(f"       {l[:112]}")
+dp = (det.get("publico") or {})
+checa((dp.get("d") or 0) > 0.8,
+      "e o PÚBLICO aparece como eixo forte, porque nesta mesa ele manda",
+      dp.get("d"))
+checa((dp.get("peso") or 0) > 1.5, "com peso alto, não o 1.0 que eu decretava",
+      dp.get("peso"))
+checa((dp.get("media_pagou") or 0) > (dp.get("media_nao") or 0),
+      "e diz a direção: paga mais com mesa cheia",
+      (dp.get("media_pagou"), dp.get("media_nao")))
+
+# amostra pequena não aprende nada -- peso neutro e diz que é neutro
+curto7, pc7 = mesa_publico_manda(7, giros=80)
+m2 = FE.medir(S.Memoria(curto7, pc7).momentos, curto7, S._mult_do_giro)
+checa(all(v.get("peso") == 1.0 for v in (m2.get("detalhe") or {}).values()),
+      "com pouca amostra, todo eixo fica no peso neutro",
+      {k: v.get("peso") for k, v in (m2.get("detalhe") or {}).items()})
+checa(not m2.get("aprendeu"), "e declara que NÃO aprendeu")
+
+# o peso muda a busca de verdade
+d_neutro = S.distancia(S.descrever(ln7, 0, pb7), S.descrever(ln7, 200, pb7))
+d_apren = S.distancia(S.descrever(ln7, 0, pb7), S.descrever(ln7, 200, pb7),
+                      pesos=med.get("pesos"))
+checa(d_neutro is not None and d_apren is not None and
+      abs(d_neutro - d_apren) > 1e-6,
+      "e o peso aprendido muda a distância (senão seria enfeite)",
+      (d_neutro, d_apren))
+
+# ─────────────────────────────────────────────────────────────────────────────
+print("\n[8] o SEMÁFORO: é bom momento? e o aviso só no verde")
+
+from NUCLEO import semaforo as SM  # noqa: E402
+
+_forte = {"detalhe": {"publico": {"d": 1.69, "media_pagou": 1263,
+                                  "media_nao": 457},
+                      "ritmo_mult": {"d": 0.94}}}
+_fraco = {"detalhe": {"publico": {"d": 0.05, "media_pagou": 700,
+                                  "media_nao": 690}}}
+
+verde = SM.avaliar(
+    situacao={"fala": True, "n": 40, "razao": 2.1, "lift_mult": 2.4,
+              "pagou": .18, "pagou_geral": .05, "medida_eixos": _forte},
+    publico=1300, pico_publico=800, ritmo_agora=.18, ritmo_normal=.05)
+checa(verde["cor"] == SM.VERDE, "mesa cheia + prêmio em rajada = VERDE",
+      verde["cor"])
+checa(verde["avisar"], "e o aviso sai")
+checa(any("público separa" in m for m in verde["motivos"]),
+      "e o motivo cita a MEDIDA que o autoriza", verde["motivos"][:1])
+
+# A REGRA CENTRAL: mesa cheia só é razão se o público separar NESTA mesa.
+igual = SM.avaliar(
+    situacao={"fala": True, "n": 40, "razao": 1.0, "lift_mult": 1.0,
+              "pagou": .05, "pagou_geral": .05, "medida_eixos": _fraco},
+    publico=1300, pico_publico=800, ritmo_agora=.05, ritmo_normal=.05)
+checa(igual["cor"] != SM.VERDE,
+      "mesa cheia SEM medida que separe NÃO dá verde (isso é o que impede "
+      "virar astrologia)", igual["cor"])
+checa(not igual["avisar"], "e o celular fica calado")
+checa(any("separou" in o.lower() for o in igual["observacoes"]),
+      "mas o público aparece como observação, não é escondido",
+      igual["observacoes"][:1])
+
+ruim = SM.avaliar(
+    situacao={"fala": True, "n": 40, "razao": 0.7, "lift_mult": 0.5,
+              "pagou": .02, "pagou_geral": .05, "medida_eixos": _forte},
+    publico=200, pico_publico=800,
+    placar_recente={"n": 22, "ok": 3, "acaso": 0.30})
+checa(ruim["cor"] == SM.VERMELHO, "abaixo do acaso = VERMELHO", ruim["cor"])
+checa(any("não servem para este momento" in a for a in ruim["autocritica"]),
+      "e a autocrítica diz o que fazer, não só que errou",
+      ruim["autocritica"][-1:])
+
+# "está repetindo demais? sim? porque? e mudar ou nao"
+rep = SM.avaliar(situacao={"fala": False, "nota": "só 4 momentos parecidos"},
+                 ultimas_sugestoes=[["5", "9"]] * 7)
+checa(rep["repeticao"]["repetiu"] >= SM.REPETE_DEMAIS,
+      "conta a repetição da sugestão", rep["repeticao"]["repetiu"])
+checa(bool(rep["repeticao"]["porque"]), "diz POR QUE está repetindo",
+      rep["repeticao"]["porque"][:60])
+checa(rep["repeticao"]["mudar"] is True,
+      "e opina se deve mudar a lista")
+# repetição por mesa travada é legítima pelo critério dele, e não pede mudança
+variando = SM.avaliar(situacao={"fala": False, "nota": "x"},
+                      ultimas_sugestoes=[["1"], ["2"], ["3"], ["4"], ["5", "9"],
+                                         ["5", "9"], ["5", "9"], ["5", "9"],
+                                         ["5", "9"]])
+checa(variando["repeticao"]["mudar"] is False,
+      "mas se a lista variou antes, insistir no atrasado é o critério DELE")
+
+# o aviso só no verde, e a CENTRAL respeita
+_ce2 = (RAIZ / "CENTRAL.py").read_text(encoding="utf-8")
+checa("_NaoAvisar" in _ce2 and 'raise _NaoAvisar()' in _ce2,
+      "a CENTRAL tranca a notificação fora do verde")
+checa("SEM_AVISO cor=" in _ce2,
+      "e registra no log que ficou calada, com a cor e o motivo")
+
 print()
 if falhas:
     print("FALHAS:", falhas)

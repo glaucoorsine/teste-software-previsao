@@ -47,6 +47,10 @@ from worker_process import process_cerebro
 from tela_segura import bombear, depois  # after que nao quebra ao fechar a janela
 from fila_cerebro import novo_pedido as _novo_pedido, resposta_de as _resposta_de
 
+class _NaoAvisar(Exception):
+    """O momento nao esta verde. Nao e erro -- e a regra dele."""
+
+
 RAIZ = Path(__file__).resolve().parent
 PASTA = RAIZ / "Logs"
 LOG = PASTA / "central_log.txt"
@@ -1443,7 +1447,29 @@ class PainelMesa(ctk.CTkFrame):
             # os giros na janela anterior em vez de abrir outra.
             registrar(f"{self.jogo} NOVA_JANELA {self.escolhas} {modo}"
                       + (" REPETICAO" if _repetiu else ""))
+            # O AVISO NO CELULAR SO SAI NO VERDE.
+            #
+            #   "so deve ser enviado o sinal para o ntfy quando for verde, pode
+            #    ficar prevendo, mas so envia quando for verde (momento bom)"
+            #
+            # E o pedido mais util da lista: aviso que chega sempre nao informa
+            # nada -- ele para de olhar. A previsao continua na tela em qualquer
+            # cor; o celular so toca quando a mesa reune o que ELA mediu que
+            # importa.
+            _sem = (sug or {}).get("semaforo") or {}
+            _cor = _sem.get("cor")
+            if _cor and not _sem.get("avisar"):
+                registrar(f"{self.jogo} SEM_AVISO cor={_cor} "
+                          f"— previsao na tela, celular calado. "
+                          f"{'; '.join((_sem.get('contra') or [])[:2])[:120]}")
+            # `if`, e nao `raise`: um StopIteration aqui cairia no
+            # `except Exception` la embaixo e o log diria "notificacao: momento
+            # nao verde" -- como se fosse erro. Nao e erro, e a regra dele
+            # funcionando.
+            _pode_avisar = (not _cor) or bool(_sem.get("avisar"))
             try:
+                if not _pode_avisar:
+                    raise _NaoAvisar()
                 from notificador import notificar_sinal
                 tx = sug.get("taxa_acerto")
                 ac = sug.get("acaso_k")
@@ -1457,6 +1483,8 @@ class PainelMesa(ctk.CTkFrame):
                                 publico=self._publico_curto(),
                                 multiplicador=self._texto_fogo(),
                                 log_fn=registrar)
+            except _NaoAvisar:
+                pass                      # momento nao verde: silencio proposital
             except Exception as e:
                 registrar(f"{self.jogo} notificacao: {e}")
         elif not pad and not self.escolhas:

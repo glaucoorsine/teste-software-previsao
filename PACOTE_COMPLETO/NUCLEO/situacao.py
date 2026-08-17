@@ -219,6 +219,20 @@ def _dif_circular(a: float, b: float, volta: float = 24.0) -> float:
     return min(d, volta - d)
 
 
+# O PESO ERA MEU, E ELE PEGOU A INCOERENCIA.
+#
+# Eu escrevi "hora e publico entram como EIXOS, nao como regras minhas" -- e
+# logo abaixo decretei hora=1.0 e repeticao=0.6. O peso E a regra. Decidir
+# quanto cada coisa importa era exatamente o que eu dizia nao estar fazendo.
+#
+# E o estrago nao e filosofico: se publico separa muito nesta mesa (ele mediu ao
+# vivo) e eu dou 1.0 igual a tudo, o eixo forte fica DILUIDO entre os fracos. A
+# parecenca passa a ser dominada por eixos que nao importam, e os "momentos
+# parecidos" que a busca acha nao sao parecidos no que conta.
+#
+# Agora o peso e aprendido da propria mesa (NUCLEO/forca_dos_eixos.py): quanto
+# cada eixo separa o giro que pagou do que nao pagou. Estes valores ficam so
+# como ponto de partida, para a primeira volta ter de onde sair.
 PESOS_EIXO = {
     "hora": 1.0,
     "publico": 1.0,
@@ -231,25 +245,27 @@ PESOS_EIXO = {
 
 
 def distancia(a: Momento, b: Momento,
-             escala_publico: float = 1.0) -> Optional[float]:
+             escala_publico: float = 1.0,
+             pesos: Optional[Dict[str, float]] = None) -> Optional[float]:
     """Quão diferentes são dois momentos. Menor é mais parecido.
 
     Eixo ausente nos dois é ignorado (não penaliza); ausente em um só também —
     comparar "sem informação" com "22h" produziria parecença falsa. É por isso
     que a conta divide pelo peso EFETIVAMENTE usado.
     """
+    W = pesos or PESOS_EIXO
     soma, peso = 0.0, 0.0
 
     def par(nome, va, vb, norm):
         nonlocal soma, peso
         if va is None or vb is None:
             return
-        w = PESOS_EIXO[nome]
+        w = float(W.get(nome, PESOS_EIXO.get(nome, 1.0)))
         soma += w * min(1.0, abs(va - vb) / norm)
         peso += w
 
     if a.hora is not None and b.hora is not None:
-        w = PESOS_EIXO["hora"]
+        w = float(W.get("hora", PESOS_EIXO["hora"]))
         # 6 horas de diferença já é "outro momento do dia"
         soma += w * min(1.0, _dif_circular(a.hora, b.hora) / 6.0)
         peso += w
@@ -268,7 +284,9 @@ class Memoria:
     """O histórico descrito como sequência de momentos, pronto para consulta."""
 
     def __init__(self, linhas: Sequence[dict],
-                 publico_por_giro: Optional[Dict[int, float]] = None):
+                 publico_por_giro: Optional[Dict[int, float]] = None,
+                 pesos: Optional[Dict[str, float]] = None):
+        self.pesos = dict(pesos) if pesos else None
         self.linhas = list(linhas or [])
         self.momentos: List[Momento] = []
         for i in range(len(self.linhas)):
@@ -292,7 +310,7 @@ class Memoria:
         for m in self.momentos:
             if m.i <= alvo.i + SEPARACAO:
                 continue                      # é o próprio momento, ou colado
-            d = distancia(alvo, m, self.escala_publico)
+            d = distancia(alvo, m, self.escala_publico, self.pesos)
             if d is None:
                 continue
             cands.append((d, m))
@@ -345,7 +363,7 @@ class Memoria:
 def ler(linhas: Sequence[dict], n_classes: int,
         publico_por_giro: Optional[Dict[int, float]] = None,
         publico_agora: Optional[float] = None,
-        k_alvos: int = 6) -> Dict[str, Any]:
+        k_alvos: int = 6, jogo: str = "") -> Dict[str, Any]:
     """A situação de agora, os momentos parecidos, e o que seguiu.
 
     Esta é a função que o motor chama. Ela não decide nada sozinha: devolve
@@ -355,7 +373,28 @@ def ler(linhas: Sequence[dict], n_classes: int,
     if not linhas or len(linhas) < 60:
         return {"fala": False, "nota": f"histórico curto ({len(linhas or [])})"}
 
-    mem = Memoria(linhas, publico_por_giro)
+    # OS PESOS VEM DA MESA, NAO DE MIM.
+    #
+    # Primeiro descreve os momentos com peso neutro, mede quanto cada eixo
+    # separa acerto de erro NESTA mesa, e refaz a busca com o peso aprendido.
+    # Custa uma passada a mais e vale: e a diferenca entre "momentos parecidos"
+    # e "momentos parecidos NO QUE IMPORTA".
+    _pesos, _medida = None, None
+    try:
+        from . import forca_dos_eixos as FE
+        _base = Memoria(linhas, publico_por_giro)
+        if len(_base.momentos) >= 2 * FE.MIN_PARA_APRENDER:
+            _medida = FE.medir(_base.momentos, linhas, _mult_do_giro)
+            if _medida.get("aprendeu"):
+                _pesos = _medida["pesos"]
+                if jogo:
+                    FE.gravar(jogo, _medida)
+        if _pesos is None and jogo:
+            _pesos = FE.carregar(jogo)
+    except Exception:
+        _pesos, _medida = None, None
+
+    mem = Memoria(linhas, publico_por_giro, pesos=_pesos)
     if not mem.momentos:
         return {"fala": False, "nota": "não deu para descrever o momento"}
 
@@ -435,6 +474,7 @@ def ler(linhas: Sequence[dict], n_classes: int,
         "x_medio": depois["x_medio"],
         "anunciados_medio": depois["anunciados_medio"],
         "distancia_media": depois["distancia_media"],
+        "pesos_eixos": _pesos, "medida_eixos": _medida, "jogo": jogo,
     }
 
 
@@ -447,6 +487,12 @@ def resumo(r: Dict[str, Any]) -> List[str]:
          f"[Situação] {r['n']} momentos parecidos no histórico → "
          f"{' '.join(str(x) for x in r['numeros'])}  "
          f"({r['taxa']:.0%} contra acaso {r['acaso']:.0%} = {r['razao']:.2f}x)"]
+    if r.get("medida_eixos"):
+        try:
+            from . import forca_dos_eixos as FE
+            L.extend(FE.resumo(r.get("jogo") or "", r["medida_eixos"]))
+        except Exception:
+            pass
     if r.get("lift_mult"):
         seta = "acima" if r["lift_mult"] > 1.05 else (
             "abaixo" if r["lift_mult"] < 0.95 else "igual")
