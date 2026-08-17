@@ -62,6 +62,7 @@ TESTES = [
     ("test_cacador_decide.py", "CACADOR_DECIDE_OK", 900, 90),
     ("test_v121.py", "V121_OK", 900, 60),
     ("test_procedencia.py", "PROCEDENCIA_OK", 900, 120),
+    ("test_pagina_da_mesa.py", "PAGINA_MESA_OK", 300, 2),
     ("test_honestidade_gates.py", "HONEST_TESTS_OK", 300, 1),
     ("test_coletor_sites.py", "COLETOR_OK", 300, 1),
     ("teste_a6_ruido.py", None, 900, 1),

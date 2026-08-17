@@ -994,6 +994,38 @@ def capturar(
     import time as _t
     _fim = _t.time() + ORCAMENTO_VOLTA_S
     items, err = [], None
+
+    # A PAGINA DELE VEM PRIMEIRO QUANDO A MESA NAO TEM FONTE CONHECIDA.
+    #
+    #     "use este https://www.casino.org/casinoscores/pt-br/crazy-time-a/"
+    #
+    # Ele pediu duas vezes, e ele esta certo: se a mesa nunca conseguiu abrir
+    # por nenhum endereco (nada gravado em fontes_que_funcionam.json), insistir
+    # na minha lista de grafias e' gastar o orcamento da volta em 404 antes de
+    # olhar a unica fonte que ELE confirmou existir.
+    #
+    # Com fonte gravada, este atalho nao roda: ai a API conhecida e' mais
+    # rapida e mais rica (traz o anuncio de multiplicador, que a pagina nao
+    # traz). O atalho e para destravar mesa nova -- que e' o caso da Crazy
+    # Time A desde o comeco.
+    if not fonte_lembrada(dataset_id):
+        try:
+            from descobridor_pela_pagina import procurar as _proc
+            for _pag in enderecos_html(dataset_id):
+                if _t.time() >= _fim - 5:
+                    break
+                _r = _proc(_pag, str(dataset_id),
+                           registrar=lambda m: engolido("fluxo_captura/" + m,
+                                                        None))
+                if _r.get("api"):
+                    # a propria pagina disse onde busca; grava e usa
+                    _lembrar_fonte(dataset_id, _r["api"])
+                    candidatos = [_r["api"]] + [c for c in candidatos
+                                                if c != _r["api"]]
+                    break
+        except Exception as _e:
+            engolido("fluxo_captura/pagina_primeiro", _e)
+
     for _url in candidatos:
         if _t.time() >= _fim:
             err = err or "prazo da volta esgotado"
@@ -1022,7 +1054,30 @@ def capturar(
             # a procura custa dezenas de requisicoes: nao comeca sem tempo
             if _t.time() < _fim - 5 and _t.time() - _ultima > 600:
                 _ULTIMA_PROCURA[dataset_id] = _t.time()
-                _novo = _descobrir(str(dataset_id))
+                # PRIMEIRO PERGUNTA A PAGINA DA MESA, DEPOIS CHUTA GRAFIA.
+                #
+                # A pagina que ele mandou EXIBE os resultados, entao ela sabe de
+                # onde os tira. Ler o endereco dela e seguir uma referencia;
+                # gerar grafias e adivinhar. Eu venho adivinhando o nome da
+                # Crazy Time A ha versoes -- crazytimea, crazytime-a,
+                # crazytimeA, crazytime2, crazy-time-a -- e todas deram 404,
+                # sem eu poder testar nenhuma (o proxy daqui nega casino.org).
+                #
+                # A ordem certa e: evidencia primeiro, palpite depois.
+                _novo = None
+                try:
+                    from descobridor_pela_pagina import procurar as _proc
+                    for _pag in enderecos_html(dataset_id):
+                        _r = _proc(_pag, str(dataset_id),
+                                   registrar=lambda m: engolido(
+                                       "fluxo_captura/" + m, None))
+                        if _r.get("api"):
+                            _novo = _r["api"]
+                            break
+                except Exception as _e:
+                    engolido("fluxo_captura/descobrir_pela_pagina", _e)
+                if not _novo:
+                    _novo = _descobrir(str(dataset_id))
                 if _novo:
                     items, err = fetch_paginas(
                         _novo, HEADERS, page_size=page_size,

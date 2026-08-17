@@ -134,8 +134,77 @@ def _dominio(jogo: str) -> set:
         return {str(i) for i in range(37)}
 
 
+def _valores_validos(arr, dom, aliases) -> tuple:
+    """Quantos itens da lista são giros DESTA mesa. Devolve (valores, vistos)."""
+    saida, vistos = [], 0
+    for it in arr:
+        v = it
+        if isinstance(it, dict):
+            for c in ("result", "value", "number", "outcome", "sector",
+                      "wheelSector", "slotResult", "segment", "n"):
+                if it.get(c) is not None:
+                    v = it[c]
+                    break
+        if isinstance(v, (dict, list)):
+            vistos += 1
+            continue
+        vistos += 1
+        s = str(v).strip()
+        if not s:
+            continue
+        s = aliases.get(s.lower().replace(" ", "").replace("_", ""), s)
+        if s in dom:
+            saida.append(s)
+    return saida, vistos
+
+
+def _varrer(obj, dom, aliases, melhor, fundo=0):
+    """Procura a lista de giros em QUALQUER profundidade do JSON.
+
+    A BUSCA SÓ OLHAVA O PRIMEIRO NÍVEL, E A PÁGINA DELE É ANINHADA.
+    --------------------------------------------------------------
+    A versão anterior casava `"history": [...]` por expressão regular no texto
+    do HTML. Isso pega um JSON raso e perde o formato que as páginas modernas
+    usam de fato -- o casinoscores é um app React e guarda o estado assim:
+
+        __NEXT_DATA__ → props → pageProps → initialData → table → latestResults
+
+    Testado: com `latestResults` aninhado, a leitura devolvia `[]`. Ou seja, a
+    página que ele mandou seria lida como vazia, e a Crazy Time A continuaria
+    sem dados mesmo com o endereço certo.
+
+    Agora o JSON é percorrido inteiro e vale a MAIOR lista que passe no crivo de
+    domínio -- o nome da chave deixa de importar, o que também tira o problema
+    do `"data"` genérico: não é o nome que autoriza, é o conteúdo.
+    """
+    if fundo > 8:
+        return melhor
+    if isinstance(obj, list):
+        if len(obj) >= MIN_ITENS:
+            vals, vistos = _valores_validos(obj, dom, aliases)
+            if vistos and len(vals) / vistos >= FRACAO_VALIDA and len(vals) > len(melhor):
+                melhor = vals
+        for it in obj[:60]:
+            if isinstance(it, (dict, list)):
+                melhor = _varrer(it, dom, aliases, melhor, fundo + 1)
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            if isinstance(v, (dict, list)):
+                melhor = _varrer(v, dom, aliases, melhor, fundo + 1)
+    return melhor
+
+
+_BLOCOS = re.compile(r"[\[{]", re.S)
+
+
 def extrair_resultados(html: str, jogo: str, limite: int = 200) -> List[str]:
-    """Os últimos resultados, do mais novo para o mais velho."""
+    """Os últimos resultados, do mais novo para o mais velho.
+
+    Lê de duas formas, e fica com a melhor: os blocos JSON embutidos na página
+    (varridos até o fim, em qualquer profundidade) e, como reserva, o casamento
+    direto das chaves conhecidas. Em ambos, todo valor é conferido contra o
+    domínio da mesa -- é isso que impede um array de ids de virar histórico.
+    """
     if not html:
         return []
     dom = _dominio(jogo)
@@ -143,6 +212,23 @@ def extrair_resultados(html: str, jogo: str, limite: int = 200) -> List[str]:
                "pachinko": "Pachinko", "crazybonus": "CrazyBonus",
                "bonus": "CrazyBonus", "crazytime": "CrazyBonus"}
     melhor: List[str] = []
+
+    # 1) os JSON grandes embutidos (é onde o casinoscores guarda o estado)
+    for m in re.finditer(r"<script[^>]*>(.*?)</script>", html, re.S | re.I):
+        corpo = m.group(1).strip()
+        for inicio in (corpo.find("{"), corpo.find("[")):
+            if inicio < 0:
+                continue
+            try:
+                dados = json.loads(corpo[inicio:])
+            except ValueError:
+                continue
+            melhor = _varrer(dados, dom, aliases, melhor)
+            break
+    if melhor:
+        return melhor[:limite]
+
+    # 2) reserva: casar as chaves conhecidas direto no texto
     for chave in CHAVES:
         for m in re.finditer(rf'"{chave}"\s*:\s*(\[.*?\])', html, re.S):
             try:
@@ -151,32 +237,12 @@ def extrair_resultados(html: str, jogo: str, limite: int = 200) -> List[str]:
                 continue
             if not isinstance(arr, list) or len(arr) < MIN_ITENS:
                 continue
-            saida, vistos = [], 0
-            for it in arr:
-                v = it
-                if isinstance(it, dict):
-                    for c in ("result", "value", "number", "outcome", "sector"):
-                        if it.get(c) is not None:
-                            v = it[c]
-                            break
-                if isinstance(v, (dict, list)):
-                    vistos += 1
-                    continue
-                vistos += 1
-                s = str(v).strip()
-                if not s:
-                    continue
-                s = aliases.get(s.lower().replace(" ", "").replace("_", ""), s)
-                if s in dom:
-                    saida.append(s)
-            if not vistos or len(saida) / vistos < FRACAO_VALIDA:
-                # array que não é histórico desta mesa: segue procurando em
-                # vez de devolver lixo com cara de giro
+            vals, vistos = _valores_validos(arr, dom, aliases)
+            if not vistos or len(vals) / vistos < FRACAO_VALIDA:
                 continue
-            if len(saida) > len(melhor):
-                melhor = saida
+            if len(vals) > len(melhor):
+                melhor = vals
         if melhor:
-            # chave específica achou: não desce para o `data` genérico
             return melhor[:limite]
     return melhor[:limite]
 
