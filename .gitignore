@@ -26,3 +26,4 @@ LOTERIA/dados/*
 
 # area temporaria que o teste da loteria cria e apaga sozinho
 LOTERIA/_teste_tmp/
+LOTERIA_v*.zip
