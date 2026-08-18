@@ -547,6 +547,46 @@ def test_sonda_existe_e_nao_muda_nada():
     print("  ok   a sonda le e relata, sem tocar no que esta rodando")
 
 
+def test_profundidade_do_historico_medida_na_maquina_dele():
+    """O teto de 100 giros era MEU, e a sonda dele provou.
+
+    A sonda mediu contra a API real: 100 por pagina no maximo; `duration`
+    ignorado; paginacao funcionando. A CENTRAL pedia 50x2 = 100 giros — o
+    "historico 104" da tela dele. Primeiro teste deste arquivo escrito a partir
+    de MEDIDA da API, nao da minha suposicao sobre ela.
+    """
+    import fluxo_captura as F
+    from fetch_historico import fetch_paginas as FP
+    import inspect
+    assert "min(int(page_size), 100)" in inspect.getsource(FP)
+    assert F.TAMANHO_PAGINA == 100
+    assert F.PAGINAS_A_FUNDO * F.TAMANHO_PAGINA >= F.PROFUNDIDADE_ALVO
+
+    pedidos = []
+    def espiao(url, headers, **kw):
+        pedidos.append({"page_size": kw.get("page_size"),
+                        "max_pages": kw.get("max_pages")})
+        return [], "HTTP 404"
+    guardados = (F.fetch_paginas, F.enderecos_para, F.capturar_html)
+    import descobridor_endereco as D
+    d_orig = D.descobrir
+    try:
+        F.fetch_paginas = espiao
+        F.enderecos_para = lambda ds: [
+            "https://api-cs.casino.org/svc/lightningroulette"]
+        F.capturar_html = lambda ds: []
+        D.descobrir = lambda *a, **k: None
+        F._ULTIMA_PAGINA.clear()
+        F.capturar("lightning", page_size=50, max_pages=2, duration=1)
+    finally:
+        F.fetch_paginas, F.enderecos_para, F.capturar_html = guardados
+        D.descobrir = d_orig
+    assert pedidos and pedidos[0]["page_size"] == 100, pedidos[:1]
+    assert pedidos[0]["max_pages"] >= F.PAGINAS_A_FUNDO, pedidos[0]
+    print(f"  ok   historico vai fundo: {pedidos[0]['max_pages']} paginas de "
+          f"{pedidos[0]['page_size']} (antes: 2 de 50 = 100 giros)")
+
+
 if __name__ == "__main__":
     test_parser_legacy_and_lists()
     test_zero_purge()
@@ -566,4 +606,5 @@ if __name__ == "__main__":
     test_mega_fire_capta_multiplicador_sem_super_boost()
     test_repeticao_real_nao_e_apagada()
     test_sonda_existe_e_nao_muda_nada()
+    test_profundidade_do_historico_medida_na_maquina_dele()
     print("FLUXO_TESTES_OK")

@@ -1349,6 +1349,26 @@ def parse_items_ct(items: List[dict]) -> List[dict]:
     return rows
 
 
+# PROFUNDIDADE DO HISTORICO — MEDIDO NA MAQUINA DELE, NAO SUPOSTO.
+#
+# A sonda que ele rodou respondeu tres coisas que eu vinha adivinhando:
+#   1. o servidor devolve NO MAXIMO 100 itens por pagina
+#   2. `duration` e IGNORADO — 90 a 525600 devolvem os MESMOS 100 itens
+#   3. a PAGINACAO funciona: pag0 comecava 22:39, pag3 comecava 18:25
+#
+# E dai sai o defeito: a CENTRAL pedia `page_size=50, max_pages=2` — cem giros,
+# exatamente o "historico 104" da tela dele. O teto era meu, nao do servidor.
+# Enquanto isso, metade das medidas dizia "amostra insuficiente" por falta de
+# historico que estava ali para ser puxado (o limiar dele exige 3 blocos de 500).
+#
+# Buffer raso pede fundo; buffer cheio pede so a frente, porque giro novo nasce
+# no topo. Automatico de proposito: depender de eu lembrar de passar o parametro
+# certo em cada chamada foi o que produziu o teto de 100.
+TAMANHO_PAGINA = 100          # teto do servidor, medido pela sonda
+PROFUNDIDADE_ALVO = 500       # o mesmo teto que o buffer guarda
+PAGINAS_A_FUNDO = 6           # 6 x 100 = 600, com folga sobre o alvo
+
+
 def capturar(
     dataset_id: str,
     *,
@@ -1365,6 +1385,15 @@ def capturar(
       mults: lista de multiplicadores (roleta)
     """
     fontes_extra: List[str] = []
+    # quanto historico esta mesa ja tem — raso pede fundo, cheio pede a frente
+    try:
+        _ja_tem = len(load(buffer_path(dataset_id)).get("events") or [])
+    except Exception:
+        _ja_tem = 0
+    page_size = max(int(page_size), TAMANHO_PAGINA)
+    if _ja_tem < PROFUNDIDADE_ALVO:
+        max_pages = max(int(max_pages), PAGINAS_A_FUNDO)
+
     candidatos = enderecos_para(dataset_id)
 
     # A FONTE QUE JA FOI DESCOBERTA VEM NA FRENTE.
