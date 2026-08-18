@@ -43,8 +43,12 @@ def teste_captura():
 
     checar("red_door" in F.API_BY_GAME, "tem endereço principal declarado")
     ends = F.enderecos_para("red_door")
-    checar(len(ends) >= 3, f"tem {len(ends)} endereço(s) candidatos (principal "
-                           f"+ alternativas)")
+    # UM endereço só, e isso agora é o certo: a sonda dele confirmou que este
+    # responde 200, e ele mandou apagar toda fonte fora do casino.org. Manter
+    # alternativas que a sonda mostrou darem 404 seria gastar o orçamento da
+    # volta para nada.
+    checar(len(ends) >= 1 and all("casino.org" in u for u in ends),
+           f"tem {len(ends)} endereço(s), todos do casino.org", ends)
 
     checar(F.identidade_ok("red_door", ends[0])[0],
            "o próprio endereço declarado passa na checagem de identidade — "

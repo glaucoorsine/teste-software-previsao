@@ -252,6 +252,18 @@ def fetch_html_numeros(url: str, max_n: int = 80) -> Tuple[List[dict], Optional[
         return [], str(e)
 
 
+# A CHAVE UNICA QUE DESLIGA TODA FONTE QUE NAO SEJA DO CASINO.ORG.
+#
+# Ele foi explicito: "unicas apis que devem ser usadas, apague todas as
+# outras", e listou as quatro paginas do casinoscores. Apagar as listas na
+# mao, espalhadas por `coletor_sites`, `fontes_externas` e `fluxo_captura`,
+# deixaria alguma para tras -- e uma fonte fantasma que volta a responder
+# meses depois traz dado de outra mesa sem ninguem entender de onde veio.
+#
+# Uma chave so, num lugar so, e conferivel por teste.
+SOMENTE_CASINO_ORG = True
+
+
 def capturar_multi_fonte(jogo: str, max_total: int = 200) -> Dict[str, Any]:
     """
     Combina: base de estudo (prints reais) + tracksino + HTML público.
@@ -266,14 +278,22 @@ def capturar_multi_fonte(jogo: str, max_total: int = 200) -> Dict[str, Any]:
         rows.extend(base)
         fontes_ok.append(f"bases_estudo:{len(base)}")
 
-    tr, err = fetch_tracksino(jogo)
-    if tr:
-        rows.extend(tr)
-        fontes_ok.append(f"tracksino:{len(tr)}")
-    elif err:
-        erros.append(err)
+    # SO CASINO.ORG -- decisao dele: "unicas apis que devem ser usadas, apague
+    # todas as outras", listando as quatro paginas do casinoscores.
+    #
+    # `SOMENTE_CASINO_ORG` desliga tracksino e os HTML de terceiros de UM lugar
+    # so, em vez de eu apagar listas espalhadas por tres arquivos e esquecer de
+    # alguma -- que e como uma fonte fantasma sobrevive. `bases_estudo` fica:
+    # nao e site de terceiro, sao os proprios dados dele.
+    if not SOMENTE_CASINO_ORG:
+        tr, err = fetch_tracksino(jogo)
+        if tr:
+            rows.extend(tr)
+            fontes_ok.append(f"tracksino:{len(tr)}")
+        elif err:
+            erros.append(err)
 
-    for url in URLS.get(jogo, [])[:2]:
+    for url in ([] if SOMENTE_CASINO_ORG else URLS.get(jogo, [])[:2]):
         hr, herr = fetch_html_numeros(url, max_n=40)
         if hr:
             rows.extend(hr)

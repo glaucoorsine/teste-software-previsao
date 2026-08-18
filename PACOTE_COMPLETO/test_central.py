@@ -1008,6 +1008,49 @@ checa("nao entrar" not in _corpo.lower() or "pad" not in _corpo,
       "o vermelho nao apaga a previsao -- 'pode ficar prevendo, mas so envia "
       "quando for verde'")
 
+# ══════════════════════════════════════════════════════════════════════════
+print("\n[32] a tela NAO pode congelar quando o cerebro atrasa")
+#
+#   "lighting e mega nao contam erros e acertos e tambem nao atualizam o
+#    layout, mas as msg estao chegando no ntfy"
+#
+# Os dois sintomas tinham UMA causa. O log dele mostra a distancia entre o
+# pedido respondido e o esperado CRESCENDO:
+#     mega_fire#2 vs #3 -> #3 vs #5 -> #4 vs #6 -> #5 vs #8
+# A tela pergunta a cada 10s, o cerebro leva ~90s. Cada volta mandava um
+# pedido NOVO, e mandar pedido novo invalida a resposta do anterior. Toda
+# resposta chegava tarde, era descartada, e a distancia so crescia.
+#
+# E quando a resposta nao vinha, a volta terminava num `return` ANTES de
+# `_aplicar()` -- que e quem repinta placar, historico e caixas. Dai a tela
+# parada com HIT/MISS ja contados no log, e o ntfy chegando (o aviso sai do
+# fluxo da janela, que continuava rodando).
+_c = (RAIZ / "CENTRAL.py").read_text(encoding="utf-8")
+
+checa("_pedido_em_voo" in _c,
+      "existe um controle de pedido em voo")
+checa('if getattr(self, "_pedido_em_voo", False):' in _c,
+      "e a volta seguinte ESPERA o pedido pendente em vez de mandar outro "
+      "-- mandar outro e o que invalidava a resposta boa")
+_pos_guarda = _c.index('if getattr(self, "_pedido_em_voo", False):')
+_pos_pedido = _c.index('_pedido = {"nums"')
+checa(_pos_guarda < _pos_pedido,
+      "a guarda vem ANTES de montar o pedido novo, senao ja teria sido "
+      "enviado antes da checagem")
+checa(_c.count("self._pedido_em_voo = False") >= 2,
+      "e o controle e limpo quando a resposta chega, nos dois caminhos "
+      "(primeira volta e voltas seguintes)")
+
+# a tela repinta mesmo sem previsao
+checa("self._aplicar(None, r)" in _c,
+      "a tela e repintada mesmo quando o cerebro nao respondeu")
+_corpo_ap = _c[_c.index("def _aplicar(self, sug, rows):"):]
+_corpo_ap = _corpo_ap[:_corpo_ap.index("\n    def ", 10)]
+checa("sug = sug or {}" in _corpo_ap,
+      "e _aplicar aceita sugestao ausente sem estourar")
+checa("pad = sug.get(\"pad5\") or []" in _corpo_ap,
+      "sem sugestao, pad fica vazio -- nao abre janela nova por engano")
+
 print()
 if falhas:
     print("FALHAS:", falhas)

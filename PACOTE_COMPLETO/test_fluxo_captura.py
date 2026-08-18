@@ -139,24 +139,31 @@ def test_does_not_wipe_operational_cycle():
     print("OK no wipe operational")
 
 def test_toda_mesa_tem_segunda_fonte():
-    """Ele reparou: "possuem dois links de api, porque so esta no casino?"
+    """ESTE TESTE MUDOU DE LADO, E ISSO E PROPOSITAL.
 
-    Tinha razao, e a prova estava no arquivo dele: fontes_descobertas.json ja
-    trazia o endereco do trackpot para lightning, descoberto pelo
-    coletor -- e o fluxo de captura nunca consultava, porque so o Crazy Time A
-    tinha alternativa cadastrada. Quando o casino.org falhava, a mesa morria
-    tendo uma segunda fonte ali do lado.
+    Ele antes exigia que TODA mesa tivesse uma segunda fonte fora do
+    casino.org (trackpot), porque na epoca uma mesa morria quando o
+    casino.org falhava. Depois ele mediu, com a sonda, e decidiu o contrario:
+
+        "unicas apis que devem ser usadas, apague todas as outras"
+
+    E a sonda deu razao a ele: as tais segundas fontes devolviam 404 nas duas
+    grafias do mega_fire, nas duas do crazy_time e nas tres do crazy_time_a.
+    Nao eram reserva -- eram orcamento de volta gasto para nada em toda mesa.
+
+    Mantenho o nome do teste para o historico ficar rastreavel, mas o que ele
+    verifica agora e o oposto: NENHUMA fonte fora do casino.org.
     """
     import fluxo_captura as F
     for mesa in ("lightning", "mega_fire", "crazy_time",
-                 "crazy_time_a"):
+                 "crazy_time_a", "red_door"):
         urls = F.enderecos_para(mesa)
-        assert len(urls) >= 2, f"{mesa} so tem {len(urls)} endereco(s)"
-        assert any("casino.org" in u for u in urls), mesa
-        assert any("trackpot" in u for u in urls), f"{mesa} sem a segunda fonte"
-    # a ordem importa: o principal vem primeiro, a alternativa e reserva
+        assert urls, f"{mesa} ficou sem endereco nenhum"
+        for u in urls:
+            assert "casino.org" in u, \
+                f"{mesa} ainda tem fonte fora do casino.org: {u}"
     assert "casino.org" in F.enderecos_para("lightning")[0]
-    print("  ok   as cinco mesas tem duas fontes, nao uma")
+    print("  ok   toda mesa usa SO casino.org (era o oposto; ele mediu e mudou)")
 
 
 def test_parser_aceita_formato_plano():
@@ -224,7 +231,12 @@ def test_crazy_time_a_viva():
     assert F.API_BY_GAME["crazy_time_a"].endswith("/crazy-time-a"), \
         F.API_BY_GAME["crazy_time_a"]
     assert ends[0].endswith("/crazy-time-a"), ends[:2]
-    assert any("trackpotapi" in u for u in ends), ends
+    # a segunda fonte (trackpotapi) saiu por decisao dele -- "apague todas as
+    # outras". O que substitui a reserva aqui sao as grafias de casino.org,
+    # que e o que de fato falta descobrir nesta mesa.
+    assert not any("trackpotapi" in u for u in ends), \
+        "trackpotapi tinha que ter saido: so casino.org"
+    assert len(ends) >= 4, f"as grafias de casino.org continuam: {ends}"
     assert F.enderecos_para("mesa_inexistente") == []
 
     itens = [{"data": {"result": {"outcome": {
@@ -629,6 +641,62 @@ def test_profundidade_do_historico_medida_na_maquina_dele():
           f"{pedidos[0]['page_size']} (antes: 2 de 50 = 100 giros)")
 
 
+def test_so_casino_org():
+    """"unicas apis que devem ser usadas, apague todas as outras".
+
+    Ele listou as quatro paginas do casinoscores e mandou apagar o resto. A
+    sonda que ele rodou ja mostrava o quanto as outras eram inuteis: 404 nas
+    duas grafias do mega_fire, nas duas do crazy_time e nas tres do
+    crazy_time_a. Alternativa que so devolve 404 nao e reserva -- e orcamento
+    da volta gasto para nada, em toda mesa, para sempre.
+
+    O risco desta mudanca e apagar as listas na mao, espalhadas por tres
+    arquivos, e esquecer uma. Uma fonte fantasma que volta a responder meses
+    depois traz dado de outra mesa sem ninguem entender de onde veio -- que e
+    exatamente a classe de defeito que ja custou versoes aqui. Por isso o
+    desligamento e uma CHAVE SO, e este teste confere os tres caminhos.
+    """
+    import fluxo_captura as F
+    import fontes_externas as X
+
+    assert X.SOMENTE_CASINO_ORG is True, "a chave unica tem que estar ligada"
+
+    # 1. os enderecos de captura de toda mesa
+    for mesa in ("lightning", "mega_fire", "crazy_time", "crazy_time_a",
+                 "red_door"):
+        for u in F.enderecos_para(mesa):
+            assert "casino.org" in u, f"{mesa} ainda tem fonte de fora: {u}"
+
+    # 2. as paginas HTML tambem
+    for mesa in ("lightning", "mega_fire", "crazy_time", "crazy_time_a"):
+        ends = F.enderecos_html(mesa)
+        assert ends, mesa
+        assert "casino.org/casinoscores" in ends[0], (mesa, ends[0])
+
+    # as quatro paginas que ele mandou, textuais
+    esperadas = {
+        "crazy_time": "https://www.casino.org/casinoscores/pt-br/crazy-time/",
+        "crazy_time_a": "https://www.casino.org/casinoscores/pt-br/crazy-time-a/",
+        "mega_fire": "https://www.casino.org/casinoscores/pt-br/mega-fire-blaze-roulette/",
+        "lightning": "https://www.casino.org/casinoscores/pt-br/lightning-roulette/",
+    }
+    for mesa, url in esperadas.items():
+        assert url in F.enderecos_html(mesa), \
+            f"{mesa}: a pagina que ele mandou tem que estar la -- {url}"
+
+    # 3. a agregacao externa nao pode trazer site de terceiro
+    r = X.capturar_multi_fonte("lightning", max_total=5)
+    for f in (r.get("fontes_ok") or []):
+        assert "tracksino" not in f and "trackpot" not in f \
+            and "gamblingcounting" not in f, f"fonte de fora ainda ativa: {f}"
+
+    # 4. e o coletor_sites (trackpot/tracksino) fica atras da mesma chave
+    fonte = (ROOT / "fluxo_captura.py").read_text(encoding="utf-8")
+    assert "and not _so_casino" in fonte, \
+        "coletor_sites tem que respeitar a mesma chave, senao volta por tras"
+    print("  ok   so casino.org: captura, paginas, agregacao e coletor_sites")
+
+
 if __name__ == "__main__":
     test_parser_legacy_and_lists()
     test_zero_purge()
@@ -650,4 +718,5 @@ if __name__ == "__main__":
     test_sonda_existe_e_nao_muda_nada()
     test_sonda_le_a_pagina_antes_de_procurar_nela()
     test_profundidade_do_historico_medida_na_maquina_dele()
+    test_so_casino_org()
     print("FLUXO_TESTES_OK")

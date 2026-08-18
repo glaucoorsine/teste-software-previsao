@@ -1216,11 +1216,48 @@ class PainelMesa(ctk.CTkFrame):
                     return                        # segue esperando na proxima
                 registrar(f"{self.jogo} PRIMEIRA_VOLTA respondeu em {_faz}s")
                 self._esperando_1a = False
+                self._pedido_em_voo = False
                 self.primeira = False
                 self._estado("operacional", VERDE)
                 self.ultimo_resultado = None
                 self._alimentar_academia(rows, cap)
                 depois(self, 0, lambda x=_sug, r=rows: self._aplicar(x, r))
+                return
+
+            # UM PEDIDO POR VEZ -- SENAO A RESPOSTA BOA E SEMPRE DESCARTADA.
+            #
+            # O log dele mostra a distancia CRESCENDO, e e a prova do defeito:
+            #     mega_fire#2 vs esperava #3
+            #     mega_fire#3 vs esperava #5
+            #     mega_fire#4 vs esperava #6
+            #     mega_fire#5 vs esperava #8
+            # (o mesmo no lightning e no crazy_time)
+            #
+            # A tela pergunta a cada 10s; o cerebro leva ~90s por volta. Cada
+            # volta mandava um pedido NOVO, e mandar um pedido novo invalida a
+            # resposta do anterior -- `resposta_de` so aceita o carimbo do
+            # pedido corrente. Entao toda resposta chegava tarde e ia para o
+            # lixo, para sempre, e a distancia so aumentava.
+            #
+            # O cerebro estava certo o tempo todo (o log mostra as sugestoes
+            # que ele produziu, bem formadas). O que estava errado era eu
+            # perguntar de novo antes de ouvir a resposta.
+            #
+            # Com um pedido por vez, a mesa passa a andar no ritmo do cerebro
+            # (~90s) em vez de nao andar nunca. Isso e honesto: e a velocidade
+            # que o motor tem.
+            if getattr(self, "_pedido_em_voo", False):
+                _sug_atras = self._resposta_do_cerebro(ESPERA_S)
+                if _sug_atras is None:
+                    self._estado("cérebro pensando — histórico atualizado",
+                                 AMARELO)
+                    depois(self, 0, lambda r=rows: self._aplicar(None, r))
+                    return
+                self._pedido_em_voo = False
+                self.ultimo_resultado = None
+                self._alimentar_academia(rows, cap)
+                depois(self, 0,
+                       lambda x=_sug_atras, r=rows: self._aplicar(x, r))
                 return
 
             _pedido = {"nums": [r.get("n") for r in rows],
@@ -1257,6 +1294,7 @@ class PainelMesa(ctk.CTkFrame):
                               "req_id": self._novo_pedido()}
             try:
                 self.entrada.put(_pedido, timeout=2)
+                self._pedido_em_voo = True
             except Exception:
                 # fila cheia: o cérebro está atrasado. Empilhar mais um pedido
                 # só aumenta o atraso -- e o pedido de agora vira lixo assim
@@ -1296,8 +1334,28 @@ class PainelMesa(ctk.CTkFrame):
                               f"(nao reinicia: reiniciar jogava fora a carga "
                               f"que estava quase pronta)")
                 else:
-                    self._estado("cérebro sem resposta", AMARELO)
+                    self._estado("cérebro pensando — histórico atualizado",
+                                 AMARELO)
+                # A TELA NAO PODE CONGELAR SO PORQUE O CEREBRO DEMOROU.
+                #
+                # Ele viu: "lighting e mega nao contam erros e acertos e tambem
+                # nao atualizam o layout, mas as msg estao chegando no ntfy".
+                # Os dois sintomas tinham UMA causa: este `return`.
+                #
+                # `_aplicar()` e quem repinta o placar, o historico e as caixas.
+                # Ele so era chamado com resposta do cerebro na mao. Quando o
+                # cerebro atrasava, a volta terminava aqui -- e a tela ficava
+                # parada mesmo com giro novo capturado e com os HIT/MISS ja
+                # contados e gravados no log. Dai o ntfy chegar (o aviso sai do
+                # fluxo da janela, que ainda roda) com a tela dizendo 0 e 0.
+                #
+                # O placar e o historico sao da CAPTURA, nao da previsao: nao ha
+                # motivo para depender do cerebro para mostra-los. So a SUGESTAO
+                # depende, e essa continua sendo a da volta anterior ate a
+                # resposta chegar.
+                depois(self, 0, lambda r=rows: self._aplicar(None, r))
                 return
+            self._pedido_em_voo = False
             if self.primeira:
                 self.primeira = False
                 self._estado("API instável — histórico salvo" if offline
@@ -1482,7 +1540,19 @@ class PainelMesa(ctk.CTkFrame):
         return "", FRACO
 
     def _aplicar(self, sug, rows):
+        """Repinta a tela. `sug=None` quer dizer "o cerebro ainda nao respondeu".
+
+        SEM PREVISAO AINDA NAO E MOTIVO PARA A TELA CONGELAR.
+        ─────────────────────────────────────────────────────
+        O placar, o historico e o semaforo saem da CAPTURA; so a lista de
+        numeros sugeridos sai do cerebro. Quando ele atrasa, tudo o que nao
+        depende dele continua sendo mostrado, e a sugestao anterior fica na
+        tela ate a nova chegar -- em vez de a janela inteira parar no tempo,
+        que foi o que ele viu ("nao contam erros e acertos e tambem nao
+        atualizam o layout").
+        """
         self.ultimas_linhas = list(rows or [])
+        sug = sug or {}
         modo = sug.get("modo") or ""
         # A COR SOBE A CADA VOLTA, NAO SO QUANDO ABRE JANELA.
         #

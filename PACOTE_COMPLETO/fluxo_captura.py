@@ -79,38 +79,38 @@ API_BY_GAME = {
 # Agora TODAS as mesas tem alternativa. Se a primeira nao responder, cai para
 # a outra e grava qual funcionou.
 API_ALTERNATIVAS = {
-    "lightning": [
-        "https://api.trackpotapi.com/api/trackersino/lightningroulette/history",
-        "https://api.trackpotapi.com/api/trackersino/lightning-roulette/history",
-    ],
-    "mega_fire": [
-        "https://api.trackpotapi.com/api/trackersino/mega-fire-blaze-roulette/history",
-        "https://api.trackpotapi.com/api/trackersino/megafireblazeroulette/history",
-    ],
-    "crazy_time": [
-        "https://api.trackpotapi.com/api/trackersino/crazy-time/history",
-        "https://api.trackpotapi.com/api/trackersino/crazytime/history",
-    ],
-    "red_door": [
-        "https://api-cs.casino.org/svc-evolution-game-events/api/red-door-roulette",
-        "https://api-cs.casino.org/svc-evolution-game-events/api/reddoor",
-        "https://api.trackpotapi.com/api/trackersino/red-door-roulette/history",
-        "https://api.trackpotapi.com/api/trackersino/reddoorroulette/history",
-    ],
+    # SO CASINO.ORG, POR DECISAO DELE.
+    #
+    #     "unicas apis que devem ser usadas, apague todas as outras"
+    #     crazy time    -> .../casinoscores/pt-br/crazy-time/
+    #     crazy time A  -> .../casinoscores/pt-br/crazy-time-a/
+    #     mega fire     -> .../casinoscores/pt-br/mega-fire-blaze-roulette/
+    #     lighting      -> .../casinoscores/pt-br/lightning-roulette/
+    #
+    # Ele mandou as PAGINAS do casinoscores. Elas nao sao APIs -- sao HTML --
+    # e por isso vivem em FONTES_HTML, nao aqui. O que estas paginas tem por
+    # tras e o `api-cs.casino.org`, que e de onde a captura le, e e o mesmo
+    # provedor. Entao a leitura do pedido dele e: um provedor so, o dele.
+    #
+    # O que saiu: trackpotapi e tracksino. Alem de nao serem o que ele pediu,
+    # a sonda que ele rodou mostrou o quanto eram inuteis -- 404 em
+    # mega_fire (as duas grafias), 404 em crazy_time (as duas), 404 em
+    # crazy_time_a (as tres). Respondiam so em lightning e red_door, e ali o
+    # casino.org ja respondia melhor e primeiro.
+    #
+    # Alternativa que so devolve 404 nao e reserva: e tempo do orcamento da
+    # volta gasto para nada, em toda mesa, para sempre.
     "crazy_time_a": [
-        # o slug da pagina dele, tambem no formato de consulta que algumas
-        # rotas do casinoscores usam
-        "https://api-cs.casino.org/svc-evolution-game-events/api/crazy-time-a",
+        # a mesa que ainda nao achou o proprio endereco: as grafias de
+        # casino.org continuam, porque o slug e o que falta descobrir
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimea",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime-a",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimeA",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytime2",
         "https://api-cs.casino.org/svc-evolution-game-events/api/crazytimeatable",
-        "https://api.trackpotapi.com/api/trackersino/crazy-time-a/history",
-        "https://api.trackpotapi.com/api/trackersino/crazytimea/history",
-        "https://api.trackpotapi.com/api/trackersino/crazy-time-a-roulette/history",
     ],
 }
+
 
 # onde fica gravado o endereco que respondeu, por mesa
 FONTES_OK = ROOT / "Logs" / "fontes_que_funcionam.json"
@@ -1751,7 +1751,11 @@ def capturar(
     try:
         _n = _passo_sites.get(dataset_id, 0)
         _passo_sites[dataset_id] = _n + 1
-        if _n % PUXAR_SITES_A_CADA == 0:
+        from fontes_externas import SOMENTE_CASINO_ORG as _so_casino
+        if _n % PUXAR_SITES_A_CADA == 0 and not _so_casino:
+            # `coletor_sites` e trackpotapi + tracksino, os dois fora do
+            # casino.org. Mesma chave unica que desliga `fontes_externas`:
+            # decisao dele de usar so as paginas do casinoscores.
             from coletor_sites import buscar_sequencia
             _extra, _av = buscar_sequencia(dataset_id)
             if _extra:
