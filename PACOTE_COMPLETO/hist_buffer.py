@@ -27,6 +27,7 @@ DOMAIN = {
     "lightning": ROULETTE,
     "crazy_time": CT,
     "crazy_time_a": CT,
+    "red_door": ROULETTE,
 }
 
 def _lock_path(path: Path) -> Path:

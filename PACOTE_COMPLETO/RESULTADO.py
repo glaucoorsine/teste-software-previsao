@@ -35,7 +35,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent
 LOG = RAIZ / "Logs" / "central_log.txt"
-JOGOS = ("lightning", "mega_fire", "crazy_time", "crazy_time_a")
+JOGOS = ("lightning", "mega_fire", "crazy_time", "crazy_time_a", "red_door")
 
 # A CRAZY TIME A FALTAVA AQUI, E ISSO ERA UM KeyError NA PRIMEIRA JANELA.
 #
@@ -48,7 +48,7 @@ JOGOS = ("lightning", "mega_fire", "crazy_time", "crazy_time_a")
 # enquanto a Crazy Time A não capturava nada, nenhuma janela dela fechava, e
 # o erro ficava dormindo.
 N_CLASSES = {"lightning": 37, "mega_fire": 37,
-             "crazy_time": 54, "crazy_time_a": 54}
+             "crazy_time": 54, "crazy_time_a": 54, "red_door": 37}
 
 # A RODA DO CRAZY TIME NÃO TEM CASAS IGUAIS.
 #

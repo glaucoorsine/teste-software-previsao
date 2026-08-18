@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 ap = argparse.ArgumentParser()
 ap.add_argument("arquivo", help="txt/json com os giros, do mais antigo ao mais recente")
 ap.add_argument("--jogo", default="lightning",
-                choices=["lightning", "mega_fire", "crazy_time", "crazy_time_a"])
+                choices=["lightning", "mega_fire", "crazy_time", "crazy_time_a", "red_door"])
 ap.add_argument("--raiz", default=".", help="pasta do PACOTE_COMPLETO")
 ap.add_argument("--dados", default=None, help="pasta de dados da academia (isolada)")
 ap.add_argument("--intervalo", type=int, default=45, help="segundos entre giros")

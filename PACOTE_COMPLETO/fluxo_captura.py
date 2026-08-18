@@ -39,6 +39,13 @@ API_BY_GAME = {
     # Nao e adivinhacao minha: e o nome que o proprio provedor usa na URL
     # publica da mesa.
     "crazy_time_a": "https://api-cs.casino.org/svc-evolution-game-events/api/crazy-time-a",
+    # A QUINTA MESA. O slug segue o MESMO padrao que funcionou para lightning,
+    # mega_fire e crazy_time -- nome da pagina sem hifen -- mas eu nao consigo
+    # confirmar contra a API real daqui (o proxy nega casino.org). Por isso ha
+    # tres redes de seguranca por tras deste palpite: a descoberta pela pagina,
+    # o gerador de grafias, e identidade_ok() recusando qualquer endereco que
+    # nao diga "red door". Ver o cabecalho de red_door_combo.py.
+    "red_door": "https://api-cs.casino.org/svc-evolution-game-events/api/reddoorroulette",
 }
 
 # Candidatos alternativos por mesa, tentados quando o principal nao responde.
@@ -83,6 +90,12 @@ API_ALTERNATIVAS = {
     "crazy_time": [
         "https://api.trackpotapi.com/api/trackersino/crazy-time/history",
         "https://api.trackpotapi.com/api/trackersino/crazytime/history",
+    ],
+    "red_door": [
+        "https://api-cs.casino.org/svc-evolution-game-events/api/red-door-roulette",
+        "https://api-cs.casino.org/svc-evolution-game-events/api/reddoor",
+        "https://api.trackpotapi.com/api/trackersino/red-door-roulette/history",
+        "https://api.trackpotapi.com/api/trackersino/reddoorroulette/history",
     ],
     "crazy_time_a": [
         # o slug da pagina dele, tambem no formato de consulta que algumas
@@ -478,6 +491,7 @@ IDENTIDADE = {
     "crazy_time_a": ("crazytimea", "crazytime2", "crazytimeatable",
                      "crazytimearoulette"),
     "immersive": ("immersiveroulette", "immersive"),
+    "red_door": ("reddoorroulette", "reddoor"),
 }
 
 # quando o nome de uma mesa é PREFIXO do da outra, exigir não basta: `crazytime`
@@ -697,6 +711,10 @@ FONTES_HTML = {
     "crazy_time": [
         "https://www.casino.org/casinoscores/pt-br/crazy-time/",
         "https://gamblingcounting.com/crazy-time",
+    ],
+    "red_door": [
+        "https://www.casino.org/casinoscores/pt-br/red-door-roulette/",
+        "https://gamblingcounting.com/roulette",
     ],
     "crazy_time_a": [
         # o endereco que ele mandou, textual

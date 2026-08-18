@@ -57,7 +57,7 @@ SAIDA = RAIZ / "Logs" / "sonda_mesas.json"
 MAX_GIROS = 3
 TIMEOUT = 20
 
-MESAS = ("lightning", "mega_fire", "crazy_time", "crazy_time_a")
+MESAS = ("lightning", "mega_fire", "crazy_time", "crazy_time_a", "red_door")
 
 
 def _linha(txt: str = "") -> None:

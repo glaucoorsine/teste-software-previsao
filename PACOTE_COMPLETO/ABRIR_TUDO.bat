@@ -45,6 +45,9 @@ rem No lugar dela entra a mesa que nunca teve janela: a Crazy Time A.
 start "Crazy Time A" cmd /c "cd /d "%~dp0" && %CMD% crazy_time_a_combo.py"
 timeout /t 1 /nobreak >nul
 
+start "Red Door" cmd /c "cd /d "%~dp0" && %CMD% red_door_combo.py"
+timeout /t 1 /nobreak >nul
+
 start "Assistente IA" cmd /c "cd /d "%~dp0" && %CMD% assistente_ia.py"
 timeout /t 1 /nobreak >nul
 start "Central IAs"   cmd /c "cd /d "%~dp0" && %CMD% central_ias.py"

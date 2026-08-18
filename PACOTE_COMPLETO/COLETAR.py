@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
 
-JOGOS = ["lightning", "mega_fire", "crazy_time", "crazy_time_a"]
+JOGOS = ["lightning", "mega_fire", "crazy_time", "crazy_time_a", "red_door"]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("jogos", nargs="*", default=None)

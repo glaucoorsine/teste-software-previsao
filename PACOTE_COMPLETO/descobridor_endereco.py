@@ -67,6 +67,7 @@ NOMES: Dict[str, List[str]] = {
     "crazy_time": ["Crazy Time"],
     "crazy_time_a": ["Crazy Time A", "Crazy Time 2", "Crazy Time A Live",
                      "Crazy Time Alt", "Crazy TimeA"],
+    "red_door": ["Red Door Roulette", "Red Door"],
 }
 
 SEGMENTOS_CT = {"1", "2", "5", "10", "coinflip", "coin flip", "cashhunt",

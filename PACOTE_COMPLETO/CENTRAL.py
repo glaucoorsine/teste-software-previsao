@@ -55,14 +55,15 @@ RAIZ = Path(__file__).resolve().parent
 PASTA = RAIZ / "Logs"
 LOG = PASTA / "central_log.txt"
 JOGOS = [("lightning", "Lightning"), ("mega_fire", "Mega Fire"), ("crazy_time", "Crazy Time"),
-         ("crazy_time_a", "Crazy Time A")]
+         ("crazy_time_a", "Crazy Time A"), ("red_door", "Red Door")]
 
 # Mesmo arquivo que o combo daquela mesa usa: o placar que ele já acumulou
 # continua de onde parou, em vez de zerar por trocar de janela.
 ESTADO = {"lightning": "lightning_combo_state.json",
           "mega_fire": "mega_fire_combo_state.json",
           "crazy_time": "crazy_time_state.json",
-          "crazy_time_a": "crazy_time_a_state.json"}
+          "crazy_time_a": "crazy_time_a_state.json",
+          "red_door": "red_door_combo_state.json"}
 
 VERMELHOS = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
 PERIODO_S = 10          # de quanto em quanto cada mesa consulta

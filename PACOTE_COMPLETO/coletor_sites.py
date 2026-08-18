@@ -80,6 +80,8 @@ SEQUENCIA = {
     "crazy_time_a": [BASE_TRACKPOT.format(s) for s in (
         "crazytimea", "crazy-time-a", "crazytime-a", "crazy_time_a",
         "crazytime2", "crazy-time-2")],
+    "red_door": [BASE_TRACKPOT.format(s) for s in (
+        "red-door-roulette", "reddoorroulette", "red-door", "reddoor")],
 }
 PARAMS_SEQ = {"window": "72h", "limit": 1000}
 
@@ -92,6 +94,8 @@ AGREGADOS = {
     "crazy_time_a": ["https://www.tracksino.com/crazytimea",
                      "https://www.tracksino.com/crazy-time-a",
                      "https://www.tracksino.com/crazytime-a"],
+    "red_door": ["https://www.tracksino.com/red-door-roulette",
+                "https://www.tracksino.com/reddoorroulette"],
 }
 
 MEMORIA = Path(__file__).resolve().parent / "Logs" / "fontes_descobertas.json"

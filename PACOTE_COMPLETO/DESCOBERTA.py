@@ -273,7 +273,7 @@ def main() -> int:
 
     linhas, ps = [], []
 
-    for jogo in ("lightning", "mega_fire", "crazy_time", "crazy_time_a"):
+    for jogo in ("lightning", "mega_fire", "crazy_time", "crazy_time_a", "red_door"):
         nums, mults = carregar(jogo)
         if not nums:
             continue

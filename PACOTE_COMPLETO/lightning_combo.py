@@ -29,8 +29,28 @@ from fila_cerebro import (novo_pedido as _novo_pedido,
                           resposta_de as _resposta_de,
                           garantir_cerebro as _garantir_cerebro)
 
-GAME = "lightning"
-API = "https://api-cs.casino.org/svc-evolution-game-events/api/lightningroulette"
+# A MESA VEM DO AMBIENTE -- mesmo caminho que a Crazy Time A usou.
+#
+# `crazy_time_a_combo.py` provou o padrão: em vez de copiar 596 linhas para
+# cada roleta nova (e ter de lembrar de corrigir todas quando um defeito
+# aparece), a mesa vem de LAB_MESA e este arquivo dá a UI para qualquer roleta
+# comum. `red_door_combo.py` é um lançador de poucas linhas, como
+# `crazy_time_a_combo.py` foi.
+#
+# O whitelist evita que uma variável de ambiente estragada abra esta janela
+# como se fosse Crazy Time -- que usa outro layout (setores, não números).
+_ROLETAS_COMUNS = ("lightning", "mega_fire", "red_door")
+GAME = os.environ.get("LAB_MESA") or "lightning"
+if GAME not in _ROLETAS_COMUNS:
+    GAME = "lightning"
+_ROTULOS = {"lightning": "LIGHTNING", "mega_fire": "MEGA FIRE",
+           "red_door": "RED DOOR"}
+ROTULO = _ROTULOS.get(GAME, GAME.upper().replace("_", " "))
+try:
+    from fluxo_captura import API_BY_GAME as _API_BY_GAME
+    API = _API_BY_GAME.get(GAME, "")
+except Exception:
+    API = ""
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     "Accept": "application/json",
@@ -61,7 +81,7 @@ class App(ctk.CTk):
         # sem isto, `depois()` chamado de thread de fundo toca no Tk de
         # fora da thread dele -- a corrida que trava a janela. Ver tela_segura.
         bombear(self)
-        self.title("LIGHTNING — Pipeline 24reqs")
+        self.title(f"{ROTULO} — Pipeline 24reqs")
         self.geometry("1120x820")
         ctk.set_appearance_mode("dark")
         self.ok=0; self.err=0; self.restantes=0
@@ -89,12 +109,12 @@ class App(ctk.CTk):
 
     def build_ui(self):
         h=ctk.CTkFrame(self); h.pack(fill="x", padx=10, pady=10)
-        ctk.CTkLabel(h, text="LIGHTNING", font=("Arial",20,"bold"), text_color="#38bdf8").pack(side="left", padx=10)
+        ctk.CTkLabel(h, text=ROTULO, font=("Arial",20,"bold"), text_color="#38bdf8").pack(side="left", padx=10)
         self.st=ctk.CTkLabel(h, text="Aguardando...", text_color="#a78bfa"); self.st.pack(side="left", padx=10)
         self.lbl_device=ctk.CTkLabel(h, text="HW: —", text_color="#eab308"); self.lbl_device.pack(side="right", padx=10)
         # Logo
         try:
-            self._logo_img = _load_logo_image("lightning")
+            self._logo_img = _load_logo_image(GAME)   # era fixo em "lightning"
             if self._logo_img:
                 ctk.CTkLabel(self, image=self._logo_img, text="").pack(pady=(6,0))
         except Exception:

@@ -107,14 +107,23 @@ def test_concurrent_merge_keeps_both():
     assert "ref-1" in refs and "ref-2" in refs, refs
     print("OK concurrent both", refs)
 
+# OS ARQUIVOS-IMPLEMENTACAO, NAO OS LANCADORES.
+#
+# mega_fire_combo.py e red_door_combo.py viraram lancadores de poucas linhas
+# que reusam lightning_combo.py -- o mesmo caminho que crazy_time_a_combo.py ja
+# usava para reusar crazy_time_combo.py. Checar o TEXTO de um lancador por essa
+# marca sempre falharia, porque o codigo mora no arquivo que ele importa, nao
+# nele. As duas implementacoes de verdade sao estas duas.
+_IMPLEMENTACOES = ["lightning_combo.py", "crazy_time_combo.py"]
+
 def test_nova_janela_all_modules():
-    for name in ["mega_fire_combo.py","lightning_combo.py","crazy_time_combo.py"]:
+    for name in _IMPLEMENTACOES:
         s = (ROOT/name).read_text()
         assert "salvar_ciclo_ativo(GAME, self.escolhas, self.restantes, False" in s, name
-    print("OK nova janela 4/4")
+    print("OK nova janela 2/2 implementacoes (mega_fire e red_door reusam lightning)")
 
 def test_idle_returns_no_put():
-    for name in ["mega_fire_combo.py","lightning_combo.py","crazy_time_combo.py"]:
+    for name in _IMPLEMENTACOES:
         s = (ROOT/name).read_text()
         assert "sem ciclo: só redesenha" in s or "NÃO consulta motor" in s
     print("OK idle")
@@ -176,9 +185,10 @@ def test_links_dele_sao_fonte_de_captura():
     lidos por extrair_resultados() sem nunca chegar na captura.
     """
     import fluxo_captura as F
-    assert len(F.FONTES_HTML) == 4, F.FONTES_HTML
+    # 5 mesas agora -- a Red Door entrou depois deste teste ter sido escrito
+    assert len(F.FONTES_HTML) == 5, F.FONTES_HTML
     for mesa in ("lightning", "mega_fire", "crazy_time",
-                 "crazy_time_a"):
+                 "crazy_time_a", "red_door"):
         ends = F.enderecos_html(mesa)
         assert len(ends) >= 2, (mesa, ends)
         # a pagina do PROVEDOR vem antes do agregador: se as duas responderem,

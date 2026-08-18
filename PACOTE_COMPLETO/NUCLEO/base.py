@@ -61,13 +61,14 @@ MESAS: Dict[str, str] = {
     "immersive": "IMMERSIVE",
     "crazy_time": "CRAZY TIME",
     "crazy_time_a": "CRAZY TIME A",
+    "red_door": "RED DOOR",
 }
 
 # Quantas classes cada mesa tem. As roletas têm 37 casas; os jogos de roda
 # grande têm 8 segmentos.
 CLASSES: Dict[str, int] = {
     "mega_fire": 37, "lightning": 37, "immersive": 37,
-    "crazy_time": 8, "crazy_time_a": 8,
+    "crazy_time": 8, "crazy_time_a": 8, "red_door": 37,
 }
 
 # As quatro famílias que AGREGAM, em vez de ler a mesa.

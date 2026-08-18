@@ -53,6 +53,7 @@ PADRAO: Dict[str, str] = {
     "mega_fire": "https://www.casino.org/casinoscores/pt-br/mega-fire-blaze-roulette/",
     "crazy_time": "https://www.casino.org/casinoscores/pt-br/crazy-time/",
     "crazy_time_a": "https://www.casino.org/casinoscores/pt-br/crazy-time-a/",
+    "red_door": "https://www.casino.org/casinoscores/pt-br/red-door-roulette/",
 }
 
 TITULOS = {
@@ -60,6 +61,7 @@ TITULOS = {
     "mega_fire": "Mega Fire Blaze — ao vivo",
     "crazy_time": "Crazy Time — ao vivo",
     "crazy_time_a": "Crazy Time A — ao vivo",
+    "red_door": "Red Door — ao vivo",
 }
 
 

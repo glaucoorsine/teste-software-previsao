@@ -50,6 +50,9 @@ PAGINAS = {
     "mega_fire": "https://gamblingcounting.com/roulette",
     "crazy_time": "https://gamblingcounting.com/crazy-time",
     "crazy_time_a": "https://gamblingcounting.com/crazy-time-a",
+    # sem pagina propria conhecida no gamblingcounting; reusa a generica de
+    # roleta, como o mega_fire ja fazia
+    "red_door": "https://gamblingcounting.com/roulette",
 }
 
 # O limiar em que ele diz que a mesa "fica boa". Guardado por mesa porque a
@@ -59,6 +62,7 @@ PICO = {
     "lightning": 800,
     "crazy_time": 13000,
     "crazy_time_a": 13000,
+    "red_door": 800,
 }
 
 CABECALHO = {

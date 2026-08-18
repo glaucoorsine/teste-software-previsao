@@ -30,7 +30,13 @@ ONDE FICA, E POR QUE ASSIM
 ──────────────────────────
 Uma pasta nos Documentos do usuário, fora do pacote:
 
-    C:\\Users\\<ele>\\Documents\\PACOTE_COMPLETO_MEMORIA
+    C:\\Users\\<ele>\\Documents\\memorias casino
+
+O nome é o que ele pediu depois, por mensagem: "coloque o software para
+salvar toda sua memoria de aprendizado em c:/documentos com o nome da pasta
+memorias casino". Antes disso a pasta se chamava `PACOTE_COMPLETO_MEMORIA` --
+ver `NOMES_ANTIGOS` abaixo para a migração que traz o que já acumulou lá para
+o nome novo, sem duplicar e sem perder nada.
 
 Documentos é o lugar certo por três motivos: sobrevive a trocar a pasta do
 programa, não precisa de permissão de administrador (ao contrário de
@@ -72,7 +78,15 @@ from typing import List, Optional, Tuple
 
 RAIZ_PACOTE = Path(__file__).resolve().parent.parent
 
-NOME_DA_PASTA = "PACOTE_COMPLETO_MEMORIA"
+NOME_DA_PASTA = "memorias casino"
+
+# O nome anterior, para trazer o que já rodou lá antes dele pedir a troca.
+# Ele já tinha "horas rodando" nessa pasta quando pediu o nome novo -- se eu
+# só trocasse `NOME_DA_PASTA`, o software abriria uma pasta NOVA e vazia, e
+# tudo que a Academia aprendeu (o autoexame, os pesos por eixo, o placar)
+# ficaria para trás, órfão, do mesmo jeito que a pasta do programa ficava
+# órfã antes deste arquivo existir. A mesma doença, com outro nome de pasta.
+NOMES_ANTIGOS = ("PACOTE_COMPLETO_MEMORIA",)
 
 # o que é memória e portanto tem de sobreviver às atualizações. Nomes exatos e
 # prefixos -- `memoria_lightning.json`, `memoria_crazy_time_a.json` etc.
@@ -190,11 +204,12 @@ def esquecer() -> None:
 
 
 def _migrar() -> None:
-    """Traz para o lar o que já existe na pasta do programa.
+    """Traz para o lar o que já existe na pasta do programa E na pasta antiga.
 
     COPIA, não move: se der erro no meio, as duas cópias continuam de pé. E não
     sobrescreve o que já está no lar -- entre a memória que vem acumulando e uma
-    que veio dentro do zip, a que acumulou é a verdade.
+    que veio dentro do zip (ou de um nome de pasta anterior), a que acumulou é
+    a verdade.
     """
     global _migrado
     if _migrado or _lar is None or _lar == RAIZ_PACOTE:
@@ -204,6 +219,24 @@ def _migrar() -> None:
     _migrado = True
     trazidos = 0
     origens = [RAIZ_PACOTE, RAIZ_PACOTE / "Logs"]
+
+    # A PASTA COM O NOME ANTIGO — ele pediu para trocar o nome DEPOIS de já
+    # ter horas de memória acumuladas em `PACOTE_COMPLETO_MEMORIA`. Sem isto,
+    # trocar `NOME_DA_PASTA` abriria uma pasta nova e vazia, e o aprendizado
+    # ficaria órfão -- exatamente o problema que este arquivo existe para
+    # resolver, só que com um nome de pasta no lugar de uma versão do zip.
+    #
+    # Procura em TODOS os candidatos de Documentos, não só onde o lar atual
+    # caiu: se o OneDrive mudou de estado entre uma execução e outra, a pasta
+    # antiga pode estar num candidato que hoje não é mais o escolhido.
+    for docs in _candidatas():
+        if not docs.is_dir():
+            continue
+        for nome_antigo in NOMES_ANTIGOS:
+            antiga = docs / nome_antigo
+            if antiga.is_dir() and antiga != _lar:
+                origens.append(antiga)
+
     for origem in origens:
         if not origem.is_dir():
             continue
@@ -219,8 +252,9 @@ def _migrar() -> None:
             except Exception:
                 pass
     if trazidos:
-        _motivo.append(f"trouxe {trazidos} arquivo(s) de memória da pasta do "
-                       f"programa para o lar (copiados, os originais ficaram)")
+        _motivo.append(f"trouxe {trazidos} arquivo(s) de memória de local(is) "
+                       f"anterior(es) para o lar (copiados, os originais "
+                       f"ficaram)")
 
 
 def arquivo(nome: str) -> Path:

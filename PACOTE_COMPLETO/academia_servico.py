@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional
 from academia_autonoma.ciclo_academia import ciclo
 from academia_autonoma.locks import file_lock
 
-JOGOS = ("mega_fire", "lightning", "crazy_time", "crazy_time_a")
+JOGOS = ("mega_fire", "lightning", "crazy_time", "crazy_time_a", "red_door")
 CLAIM_LEASE_SEC = 120.0
 
 

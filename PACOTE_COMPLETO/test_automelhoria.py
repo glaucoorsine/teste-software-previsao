@@ -136,6 +136,71 @@ def teste_migracao():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+# ══════════════════ 2b. o NOME da pasta mudou -- não pode orfanar o que já tem
+def teste_migracao_de_nome_de_pasta():
+    """"coloque o software para salvar toda sua memoria de aprendizado em
+    c:/documentos com o nome da pasta memorias casino"
+
+    Ele já tinha horas de memória em `PACOTE_COMPLETO_MEMORIA` quando pediu o
+    nome novo. Só trocar `NOME_DA_PASTA` abriria uma pasta nova e vazia -- a
+    mesma doença que este arquivo inteiro existe para curar, agora por causa
+    de um nome de pasta em vez de uma versão de zip.
+
+    PACOTE_MEMORIA_DIR não serve para testar isto: ele pula direto para o
+    caminho forçado e nunca chama `_candidatas()`, que é onde a pasta com o
+    nome antigo é procurada. Então aqui o teste substitui `_candidatas()` por
+    uma pasta de Documentos falsa, e deixa o resto do caminho normal acontecer.
+    """
+    print("\n[2b] O NOME DA PASTA MUDOU — não pode orfanar o que já tem")
+    tmp = Path(tempfile.mkdtemp(prefix="nome_"))
+    docs = tmp / "Documentos"
+    docs.mkdir()
+    from NUCLEO import lar
+    original_candidatas = lar._candidatas
+    try:
+        # a pasta com o NOME ANTIGO, já com memória de horas de uso
+        antiga = docs / "PACOTE_COMPLETO_MEMORIA"
+        antiga.mkdir()
+        (antiga / "memoria_lightning.json").write_text(
+            '{"avaliadas": ["horas de aprendizado"]}', encoding="utf-8")
+        (antiga / "automelhoria.json").write_text(
+            '{"aplicados": {"semaforo.MIN_MOTIVOS_VERDE": 1}}', encoding="utf-8")
+        # e um arquivo que NÃO é memória -- não pode ser trazido
+        (antiga / "nao_e_memoria.txt").write_text("lixo", encoding="utf-8")
+
+        lar._candidatas = lambda: [docs]
+        lar.esquecer()
+        p = lar.lar()
+
+        checar(p.name == "memorias casino",
+               "a pasta escolhida já usa o nome novo", p.name)
+        checar(lar.ler_json("memoria_lightning.json") ==
+               {"avaliadas": ["horas de aprendizado"]},
+               "a memória da pasta antiga foi trazida para a de nome novo")
+        checar(lar.ler_json("automelhoria.json") ==
+               {"aplicados": {"semaforo.MIN_MOTIVOS_VERDE": 1}},
+               "inclusive o que a automelhoria já tinha decidido")
+        checar(not (p / "nao_e_memoria.txt").exists(),
+               "e só o que é memória (pelos PREFIXOS) atravessa -- não é uma "
+               "cópia cega da pasta inteira")
+        checar(antiga.is_file() is False and (antiga / "memoria_lightning.json").is_file(),
+               "a pasta antiga NÃO é apagada nem movida -- fica de pé, copiada")
+
+        # e se a pasta antiga tiver algo que a nova NÃO tem ainda, mesmo
+        # depois de rodar de novo, ela não é sobrescrita por uma vinda antiga
+        lar.gravar_json("memoria_lightning.json", {"avaliadas": ["mais recente"]})
+        lar.esquecer()
+        lar._candidatas = lambda: [docs]
+        lar.lar()
+        checar(lar.ler_json("memoria_lightning.json") == {"avaliadas": ["mais recente"]},
+               "o que já acumulou na pasta nova não regride para o que "
+               "estava na antiga")
+    finally:
+        lar._candidatas = original_candidatas
+        lar.esquecer()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 # ═══════════════════════════════ 3. a automelhoria: aplicar só o que mediu melhor
 def teste_automelhoria():
     print("\n[3] AUTOMELHORIA — aplica o que ganhou, devolve o que empatou")
@@ -372,6 +437,7 @@ def main() -> int:
     print("═" * 72)
     teste_lar()
     teste_migracao()
+    teste_migracao_de_nome_de_pasta()
     teste_automelhoria()
     teste_pesquisa()
     print("\n" + "═" * 72)

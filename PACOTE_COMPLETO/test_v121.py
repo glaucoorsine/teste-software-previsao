@@ -319,7 +319,10 @@ T.depois(_j, 0, lambda: _feito.append("y"))
 checa(_j.thread_do_after == threading.get_ident() and _feito == ["x", "y"],
       "da própria thread da interface continua direto", _feito)
 # e todas as janelas precisam LIGAR a bomba, senão a fila enche e nada roda
-for _arq in ("CENTRAL.py", "central_ias.py", "mega_fire_combo.py",
+# mega_fire_combo.py e red_door_combo.py sao lancadores de poucas linhas que
+# reusam lightning_combo.py (o mesmo caminho que crazy_time_a_combo.py ja usa
+# para crazy_time_combo.py) -- o codigo mora no arquivo que eles importam.
+for _arq in ("CENTRAL.py", "central_ias.py",
              "lightning_combo.py", "crazy_time_combo.py"):
     _t4 = (RAIZ / _arq).read_text(encoding="utf-8")
     checa("bombear(self)" in _t4, f"{_arq}: liga a bomba da interface")
@@ -327,8 +330,7 @@ for _arq in ("CENTRAL.py", "central_ias.py", "mega_fire_combo.py",
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n[10] o Caçador decide também fora da CENTRAL")
 
-_fonte = (RAIZ / "mega_fire_combo.py").read_text(encoding="utf-8")
-for arq in ("mega_fire_combo.py", "lightning_combo.py", "crazy_time_combo.py"):
+for arq in ("lightning_combo.py", "crazy_time_combo.py"):
     _t2 = (RAIZ / arq).read_text(encoding="utf-8")
     checa('"linhas": rows[:200]' in _t2,
           f"{arq}: manda as linhas cruas (sem elas o Caçador fica mudo)")
@@ -509,8 +511,8 @@ if _par:
     checa(all(isinstance(x, tuple) and len(x) == 2 for x in _itens),
           "todos os itens são pares (jogo, rótulo)", _itens)
     checa({x[0] for x in _itens} == {"mega_fire", "lightning", "crazy_time",
-                                     "crazy_time_a"},
-          "e são as quatro mesas que sobraram", _itens)
+                                     "crazy_time_a", "red_door"},
+          "e são as cinco mesas que existem", _itens)
 
 # a Crazy Time A ganhou janela e o ABRIR_TUDO não chama arquivo apagado
 checa((RAIZ / "crazy_time_a_combo.py").is_file(),

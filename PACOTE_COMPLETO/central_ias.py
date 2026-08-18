@@ -40,7 +40,7 @@ class CentralIAs(ctk.CTk):
         # foi digitada.
         for j, lab in [("mega_fire", "Mega"), ("lightning", "Lightning"),
                        ("crazy_time", "Crazy Time"),
-                       ("crazy_time_a", "Crazy Time A")]:
+                       ("crazy_time_a", "Crazy Time A"), ("red_door", "Red Door")]:
             ctk.CTkRadioButton(top, text=lab, variable=self.jogo, value=j, command=self.refresh_all).pack(side="left", padx=6)
         ctk.CTkButton(top, text="Atualizar", width=90, command=self.refresh_all).pack(side="right", padx=4)
         ctk.CTkButton(top, text="Rodar tribunal", width=110, fg_color="#b45309",
@@ -188,7 +188,8 @@ class CentralIAs(ctk.CTk):
         tri = snap.get("tribunal") or {}
         jogo_atual = self.jogo.get()
         nomes = {"mega_fire": "Mega Fire", "lightning": "Lightning",
-                 "crazy_time": "Crazy Time", "crazy_time_a": "Crazy Time A"}
+                 "crazy_time": "Crazy Time", "crazy_time_a": "Crazy Time A",
+                 "red_door": "Red Door"}
         ctk.CTkLabel(
             self.cards_host,
             text=f"⚖ TRIBUNAL · {nomes.get(jogo_atual, jogo_atual)} — 7 IAs isoladas deste jogo",

@@ -50,6 +50,9 @@ ANCORAS: Dict[str, Dict[str, int]] = {
     "mega_fire":    {"alto": 800, "medio": 300},
     "crazy_time":   {"alto": 13000, "medio": 6000},
     "crazy_time_a": {"alto": 13000, "medio": 6000},
+    # roleta comum, mesma ordem de grandeza que lightning e mega_fire ate
+    # existir dado dele para recalibrar (MIN_PARA_CALIBRAR)
+    "red_door": {"alto": 800, "medio": 300},
 }
 PADRAO = {"alto": 800, "medio": 300}
 
