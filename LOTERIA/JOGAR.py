@@ -41,7 +41,9 @@ RAIZ = Path(__file__).resolve().parent
 sys.path.insert(0, str(RAIZ))
 
 from NUCLEO import base_conhecimento as BC       # noqa: E402
+from NUCLEO import conferencia as CO             # noqa: E402
 from NUCLEO import fechamento as FE              # noqa: E402
+from NUCLEO import formular as FO                # noqa: E402
 from NUCLEO import historico as HI               # noqa: E402
 from NUCLEO import medidor as MD                 # noqa: E402
 from NUCLEO import regras as RG                  # noqa: E402
@@ -116,7 +118,8 @@ def mostrar_jogo(j: RG.Jogo) -> None:
 
 
 # ══════════════════════════════════════════════════════ o fechamento
-def mostrar_fechamento(j: RG.Jogo, dez, k: int, se: int, garantir: int) -> int:
+def mostrar_fechamento(j: RG.Jogo, dez, k: int, se: int, garantir: int,
+                       salvar: str = "") -> int:
     fora = [d for d in dez if d not in set(j.dezenas())]
     if fora:
         print(f"\n[Fechamento] dezenas fora do universo de {j.nome}: {fora}")
@@ -163,11 +166,23 @@ def mostrar_fechamento(j: RG.Jogo, dez, k: int, se: int, garantir: int) -> int:
     if it and BC.autorizada("M03"):
         print(f"\n[Base] o que autoriza isto: {it.id} — {it.afirma}")
         print(f"[Base] e o que derrubaria: {it.derruba}")
+
+    if salvar:
+        # a promessa vai gravada JUNTO com as apostas: é ela que permite, no
+        # dia do sorteio, auditar se a garantia foi honrada — e me desmentir
+        # na tela se não foi
+        caminho = CO.escrever_apostas(
+            salvar, r["apostas"], j.chave,
+            meta={"se": se, "garantir": garantir, "dezenas": sorted(dez)})
+        print(f"\n[Salvo] apostas e promessa em {caminho}")
+        print(f"[Salvo] no dia do sorteio: python JOGAR.py {j.chave} "
+              f"--apostas {caminho} --sorteio \"<as dezenas sorteadas>\"")
     return 0
 
 
 # ══════════════════════════════════════════════════ medir no histórico
-def medir(chave: str, caminho: str) -> int:
+def medir(chave: str, caminho: str):
+    """Devolve (código, histórico) — o histórico segue para quem formular."""
     print(f"\n[Histórico] lendo {caminho} …")
     h, avisos = HI.de_arquivo(caminho, chave)
     for a in avisos:
@@ -175,7 +190,7 @@ def medir(chave: str, caminho: str) -> int:
     if h is None:
         print("[Histórico] não deu para ler. Nada foi medido, e nada foi "
               "gravado na base.")
-        return 1
+        return 1, None
     print()
     for linha in h.diagnostico():
         print(linha)
@@ -187,7 +202,7 @@ def medir(chave: str, caminho: str) -> int:
     ok, motivo = h.pronto_para_medir()
     if not ok:
         print(f"[Medidor] não vou medir: {motivo}")
-        return 1
+        return 1, h
 
     med = MD.medir_tudo(h, gravar=True)
     for linha in MD.resumo(med):
@@ -195,7 +210,41 @@ def medir(chave: str, caminho: str) -> int:
     print(f"\n[Regras] as regras de {chave} agora estão "
           f"{'CONFERIDAS' if RG.jogo(chave).conferido else 'ainda não conferidas'} "
           f"contra os sorteios reais deste arquivo.")
-    return 0
+    return 0, h
+
+
+# ═══════════════════════════════════════════════ formular e conferir
+def mostrar_formulacao(j: RG.Jogo, a, h) -> int:
+    c = FO.conselho(j.chave, quantas=(a.tamanho or None), hist=h,
+                    semente=(a.semente if a.semente else None))
+    print()
+    for linha in FO.resumo(c):
+        print(linha)
+    return 0 if c.get("ok") else 1
+
+
+def mostrar_conferencia(j: RG.Jogo, a) -> int:
+    if not a.apostas:
+        print("\n[Conferência] falta dizer onde estão as apostas: "
+              "--apostas dados/apostas_" + j.chave + ".txt")
+        return 1
+    apostas, meta, avisos = CO.ler_apostas(a.apostas, j)
+    for av in avisos:
+        print(f"[Conferência] ({av})")
+    if not apostas:
+        print("[Conferência] nenhuma aposta válida no arquivo — nada a "
+              "conferir.")
+        return 1
+    r = CO.conferir(j, apostas, _dezenas(a.sorteio))
+    auditoria = None
+    if r.get("ok") and meta:
+        auditoria = CO.auditar_garantia(meta, apostas, r["sorteio"])
+    print()
+    for linha in CO.resumo(j, r, auditoria):
+        print(linha)
+    if auditoria and auditoria.get("honrada") is False:
+        return 1        # garantia falhando é defeito meu, e sai como erro
+    return 0 if r.get("ok") else 1
 
 
 # ══════════════════════════════════════════════════════ a base
@@ -231,6 +280,18 @@ def main() -> int:
                     help="arquivo de resultados baixado da Caixa")
     ap.add_argument("--base", action="store_true",
                     help="mostra a base de conhecimento")
+    ap.add_argument("--formular", action="store_true",
+                    help="as inteligências formulam jogos citando a base")
+    ap.add_argument("--tamanho", type=int, default=0,
+                    help="dezenas por jogo formulado (padrão: a aposta mínima)")
+    ap.add_argument("--semente", type=int, default=0,
+                    help="repete uma formulação anterior")
+    ap.add_argument("--salvar", nargs="?", const="AUTO", default="",
+                    help="grava as apostas do fechamento (e a promessa) num arquivo")
+    ap.add_argument("--sorteio", default="",
+                    help="as dezenas sorteadas, para conferir as apostas")
+    ap.add_argument("--apostas", default="",
+                    help="o arquivo de apostas gravado com --salvar")
     a = ap.parse_args()
 
     print("═" * 72)
@@ -263,15 +324,29 @@ def main() -> int:
         listar()
         return 1
 
+    if a.sorteio:
+        return mostrar_conferencia(j, a)
+
     if a.historico:
-        return medir(j.chave, a.historico)
+        codigo, h = medir(j.chave, a.historico)
+        if a.formular:
+            # mede primeiro, formula depois: as inteligências consultam a base
+            # JÁ com os vereditos dos dados dele — que é o pedido original
+            return mostrar_formulacao(j, a, h if codigo == 0 else None)
+        return codigo
+
+    if a.formular:
+        return mostrar_formulacao(j, a, None)
 
     if a.dezenas:
         dez = _dezenas(a.dezenas)
         k = a.k or j.minimo
         se = a.se or min(len(dez), j.sorteadas - 1)
         garantir = a.garantir or max(1, min(k, j.faixas[-1]))
-        return mostrar_fechamento(j, dez, k, se, garantir)
+        salvar = a.salvar
+        if salvar == "AUTO":
+            salvar = str(RAIZ / "dados" / f"apostas_{j.chave}.txt")
+        return mostrar_fechamento(j, dez, k, se, garantir, salvar)
 
     mostrar_jogo(j)
     if a.base:

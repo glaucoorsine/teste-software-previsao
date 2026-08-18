@@ -35,6 +35,8 @@ from NUCLEO import estatistica as E               # noqa: E402
 from NUCLEO import historico as H                 # noqa: E402
 from NUCLEO import medidor as MD                  # noqa: E402
 from NUCLEO import api as API                     # noqa: E402
+from NUCLEO import formular as FO                 # noqa: E402
+from NUCLEO import conferencia as CO              # noqa: E402
 
 FALHAS = []
 
@@ -634,6 +636,156 @@ def teste_api():
 
 
 
+
+# ═══════════════ 10. as inteligências — cada jogo rastreável até a base
+def teste_formular():
+    print("\n[10] FORMULAR — inteligência sem item que a autorize fica calada")
+
+    # os testes anteriores mexem nos vereditos; começa limpo
+    for ident in ("C01", "C02", "C03", "C04", "P01"):
+        it = B.por_id(ident)
+        if it:
+            it.veredito, it.medida = None, {}
+
+    # ── sem histórico: só quem não precisa de dado fala ──────────────────
+    c = FO.conselho("mega_sena", semente=42)
+    checar(c["ok"] and len(c["jogos"]) == 4, "o conselho reúne 4 inteligências")
+    por_nome = {g["inteligencia"]: g for g in c["jogos"]}
+    checar(por_nome["atrasadas"]["calada"] and por_nome["quentes"]["calada"],
+           "sem histórico, atrasadas e quentes ficam CALADAS com o motivo",
+           por_nome["atrasadas"]["motivo"][:50])
+    anti = por_nome["anti_partilha"]
+    checar(not anti["calada"] and min(anti["dezenas"]) > 31,
+           "a anti-partilha evita TODAS as datas (≤31) na Mega-Sena",
+           str(anti["dezenas"]))
+    ms = R.jogo("mega_sena")
+    for g in c["jogos"]:
+        if not g["calada"]:
+            ok, motivo = ms.valida_aposta(g["dezenas"])
+            checar(ok, f"o jogo de {g['inteligencia']} é aposta que a Caixa "
+                       f"aceita", motivo)
+    checar(any("não foi medido" in a for a in anti["avisos"]),
+           "e o jogo por crença NÃO MEDIDA carrega o aviso disso no corpo",
+           anti["avisos"][0][:60] if anti["avisos"] else "")
+
+    # ── reproduzível: a mesma semente dá o mesmo jogo ────────────────────
+    c2 = FO.conselho("mega_sena", semente=42)
+    checar([g["dezenas"] for g in c["jogos"]] == [g["dezenas"] for g in c2["jogos"]],
+           "a mesma semente formula exatamente os mesmos jogos")
+    c3 = FO.conselho("mega_sena", semente=43)
+    checar(por_nome["aleatoria"]["dezenas"]
+           != {g["inteligencia"]: g for g in c3["jogos"]}["aleatoria"]["dezenas"],
+           "e semente diferente formula diferente")
+
+    # ── com histórico: atrasadas e quentes acham o que está lá ───────────
+    # 60 concursos onde a dezena 60 NUNCA sai e a 7 sai SEMPRE
+    concursos = []
+    for i in range(60):
+        dz = sorted({((i * 6 + j) % 59) + 1 for j in range(6)})
+        while len(dz) < 6:
+            dz = sorted(set(dz) | {(max(dz) % 59) + 1})
+        if 7 not in dz:
+            dz = sorted(set(dz[:-1]) | {7})
+        concursos.append({"concurso": i + 1, "data": "", "dezenas": dz,
+                          "ganhadores": {}, "arrecadacao": None})
+    hist = H.Historico("mega_sena", concursos, fonte="fabricado p/ formular",
+                       sintetico=True)
+    c4 = FO.conselho("mega_sena", hist=hist, semente=42)
+    por4 = {g["inteligencia"]: g for g in c4["jogos"]}
+    checar(60 in por4["atrasadas"]["dezenas"],
+           "a inteligência das atrasadas acha a dezena que nunca saiu",
+           str(por4["atrasadas"]["dezenas"]))
+    checar(7 in por4["quentes"]["dezenas"],
+           "e a das quentes acha a que sai sempre",
+           str(por4["quentes"]["dezenas"]))
+    checar(any("SINTÉTICO" in a for a in por4["atrasadas"]["avisos"]),
+           "e jogo formulado sobre histórico sintético avisa que é treino")
+
+    # ── O PORTÃO: derrubar o item cala a inteligência ────────────────────
+    B.registrar_veredito("C01", "derrubado", {"taxa": 0.1001})
+    c5 = FO.conselho("mega_sena", hist=hist, semente=42)
+    por5 = {g["inteligencia"]: g for g in c5["jogos"]}
+    checar(por5["atrasadas"]["calada"]
+           and "DERRUBADO" in por5["atrasadas"]["motivo"],
+           "C01 derrubado pela medida CALA a inteligência das atrasadas",
+           por5["atrasadas"]["motivo"][:60])
+    checar(not por5["quentes"]["calada"],
+           "e derrubar C01 não cala as quentes — cada uma cai pelo seu item")
+    B.por_id("C01").veredito, B.por_id("C01").medida = None, {}
+
+    # ── pedido fora das regras é recusado ────────────────────────────────
+    checar(not FO.conselho("mega_sena", quantas=21)["ok"],
+           "pedir 21 dezenas na Mega-Sena (máximo 20) é recusado")
+
+
+# ═══════════ 11. a conferência — onde a promessa encontra o sorteio
+def teste_conferencia():
+    print("\n[11] CONFERÊNCIA — a promessa auditada contra o sorteio real")
+    ms = R.jogo("mega_sena")
+
+    r = CO.conferir(ms, [[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]],
+                    [1, 2, 3, 4, 5, 50])
+    checar(r["ok"] and r["resultados"][0]["acertos"] == 5
+           and r["resultados"][1]["acertos"] == 0,
+           "conta os acertos de cada aposta: 5 e 0",
+           f"{[x['acertos'] for x in r['resultados']]}")
+    checar(r["resultados"][0]["paga"] and not r["resultados"][1]["paga"],
+           "e sabe que 5 paga (quina) e 0 não paga na Mega-Sena")
+    checar(r["por_faixa"] == {5: 1}, "e agrupa por faixa", str(r["por_faixa"]))
+
+    checar(not CO.conferir(ms, [[1, 2, 3, 4, 5, 6]], [1, 2, 3, 4, 5])["ok"],
+           "um 'sorteio' com 5 dezenas é recusado — conferir contra sorteio "
+           "errado daria acerto plausível e falso")
+    checar(not CO.conferir(ms, [[1, 2, 3, 4, 5, 6]], [1, 2, 3, 4, 5, 66])["ok"],
+           "e dezena 66 fora do universo também")
+
+    # ── a promessa gravada JUNTO com as apostas, e o ciclo completo ──────
+    dez10 = list(range(1, 11))
+    fech = F.montar(dez10, k=6, acertos_previstos=5, garantir=4)
+    prova = F.conferir(fech["apostas"], dez10, 5, 4)
+    checar(prova["provado"], "(o fechamento de apoio está provado)")
+
+    arq = _escrever("apostas_ciclo.txt", "")
+    CO.escrever_apostas(arq, fech["apostas"], "mega_sena",
+                        meta={"se": 5, "garantir": 4, "dezenas": dez10})
+    lidas, meta, avisos = CO.ler_apostas(arq, ms)
+    checar([sorted(a) for a in lidas] == [sorted(a) for a in fech["apostas"]]
+           and meta == {"se": 5, "garantir": 4, "dezenas": dez10},
+           "salvar e reler devolve as MESMAS apostas e a MESMA promessa",
+           f"{len(lidas)} apostas, meta {meta}")
+
+    # a condição aconteceu (5 das 10 saíram) — a garantia TEM de se cumprir
+    sorteio = [1, 3, 5, 7, 9, 55]
+    aud = CO.auditar_garantia(meta, lidas, sorteio)
+    checar(aud["aplicavel"] and aud["honrada"] and aud["melhor"] >= 4,
+           "com 5 das 10 dezenas sorteadas, a promessa de quadra é HONRADA",
+           f"melhor aposta fez {aud['melhor']}")
+
+    # a condição NÃO aconteceu — a garantia não prometia nada, e diz isso
+    aud2 = CO.auditar_garantia(meta, lidas, [1, 3, 41, 43, 45, 47])
+    checar(aud2["aplicavel"] is False and "não prometia" in aud2["nota"],
+           "com só 2 das 10, a auditoria diz que a garantia não prometia nada")
+
+    # O DESTRUTIVO: apostas que não honram a promessa TÊM de ser desmentidas.
+    # Auditor que só sabe aprovar não audita nada -- é o mesmo princípio do
+    # teste do fechamento, agora no lugar onde o dinheiro já foi gasto.
+    ruins = [[41, 42, 43, 44, 45, 46]]
+    aud3 = CO.auditar_garantia(meta, ruins, sorteio)
+    checar(aud3["aplicavel"] and aud3["honrada"] is False
+           and "FALHOU" in aud3["nota"],
+           "apostas que NÃO cumprem a promessa são desmentidas na tela",
+           aud3["nota"][:60])
+
+    # aposta inválida no arquivo não entra na conferência
+    Path(arq).write_text("# apostas de mega_sena\n1 2 3 4 5 6\n1 2 3 4 5 66\n",
+                         encoding="utf-8")
+    lidas2, _m, avisos2 = CO.ler_apostas(arq, ms)
+    checar(len(lidas2) == 1 and any("ignorada" in a for a in avisos2),
+           "linha com dezena fora do universo é ignorada COM aviso",
+           avisos2[0][:60] if avisos2 else "")
+
+
+
 def main() -> int:
     print("═" * 72)
     print("LOTERIA — regras exatas, base falsificável, garantia provada, medida")
@@ -647,6 +799,8 @@ def main() -> int:
     teste_historico()
     teste_medidor()
     teste_api()
+    teste_formular()
+    teste_conferencia()
     import shutil
     shutil.rmtree(RAIZ / "_teste_tmp", ignore_errors=True)
 

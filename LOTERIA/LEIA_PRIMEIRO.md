@@ -14,8 +14,11 @@ Para abrir no Windows: **LOTERIA.bat**. Para conferir que está tudo provado:
 ```
 python JOGAR.py                          as loterias e o acaso de cada uma
 python JOGAR.py mega_sena                o acaso e o custo, por tamanho de aposta
-python JOGAR.py mega_sena --dezenas "3 7 12 19 24 31 38 45 52 58 11 27"
-                                         o fechamento, com a garantia provada
+python JOGAR.py mega_sena --dezenas "3 7 12 19 24 31 38 45 52 58 11 27" --salvar
+                                         o fechamento, com a garantia provada e salva
+python JOGAR.py mega_sena --formular     as inteligências formulam jogos citando a base
+python JOGAR.py mega_sena --apostas dados/apostas_mega_sena.txt --sorteio "4 18 29 33 47 52"
+                                         confere as apostas e AUDITA a promessa
 python PUXAR.py mega_sena --ultimo       testa a API com uma chamada só
 python PUXAR.py mega_sena                puxa o histórico da API para o disco
 python JOGAR.py mega_sena --historico dados/mega_sena.json
@@ -49,6 +52,32 @@ promessa inteira. Quando não dá para conferir tudo dentro do teto, o software
 
 Isto não aumenta a chance das suas dezenas saírem. Converte acerto parcial em
 prêmio com certeza, e dá para verificar antes de gastar um real.
+
+### As inteligências — quem formula, cita
+
+O pedido original: *"as inteligências irem consultando a base pra formular os
+jogos"*. São quatro, sobre o mesmo material, e a regra é o portão do outro
+software: **inteligência sem item da base que a autorize fica calada** — e item
+derrubado pela medida cala quem o citava, na tela, com o motivo.
+
+| | cita | |
+|---|---|---|
+| **Anti-partilha** | M01, P01 | evita datas e sequências: não muda a chance, muda com quantos divide |
+| **Atrasadas** | C01 | só fala se C01 sobreviver à medida; sem histórico, calada |
+| **Quentes** | C02 | idem, pelo item dela |
+| **Aleatória** | M01 | o controle: pela chance, empata com todas — é a régua delas |
+
+Cada jogo sai com a citação e o estado do item (demonstrado / confirmado / sem
+medida / derrubado), a semente para reproduzir, e os avisos no corpo. A chance é
+idêntica nos quatro (M01); o que difere é o **motivo**, e o motivo está citado.
+
+### A conferência — onde a promessa encontra o sorteio
+
+`--salvar` grava as apostas do fechamento **junto com a promessa** ("se 5
+saírem, garanto 4"). No dia do sorteio, `--sorteio` confere cada aposta e
+**audita a garantia**: a condição aconteceu? a promessa foi honrada? Se algum
+dia a resposta for "não", isso é defeito provado no meu fechamento, dito na
+tela — o auditor sabe desmentir, e o teste prova que sabe.
 
 ### A medida — o que os seus dados dizem
 
@@ -156,4 +185,6 @@ derrubar também não pode ser confirmada; ela só pode ser repetida.
 | `NUCLEO/historico.py` | a porta de entrada dos sorteios reais |
 | `NUCLEO/estatistica.py` | a régua: Wilson, qui-quadrado, permutação |
 | `NUCLEO/medidor.py` | mede cada item, andando para frente |
-| `test_loteria.py` | 9 seções, 100 checagens, incluindo as destrutivas |
+| `NUCLEO/formular.py` | as inteligências que formulam citando a base |
+| `NUCLEO/conferencia.py` | confere apostas e audita a promessa do fechamento |
+| `test_loteria.py` | 11 seções, 125 checagens, incluindo as destrutivas |
