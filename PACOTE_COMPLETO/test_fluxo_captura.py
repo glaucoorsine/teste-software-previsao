@@ -557,6 +557,38 @@ def test_sonda_existe_e_nao_muda_nada():
     print("  ok   a sonda le e relata, sem tocar no que esta rodando")
 
 
+def test_sonda_le_a_pagina_antes_de_procurar_nela():
+    """O bug que a PRIMEIRA rodada da sonda revelou sobre ela mesma.
+
+    Ele rodou a sonda e "citados": [] apareceu nas CINCO mesas -- inclusive
+    nas quatro que respondiam 200 com dado de verdade, o que nao fazia
+    sentido: se a pagina realmente nao citasse nada, o resto do software
+    (que usa a MESMA descoberta) nunca teria achado os enderecos que ja
+    estao gravados.
+
+    A causa: a sonda chamava `enderecos_citados(pag)`, passando a URL da
+    pagina como se fosse o HTML dela. A funcao procura padrao de endereco
+    DENTRO de um texto; recebendo uma URL como texto, nunca ia achar nada,
+    em nenhuma mesa -- nao era a Crazy Time A que estava muda, era a sonda
+    que nunca tinha ido buscar o que ler.
+
+    Este teste existe para essa classe de erro nao voltar disfarcada:
+    confere que a sonda usa `procurar()`, que busca a pagina e so DEPOIS
+    procura os enderecos nela -- o mesmo caminho que o pipeline ao vivo usa.
+    """
+    fonte = (ROOT / "SONDA_MESAS.py").read_text(encoding="utf-8")
+    assert "from descobridor_pela_pagina import procurar" in fonte, \
+        "a sonda tem que usar a funcao que BUSCA a pagina antes de procurar " \
+        "endereco nela, nao a que so procura em texto que ja devia ter vindo"
+    # o CODIGO tem que chamar procurar(pagina, mesa, ...) -- nao so o import.
+    # O comentario aqui em cima cita a chamada antiga de proposito, para
+    # explicar o defeito; checar so a ausencia da string velha cairia na
+    # propria explicacao. O que prova o conserto e a chamada nova existir.
+    assert "_proc(pag, str(mesa)" in fonte, \
+        "a chamada de verdade -- busca a pagina, so DEPOIS procura nela"
+    print("  ok   a sonda busca a pagina antes de procurar endereco nela")
+
+
 def test_profundidade_do_historico_medida_na_maquina_dele():
     """O teto de 100 giros era MEU, e a sonda dele provou.
 
@@ -616,5 +648,6 @@ if __name__ == "__main__":
     test_mega_fire_capta_multiplicador_sem_super_boost()
     test_repeticao_real_nao_e_apagada()
     test_sonda_existe_e_nao_muda_nada()
+    test_sonda_le_a_pagina_antes_de_procurar_nela()
     test_profundidade_do_historico_medida_na_maquina_dele()
     print("FLUXO_TESTES_OK")

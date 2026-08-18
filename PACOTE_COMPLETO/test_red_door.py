@@ -175,6 +175,89 @@ def teste_combo_compartilhado():
             _os.environ["LAB_MESA"] = guardado_lab
 
 
+def teste_com_dado_real_da_sonda():
+    """A resposta DE VERDADE que ele mandou, não mais palpite sobre o formato.
+
+    A sonda que ele rodou trouxe o JSON cru de cinco mesas, com o endereço
+    principal respondendo 200 em quatro delas -- inclusive a Red Door, que
+    era só um palpite meu até este arquivo chegar. Aqui as rodadas reais
+    (recortadas dos campos que não importam para o parser: vencedores, valor
+    em dinheiro) viram fixture, para o parser ser testado contra o formato
+    de verdade, não contra o que eu imaginei que ele fosse.
+
+    Nenhuma das rodadas capturadas pagou multiplicador -- o número da sorte
+    não bateu com o que saiu em nenhuma delas, o que é o caso comum. Isso não
+    enfraquece o teste: o que importa aqui é que TODOS os números anunciados e
+    TODOS os multiplicadores sejam lidos certos, que é exatamente o defeito
+    que já apareceu duas vezes neste arquivo (Mega Fire lendo 0% quando o
+    site mostrava 74X).
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(RAIZ))
+    import fluxo_captura as F
+    from NUCLEO.situacao import _mult_do_giro
+
+    # Lightning — api-cs.casino.org, 3 rodadas reais, giro 02:44:16Z
+    lightning_real = [{
+        "id": "6a83c70019aef3109978baf9",
+        "data": {"settledAt": "2026-08-18T02:44:16.764Z",
+                 "result": {"outcome": {"number": 19, "type": "Odd", "color": "Red"},
+                            "luckyNumbersList": [
+                                {"number": 5, "roundedMultiplier": 200},
+                                {"number": 10, "roundedMultiplier": 50},
+                                {"number": 14, "roundedMultiplier": 200}]}}}]
+    r = F.parse_items_roulette(lightning_real)
+    checar(r and r[0]["n"] == 19, "lightning: o número sai certo do dado real")
+    pago, anun = _mult_do_giro(r[0])
+    checar(anun == 3, "lightning: os 3 números da sorte anunciados são lidos",
+           f"anunciados={anun}")
+    checar(pago == 0,
+           "lightning: 19 não estava entre 5/10/14 — não paga, e o software "
+           "não pode inventar pagamento", f"pago={pago}")
+    fogo = [t["lucky"] for t in r[0]["tags"] if "lucky" in t][0]
+    checar({(it["n"], it["x"]) for it in fogo} == {(5, 200), (10, 50), (14, 200)},
+           "e os TRÊS multiplicadores batem exatamente com o que a API mandou",
+           fogo)
+
+    # Red Door — o endereço que era palpite meu respondeu 200 de verdade
+    red_door_real = [{
+        "id": "6a83c6ea927eb29a45cde464",
+        "data": {"settledAt": "2026-08-18T02:43:53.863Z",
+                 "gameType": "reddoorroulette",
+                 "table": {"id": "RedDoorRoulette1", "name": "Red Door Roulette"},
+                 "result": {"outcome": {"number": 35, "type": "Odd", "color": "Black"},
+                            "luckyNumbersList": [
+                                {"number": 2, "roundedMultiplier": 1},
+                                {"number": 3, "roundedMultiplier": 1},
+                                {"number": 4, "roundedMultiplier": 1}]}}},
+        {"id": "6a83c6a9927eb29a45cde45f",
+         "data": {"settledAt": "2026-08-18T02:42:49.359Z",
+                  "gameType": "reddoorroulette",
+                  "result": {"outcome": {"number": 10, "type": "Even", "color": "Black"},
+                             "luckyNumbersList": [
+                                 {"number": 0, "roundedMultiplier": 1},
+                                 {"number": 14, "roundedMultiplier": 1},
+                                 {"number": 31, "roundedMultiplier": 5}]}}}]
+    r2 = F.parse_items_roulette(red_door_real)
+    checar(len(r2) == 2 and {x["n"] for x in r2} == {35, 10},
+           "red door: as duas rodadas reais chegam com o número certo",
+           [x["n"] for x in r2])
+    for linha in r2:
+        pago2, anun2 = _mult_do_giro(linha)
+        checar(anun2 == 3,
+               f"red door giro {linha['n']}: os 3 anunciados são lidos sem "
+               f"eu ter chutado nome de campo nenhum — o mesmo leitor que já "
+               f"serve o Lightning", f"anunciados={anun2}")
+    checar(pago == 0 and pago2 == 0,
+           "red door: nenhuma das duas rodadas teve o número da sorte igual "
+           "ao que saiu — não paga, e é isso mesmo (não é sinal de defeito)")
+    # o 5x do 31 na segunda rodada tem que estar lá, mesmo sem ter pago
+    fogo2 = [t["lucky"] for t in r2[1]["tags"] if "lucky" in t][0]
+    checar((31, 5) in {(it["n"], it["x"]) for it in fogo2},
+           "e o multiplicador 5x do 31 é lido corretamente, ainda que não "
+           "tenha sido o número sorteado", fogo2)
+
+
 def teste_sonda_inclui_a_mesa_nova():
     print("\n[6] A SONDA — vai medir a mesa nova também")
     fonte = (RAIZ / "SONDA_MESAS.py").read_text(encoding="utf-8")
@@ -190,6 +273,7 @@ def main() -> int:
     teste_dominio_e_buffer()
     teste_telas_e_listas()
     teste_combo_compartilhado()
+    teste_com_dado_real_da_sonda()
     teste_sonda_inclui_a_mesa_nova()
     print("\n" + "═" * 72)
     if FALHAS:

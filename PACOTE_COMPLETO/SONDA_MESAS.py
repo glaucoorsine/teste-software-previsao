@@ -87,7 +87,18 @@ def _buscar(url: str) -> Dict[str, Any]:
     try:
         req = urllib.request.Request(alvo, headers=cab)
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            bruto = r.read(400_000).decode("utf-8", "ignore")
+            # ELE JÁ TROUXE UM CASO ONDE 400KB NÃO BASTAVA.
+            #
+            # A resposta do trackpot para red_door veio como "não é JSON",
+            # com o texto cru começando exatamente como um JSON válido
+            # (`{"ok":true,"game_key":...`) -- porque o trackpot ignora
+            # `size=5&page=0` (não é o parâmetro dele) e devolve a janela
+            # inteira, "sample_size":1000. O corte de 400KB cortava no meio
+            # de um objeto e `json.loads` reprovava um JSON que era válido
+            # até a página do provedor cortar. Aqui é ferramenta de
+            # diagnóstico rodada à mão, não o laço de captura: 6MB cabe
+            # tranquilo numa consulta manual e não trava nada em produção.
+            bruto = r.read(6_000_000).decode("utf-8", "ignore")
             codigo = r.status
     except Exception as e:
         return {"url": url, "erro": f"{type(e).__name__}: {e}"[:160],
@@ -141,18 +152,36 @@ def sondar() -> Dict[str, Any]:
         item: Dict[str, Any] = {"enderecos": [], "paginas": []}
 
         # ── 1. o que a PÁGINA da mesa cita nos scripts ────────────────────
+        #
+        # UM BUG MEU, ACHADO PELA PRÓPRIA SONDA: "citados": [] apareceu nas
+        # CINCO mesas -- inclusive nas quatro que funcionam, o que não fazia
+        # sentido nenhum se a página realmente não citasse nada. A causa: eu
+        # chamava `enderecos_citados(pag)`, passando a URL da página como se
+        # fosse o HTML dela. A função procura padrão de endereço DENTRO de um
+        # texto; recebendo uma URL como texto, ela nunca ia achar nada -- não
+        # importa a mesa. Não era a página que estava muda, era a sonda que
+        # nunca tinha ido buscar o que ler.
+        #
+        # `procurar()` é a função que o pipeline de verdade usa (o mesmo
+        # caminho de `fluxo_captura.py`): ela busca a página primeiro,
+        # depois procura nos scripts dela. Chamar ela aqui corrige o bug e
+        # faz a sonda testar exatamente o que o software testa ao vivo.
         try:
-            from descobridor_pela_pagina import enderecos_citados
+            from descobridor_pela_pagina import procurar as _proc
             for pag in F.enderecos_html(mesa)[:1]:
                 _linha(f"  lendo a página {pag}")
                 try:
-                    citados = enderecos_citados(pag) or []
+                    r = _proc(pag, str(mesa), registrar=_linha)
+                    citados = r.get("citados") or []
+                    achado = r.get("api")
                 except Exception as e:
-                    citados = []
+                    citados, achado = [], None
                     _linha(f"    (não deu: {type(e).__name__})")
                 item["paginas"].append({"pagina": pag,
-                                        "citados": [str(c) for c in citados[:40]]})
-                _linha(f"    {len(citados)} endereço(s) citados na página")
+                                        "citados": [str(c) for c in citados[:40]],
+                                        "api_validada_pela_pagina": achado})
+                _linha(f"    {len(citados)} endereço(s) citados na página"
+                      + (f" — validado: {achado}" if achado else ""))
                 for c in citados[:40]:
                     _linha(f"      {c}")
         except Exception as e:
