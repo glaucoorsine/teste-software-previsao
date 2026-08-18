@@ -1,8 +1,8 @@
 @echo off
 chcp 65001 >nul 2>&1
-cd /d "%~dp0"
+cd /d "%~dp0.."
 title Loteria - gerar executaveis
-call "%~dp0_PYTHON.bat" || exit /b 1
+call "%~dp0..\_PYTHON.bat" || exit /b 1
 rem ---------------------------------------------------------------------------
 rem  Gera LOTERIA.exe e PUXAR.exe NESTA maquina, com o PyInstaller.
 rem

@@ -705,8 +705,12 @@ def teste_formular():
     B.registrar_veredito("C01", "derrubado", {"taxa": 0.1001})
     c5 = FO.conselho("mega_sena", hist=hist, semente=42)
     por5 = {g["inteligencia"]: g for g in c5["jogos"]}
+    # a checagem é pelo SENTIDO, não pela grafia: ela já quebrou uma vez só
+    # porque eu melhorei o texto da mensagem, e teste que quebra com melhoria
+    # de texto atrapalha em vez de proteger.
     checar(por5["atrasadas"]["calada"]
-           and "DERRUBADO" in por5["atrasadas"]["motivo"],
+           and "C01" in por5["atrasadas"]["motivo"]
+           and "derrub" in por5["atrasadas"]["motivo"].lower(),
            "C01 derrubado pela medida CALA a inteligência das atrasadas",
            por5["atrasadas"]["motivo"][:60])
     checar(not por5["quentes"]["calada"],
@@ -786,6 +790,111 @@ def teste_conferencia():
 
 
 
+
+# ════════════════ 12. o painel — a tela que ele abre, e as rotas dela
+#
+# A tela é o software para ele. Se uma rota quebrar, ele vê caixa vazia e não
+# tem como saber por quê -- então as rotas são testadas como tudo o mais.
+# Sobe o servidor de verdade numa porta livre e conversa com ele por HTTP.
+def teste_painel():
+    print("\n[12] PAINEL — o servidor da tela, respondendo de verdade")
+    import json as _json
+    import threading
+    import urllib.request
+    from http.server import ThreadingHTTPServer
+
+    import PAINEL
+
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), PAINEL.Mao)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_address[1]}"
+
+    def pega(rota):
+        with urllib.request.urlopen(base + rota, timeout=20) as r:
+            return _json.loads(r.read().decode("utf-8"))
+
+    def manda(rota, corpo):
+        req = urllib.request.Request(
+            base + rota, data=_json.dumps(corpo).encode("utf-8"),
+            headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return _json.loads(r.read().decode("utf-8"))
+
+    def esperar(ident, limite=120):
+        import time as _t
+        fim = _t.time() + limite
+        while _t.time() < fim:
+            t = pega(f"/api/tarefa?id={ident}")
+            if t["estado"] == "pronto":
+                return t["resultado"]
+            if t["estado"] == "erro":
+                return {"erro_tarefa": t.get("erro")}
+            _t.sleep(0.2)
+        return {"erro_tarefa": "demorou demais"}
+
+    try:
+        with urllib.request.urlopen(base + "/", timeout=20) as r:
+            pagina = r.read().decode("utf-8")
+        checar("<title>" in pagina and "abas" in pagina,
+               "a página abre e traz a estrutura das abas")
+
+        d = pega("/api/jogos")
+        checar(len(d["jogos"]) == len(R.JOGOS),
+               f"a tela recebe as {len(R.JOGOS)} loterias para as abas",
+               f"{len(d['jogos'])} abas")
+
+        j = pega("/api/jogo?jogo=mega_sena")
+        checar(j["nome"] == "Mega-Sena" and len(j["custo"]) > 3,
+               "e a tabela de custo por tamanho de aposta")
+        checar(all(l["razao_igual"] for l in j["custo"]),
+               "onde a chance por real sai IGUAL em todo tamanho — a correção "
+               "que a aritmética me impôs, agora visível na tela dele")
+
+        b = pega("/api/base?jogo=mega_sena")
+        checar(all(i.get("derruba") for i in b["itens"]),
+               "todo item que chega na tela diz o que o derrubaria")
+
+        c = manda("/api/formular", {"jogo": "mega_sena", "semente": 7})
+        checar(c["ok"] and len(c["jogos"]) == 4,
+               "a tela formula os quatro jogos")
+        calada = [g for g in c["jogos"] if g["calada"]]
+        checar(all(g["motivo"] for g in calada),
+               "e toda inteligência calada chega com o MOTIVO — caixa vazia "
+               "sem explicação seria pior que não mostrar nada")
+        checar(not any("PUXAR.py" in (g.get("motivo") or "") for g in c["jogos"]),
+               "e nenhum motivo manda ele rodar arquivo de programador")
+
+        t = manda("/api/fechamento", {"jogo": "mega_sena",
+                                      "dezenas": list(range(1, 11)),
+                                      "k": 6, "se": 5, "garantir": 4})
+        r = esperar(t["tarefa"])
+        checar(r and r.get("fechamento", {}).get("ok")
+               and r.get("prova", {}).get("provado"),
+               "o fechamento roda pela tela e chega provado",
+               f"{r.get('fechamento', {}).get('n_apostas')} apostas")
+
+        conf = manda("/api/conferir", {
+            "jogo": "mega_sena",
+            "apostas": r["fechamento"]["apostas"],
+            "sorteio": [1, 3, 5, 7, 9, 55],
+            "meta": {"se": 5, "garantir": 4, "dezenas": list(range(1, 11))}})
+        checar(conf["conferencia"]["ok"] and conf["auditoria"]["honrada"],
+               "e a conferência com auditoria da garantia responde pela tela")
+
+        ruim = manda("/api/conferir", {"jogo": "mega_sena",
+                                       "apostas": [[1, 2, 3, 4, 5, 6]],
+                                       "sorteio": [1, 2, 3]})
+        checar(not ruim["conferencia"]["ok"],
+               "sorteio inválido é recusado pela tela também, com o motivo")
+
+        erro = pega("/api/tarefa?id=nao_existe")
+        checar(erro["estado"] == "erro",
+               "tarefa desconhecida devolve erro em vez de travar a tela")
+    finally:
+        srv.shutdown()
+
+
+
 def main() -> int:
     print("═" * 72)
     print("LOTERIA — regras exatas, base falsificável, garantia provada, medida")
@@ -801,6 +910,7 @@ def main() -> int:
     teste_api()
     teste_formular()
     teste_conferencia()
+    teste_painel()
     import shutil
     shutil.rmtree(RAIZ / "_teste_tmp", ignore_errors=True)
 

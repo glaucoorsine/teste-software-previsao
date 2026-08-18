@@ -33,14 +33,19 @@ DESTINO = RAIZ.parent / "LOTERIA_v1.zip"
 # justamente um filtro esperto demais, e lista explícita quebra na cara quando
 # um arquivo novo não é lembrado aqui — que é como deve ser.
 LEVAR = [
-    "LEIA_PRIMEIRO.md",
-    "JOGAR.py", "PUXAR.py", "EMPACOTAR.py", "test_loteria.py",
-    "LOTERIA.bat", "PUXAR.bat", "TESTES.bat", "GERAR_EXE.bat", "_PYTHON.bat",
+    # o que ele abre
+    "ABRIR.bat", "_PYTHON.bat", "PAINEL.py",
+    "painel/index.html", "painel/estilo.css", "painel/painel.js",
+    "LEIA_PRIMEIRO.md", "dados/LEIA.md",
+    # o motor
     "NUCLEO/__init__.py", "NUCLEO/regras.py", "NUCLEO/base_conhecimento.py",
     "NUCLEO/fechamento.py", "NUCLEO/estatistica.py", "NUCLEO/historico.py",
     "NUCLEO/medidor.py", "NUCLEO/api.py", "NUCLEO/formular.py",
     "NUCLEO/conferencia.py",
-    "dados/LEIA.md",
+    # a linha de comando, para quem quiser
+    "JOGAR.py", "PUXAR.py", "EMPACOTAR.py", "test_loteria.py",
+    "avancado/LEIA.md", "avancado/LINHA_DE_COMANDO.bat", "avancado/PUXAR.bat",
+    "avancado/TESTES.bat", "avancado/GERAR_EXE.bat",
 ]
 
 
@@ -92,7 +97,7 @@ def empacotar() -> int:
     print(f"[Pacote] a extração rodou as {sum(1 for l in (r.stdout or '').splitlines() if l.startswith('  ok'))} "
           f"checagens e terminou em LOTERIA_BASE_OK.")
     print("[Pacote] na máquina dele: extrair, entrar na pasta LOTERIA, e "
-          "abrir LOTERIA.bat.")
+          "abrir ABRIR.bat — só esse.")
     return 0
 
 

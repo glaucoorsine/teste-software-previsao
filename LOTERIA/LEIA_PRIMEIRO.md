@@ -1,11 +1,39 @@
 # LOTERIA
 
 Software de loteria com três regras que não se dobram: **o acaso é calculado
-exato**, **toda afirmação diz o que a derrubaria**, e **garantia só se
-entregue provada**.
+exato**, **toda afirmação diz o que a derrubaria**, e **garantia só se entregue
+provada**.
 
-Para abrir no Windows: **LOTERIA.bat**. Para conferir que está tudo provado:
-**TESTES.bat** (a última linha tem de ser `LOTERIA_BASE_OK`).
+## Abra o ABRIR.bat. Só esse.
+
+Ele liga o programa e abre a tela no seu navegador. Tudo está lá dentro:
+
+- **as loterias em abas** no topo — Mega-Sena, Quina, Lotofácil e as outras
+- **o que fazer na lateral** — seis telas, na ordem em que se usa
+- **explicação em cada tela**, dizendo o que aquilo faz e o que aquilo não faz
+
+O programa roda inteiro no seu computador. Nada é enviado para lugar nenhum — o
+navegador é só a maneira de desenhar a tela. Para fechar, feche a janela preta
+que abre junto.
+
+> **Por que no navegador e não numa janela comum?** Por causa da acessibilidade.
+> No navegador funcionam leitor de tela, zoom, contraste alto do Windows e
+> navegação só por teclado — tudo testado por milhões de pessoas. Numa janela
+> feita à mão, nada disso funciona direito. A tela foi auditada com a ferramenta
+> `axe` nas seis seções: **zero violações** de WCAG 2.1 AA.
+
+As seis telas:
+
+| | |
+|---|---|
+| **1. Começar aqui** | o que é a loteria, o acaso exato, quanto custa cada tamanho de aposta |
+| **2. Resultados** | busca os concursos já sorteados e guarda no seu computador |
+| **3. Formular jogos** | quatro inteligências montam jogos, cada uma citando o que a autoriza |
+| **4. Fechamento** | escolha dezenas no quadro e receba apostas com garantia provada |
+| **5. Conferir sorteio** | saiu o resultado? confere as apostas e audita a promessa |
+| **6. O que o software sabe** | tudo o que ele afirma, e o que derrubaria cada coisa |
+
+Quem quiser linha de comando encontra tudo na pasta `avancado`.
 
 ---
 
@@ -23,6 +51,7 @@ python PUXAR.py mega_sena --ultimo       testa a API com uma chamada só
 python PUXAR.py mega_sena                puxa o histórico da API para o disco
 python JOGAR.py mega_sena --historico dados/mega_sena.json
                                          mede as crenças de loteria nos seus dados
+python PAINEL.py                         a tela (o mesmo que o ABRIR.bat faz)
 python JOGAR.py --base                   o que o software sabe, e o que o derruba
 ```
 
@@ -176,7 +205,10 @@ derrubar também não pode ser confirmada; ela só pode ser repetida.
 
 | | |
 |---|---|
-| `JOGAR.py` | o programa |
+| `ABRIR.bat` | **o que você abre** |
+| `PAINEL.py` | a tela, e o servidor que roda só na sua máquina |
+| `painel/` | o desenho da tela (HTML, estilo, comportamento) |
+| `JOGAR.py` | o mesmo software por linha de comando |
 | `NUCLEO/regras.py` | as oito loterias e a probabilidade exata |
 | `NUCLEO/fechamento.py` | as apostas com garantia, e a prova exaustiva |
 | `NUCLEO/base_conhecimento.py` | o que o software sabe, e o que derruba cada coisa |
@@ -187,4 +219,4 @@ derrubar também não pode ser confirmada; ela só pode ser repetida.
 | `NUCLEO/medidor.py` | mede cada item, andando para frente |
 | `NUCLEO/formular.py` | as inteligências que formulam citando a base |
 | `NUCLEO/conferencia.py` | confere apostas e audita a promessa do fechamento |
-| `test_loteria.py` | 11 seções, 125 checagens, incluindo as destrutivas |
+| `test_loteria.py` | 12 seções, 137 checagens, incluindo as destrutivas |

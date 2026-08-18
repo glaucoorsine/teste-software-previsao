@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loteria — acaso exato e garantia provada</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%231c4fd8'/%3E%3Ctext x='16' y='23' font-size='18' font-weight='bold' text-anchor='middle' fill='white' font-family='sans-serif'%3EL%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/painel/estilo.css">
+</head>
+<body>
+
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+
+<header class="topo">
+  <div class="topo-interno">
+    <div class="marca-linha">
+      <span class="marca-nome">Loteria</span>
+      <span class="marca-frase">o acaso é calculado exato, a garantia é
+        provada, e nada aqui adivinha o sorteio</span>
+    </div>
+
+    <div class="abas" role="tablist" aria-label="Escolha a loteria" id="abas">
+      <!-- as abas entram por JavaScript -->
+    </div>
+  </div>
+</header>
+
+<div class="corpo">
+
+  <nav class="menu" aria-label="Seções">
+    <p class="menu-titulo" id="menu-titulo">O que fazer</p>
+    <ul class="menu-lista" aria-labelledby="menu-titulo">
+      <li><button class="menu-item" data-secao="comecar" aria-current="page">
+        <span class="menu-num" aria-hidden="true">1</span>Começar aqui</button></li>
+      <li><button class="menu-item" data-secao="resultados">
+        <span class="menu-num" aria-hidden="true">2</span>Resultados</button></li>
+      <li><button class="menu-item" data-secao="formular">
+        <span class="menu-num" aria-hidden="true">3</span>Formular jogos</button></li>
+      <li><button class="menu-item" data-secao="fechamento">
+        <span class="menu-num" aria-hidden="true">4</span>Fechamento</button></li>
+      <li><button class="menu-item" data-secao="conferir">
+        <span class="menu-num" aria-hidden="true">5</span>Conferir sorteio</button></li>
+      <li><button class="menu-item" data-secao="base">
+        <span class="menu-num" aria-hidden="true">6</span>O que o software sabe</button></li>
+    </ul>
+  </nav>
+
+  <main id="conteudo" tabindex="-1">
+
+    <!-- ══════════════════════════════════════════ 1. COMEÇAR AQUI -->
+    <section class="secao" data-secao="comecar" aria-labelledby="t-comecar">
+      <div class="cartao">
+        <h1 id="t-comecar">Mega-Sena</h1>
+        <div class="explica">
+          <p><strong>O que este programa faz:</strong> calcula o acaso exato de
+            cada aposta, monta apostas que <em>garantem</em> prêmio se as suas
+            dezenas saírem, e mede as crenças de loteria nos resultados reais.</p>
+          <p><strong>O que ele não faz:</strong> dizer quais dezenas vão sair.
+            Num sorteio de bolas honesto isso não existe, e uma tela que
+            fingisse saber estaria mentindo com número — que é a mentira mais
+            convincente que existe.</p>
+        </div>
+        <div id="comecar-estado"></div>
+        <div id="comecar-resumo"></div>
+      </div>
+
+      <div class="cartao">
+        <h2>Quanto custa e o que compra</h2>
+        <div class="explica">
+          <p>Uma aposta com mais dezenas custa mais porque vale por várias
+            apostas mínimas. Repare na coluna <strong>chance por real</strong>:
+            ela é <strong>igual em todos os tamanhos</strong>. Aposta grande não
+            compra vantagem nenhuma por real gasto — compra outra <em>forma</em>
+            de gastar o mesmo dinheiro.</p>
+        </div>
+        <div class="rolagem" id="tabela-custo"></div>
+        <p id="nota-custo" class="dica"></p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ 2. RESULTADOS -->
+    <section class="secao escondido" data-secao="resultados" aria-labelledby="t-res">
+      <div class="cartao">
+        <h1 id="t-res">Resultados dos sorteios</h1>
+        <div class="explica">
+          <p>Aqui o programa busca os concursos já realizados e guarda no seu
+            computador. É deles que sai tudo o que é <em>medido</em> — sem eles,
+            metade do software fica calada, e isso é de propósito.</p>
+          <p>A busca demora alguns minutos na primeira vez (a fonte responde um
+            concurso por vez). Se parar no meio, <strong>continua de onde
+            parou</strong> quando você clicar de novo.</p>
+        </div>
+        <div id="res-estado"></div>
+        <div class="linha-botoes">
+          <button class="botao" id="btn-puxar">Buscar resultados agora</button>
+          <button class="botao botao-2" id="btn-medir">Medir as crenças nos resultados</button>
+        </div>
+        <div id="res-progresso" aria-live="polite"></div>
+        <div id="res-saida"></div>
+      </div>
+
+      <div class="cartao">
+        <h2>De onde vêm os resultados</h2>
+        <div class="explica">
+          <p>Se o endereço da fonte for outro, troque aqui. Use
+            <code>{slug}</code> onde entra o nome da loteria e <code>{n}</code>
+            onde entra o número do concurso.</p>
+        </div>
+        <div class="campo">
+          <label for="fonte-url">Endereço do último concurso</label>
+          <input type="text" id="fonte-url" spellcheck="false">
+        </div>
+        <div class="campo">
+          <label for="fonte-url-n">Endereço de um concurso específico</label>
+          <input type="text" id="fonte-url-n" spellcheck="false">
+        </div>
+        <button class="botao botao-2" id="btn-fonte">Guardar endereço</button>
+        <p id="fonte-estado" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ 3. FORMULAR -->
+    <section class="secao escondido" data-secao="formular" aria-labelledby="t-form">
+      <div class="cartao">
+        <h1 id="t-form">Formular jogos</h1>
+        <div class="explica">
+          <p>Quatro inteligências montam jogos, cada uma por um motivo
+            diferente — e cada uma <strong>cita</strong> o que a autoriza. Se a
+            medida derrubar aquilo que ela cita, ela <strong>fica calada</strong>,
+            e você vê o motivo na tela.</p>
+          <p><strong>A chance é idêntica nas quatro.</strong> Nenhuma escolha de
+            dezenas muda a probabilidade. O que difere entre elas é o motivo, e
+            só uma delas mexe em algo real: a que evita as dezenas que muita
+            gente joga, para dividir o prêmio com menos gente.</p>
+        </div>
+        <div class="campos-lado">
+          <div class="campo">
+            <label for="form-quantas">Dezenas por jogo</label>
+            <input type="number" id="form-quantas">
+            <span class="dica" id="form-quantas-dica"></span>
+          </div>
+          <div class="campo">
+            <label for="form-semente">Semente (opcional)</label>
+            <input type="number" id="form-semente" placeholder="deixe vazio">
+            <span class="dica">Repete uma formulação anterior</span>
+          </div>
+        </div>
+        <button class="botao" id="btn-formular">Formular os jogos</button>
+        <div id="form-saida" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ 4. FECHAMENTO -->
+    <section class="secao escondido" data-secao="fechamento" aria-labelledby="t-fech">
+      <div class="cartao">
+        <h1 id="t-fech">Fechamento — apostas com garantia</h1>
+        <div class="explica">
+          <p><strong>Esta é a coisa mais real deste software.</strong> Você
+            escolhe um punhado de dezenas. O programa monta um conjunto de
+            apostas tal que, <em>se</em> algumas delas saírem, alguma aposta sua
+            <em>garantidamente</em> tem o número de acertos combinado.</p>
+          <p>Garantia aqui é literal, não é "quase sempre": o programa testa
+            <strong>todos</strong> os casos possíveis antes de mostrar. Se não
+            conseguir provar, ele recusa em vez de prometer.</p>
+          <p>Isto <strong>não aumenta</strong> a chance das suas dezenas saírem.
+            Ele transforma acerto parcial em prêmio com certeza, gastando bem
+            menos que apostar todas as combinações.</p>
+        </div>
+
+        <h3 id="rot-grade">Escolha as suas dezenas</h3>
+        <p class="dica">Clique nos números. Pelo teclado: Tab para andar,
+          Espaço para marcar.</p>
+        <div class="grade-dezenas" id="grade" role="group"
+             aria-labelledby="rot-grade"></div>
+        <p aria-live="polite" id="grade-conta"><strong>0</strong> dezenas escolhidas</p>
+        <div class="linha-botoes" style="margin-bottom:1.25rem">
+          <button class="botao botao-2" id="btn-limpar">Limpar</button>
+          <button class="botao botao-2" id="btn-sortear">Sortear para mim</button>
+        </div>
+
+        <div class="campos-lado">
+          <div class="campo">
+            <label for="fech-k">Dezenas por aposta</label>
+            <input type="number" id="fech-k">
+          </div>
+          <div class="campo">
+            <label for="fech-se">Se saírem</label>
+            <input type="number" id="fech-se">
+            <span class="dica">das suas dezenas</span>
+          </div>
+          <div class="campo">
+            <label for="fech-gar">Garantir acertos</label>
+            <input type="number" id="fech-gar">
+            <span class="dica">em alguma aposta</span>
+          </div>
+        </div>
+        <p id="fech-frase" class="explica"></p>
+        <button class="botao" id="btn-fechar">Montar e provar a garantia</button>
+        <div id="fech-progresso" aria-live="polite"></div>
+        <div id="fech-saida"></div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ 5. CONFERIR -->
+    <section class="secao escondido" data-secao="conferir" aria-labelledby="t-conf">
+      <div class="cartao">
+        <h1 id="t-conf">Conferir o sorteio</h1>
+        <div class="explica">
+          <p>Saiu o resultado? Digite as dezenas sorteadas e o programa confere
+            cada aposta sua.</p>
+          <p>E se as apostas vieram de um fechamento, ele
+            <strong>audita a promessa</strong>: a condição aconteceu? a garantia
+            foi cumprida? Se algum dia ela falhar, a tela vai dizer isso na
+            cara — é defeito meu, e você tem que saber.</p>
+        </div>
+        <div class="campo">
+          <label for="conf-sorteio">Dezenas sorteadas</label>
+          <input type="text" id="conf-sorteio" inputmode="numeric"
+                 placeholder="4 18 29 33 47 52" spellcheck="false">
+          <span class="dica">Separe por espaço, vírgula ou traço</span>
+        </div>
+        <div class="campo">
+          <label for="conf-apostas">Suas apostas — uma por linha</label>
+          <textarea id="conf-apostas" rows="7" spellcheck="false"
+                    placeholder="1 2 3 4 5 6&#10;7 8 9 10 11 12"></textarea>
+          <span class="dica" id="conf-dica-apostas"></span>
+        </div>
+        <button class="botao" id="btn-conferir">Conferir</button>
+        <div id="conf-saida" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════ 6. A BASE -->
+    <section class="secao escondido" data-secao="base" aria-labelledby="t-base">
+      <div class="cartao">
+        <h1 id="t-base">O que o software sabe</h1>
+        <div class="explica">
+          <p>Tudo o que este programa afirma está listado aqui — e cada item diz
+            <strong>o que o derrubaria</strong>. Item que nada pode derrubar
+            também não pode ser confirmado; ele só pode ser repetido, e isso não
+            ajuda a escolher dezena nenhuma.</p>
+          <p>Quando você buscar os resultados e mandar medir, os itens ganham um
+            veredito <em>nos seus dados</em>. Item derrubado deixa de autorizar
+            qualquer jogo, e as inteligências que o citavam ficam caladas.</p>
+        </div>
+        <div id="base-saida"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="rodape">
+  <p>Este programa roda inteiro no seu computador. Nada é enviado para
+     lugar nenhum — o navegador é apenas a maneira de desenhar a tela.
+     Para fechar, feche a janela preta que abriu junto.</p>
+</footer>
+
+<script src="/painel/painel.js"></script>
+</body>
+</html>

@@ -74,7 +74,7 @@ def _citacoes(ids: Sequence[str]) -> Tuple[bool, List[str], List[str]]:
             continue
         if not BC.autorizada(ident):
             autorizado = False
-            linhas.append(f"{it.id} {it.titulo} — ✗ DERRUBADO nos dados dele")
+            linhas.append(f"{it.id} {it.titulo} — ✗ DERRUBADO nos seus resultados")
             continue
         if it.veredito == "confirmado":
             taxa = it.medida.get("taxa")
@@ -94,12 +94,12 @@ def _citacoes(ids: Sequence[str]) -> Tuple[bool, List[str], List[str]]:
             linhas.append(f"{it.id} {it.titulo} — mecanismo demonstrado, "
                           f"tamanho · ainda sem medida")
             avisos.append(f"o tamanho do efeito de {it.id} ainda não foi "
-                          f"medido nos dados dele — o mecanismo é certo, o "
-                          f"quanto ele rende não")
+                          f"medido nos seus resultados — o mecanismo é certo, "
+                          f"o quanto ele rende não")
         else:
             linhas.append(f"{it.id} {it.titulo} — · ainda sem medida")
-            avisos.append(f"{it.id} ainda não foi medido nos dados dele — "
-                          f"este jogo segue uma crença, não um achado")
+            avisos.append(f"{it.id} ainda não foi medido nos seus resultados "
+                          f"— este jogo segue uma crença, não um achado")
     return autorizado, linhas, avisos
 
 
@@ -177,13 +177,14 @@ def atrasadas(j: regras.Jogo, quantas: int,
     autorizado, citacoes, avisos = _citacoes(cita)
     if not autorizado:
         return _calada("atrasadas", "Atrasadas (C01)",
-                       "C01 foi DERRUBADO nos dados dele — dezenas atrasadas "
-                       "não saíram mais que as outras, e eu não formulo jogo "
-                       "por crença que a medida matou", cita)
+                       "a medida nos seus resultados derrubou C01: dezenas "
+                       "atrasadas NÃO saíram mais que as outras. Eu não "
+                       "formulo jogo por crença que a medida matou.", cita)
     if hist is None or not len(hist):
         return _calada("atrasadas", "Atrasadas (C01)",
-                       "sem histórico eu não sei o atraso de dezena nenhuma — "
-                       "puxe os resultados (PUXAR.py) e me chame de novo", cita)
+                       "sem os resultados dos concursos eu não sei o atraso "
+                       "de dezena nenhuma. Busque os resultados primeiro e eu "
+                       "volto a falar.", cita)
     if hist.sintetico:
         avisos = avisos + ["o histórico é SINTÉTICO — jogo de treino, não "
                            "jogue isto com dinheiro"]
@@ -210,13 +211,14 @@ def quentes(j: regras.Jogo, quantas: int,
     autorizado, citacoes, avisos = _citacoes(cita)
     if not autorizado:
         return _calada("quentes", "Quentes (C02)",
-                       "C02 foi DERRUBADO nos dados dele — dezena quente não "
-                       "continuou saindo mais, e crença morta não formula jogo",
-                       cita)
+                       "a medida nos seus resultados derrubou C02: dezena "
+                       "quente NÃO continuou saindo mais. Crença morta não "
+                       "formula jogo.", cita)
     if hist is None or not len(hist):
         return _calada("quentes", "Quentes (C02)",
-                       "sem histórico não existe 'quente' — puxe os resultados "
-                       "e me chame de novo", cita)
+                       "sem os resultados dos concursos não existe dezena "
+                       "quente. Busque os resultados primeiro e eu volto a "
+                       "falar.", cita)
     if hist.sintetico:
         avisos = avisos + ["o histórico é SINTÉTICO — jogo de treino, não "
                            "jogue isto com dinheiro"]

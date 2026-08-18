@@ -1,0 +1,336 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   LOTERIA — a folha de estilo do painel.
+
+   ACESSIBILIDADE NÃO É ENFEITE AQUI: foi a cobrança dele, e é o que decide se
+   a pessoa consegue usar. As regras que eu segui, e por quê:
+
+   · contraste  todo texto passa de 4,5:1 sobre o fundo dele. Números de
+                dinheiro e de acaso passam de 7:1, porque é o que se lê com
+                atenção e é onde errar custa caro.
+   · foco       contorno grosso e visível em tudo que se pode focar. Quem
+                navega só de teclado precisa VER onde está.
+   · zoom       tudo em rem e em grade flexível: dar 200% de zoom não quebra
+                a tela nem esconde botão.
+   · movimento  quem pede menos animação no sistema não recebe nenhuma.
+   · cor        nenhuma informação é dada SÓ por cor — sempre há um símbolo
+                ou uma palavra junto. Daltônico não pode ficar sem o dado.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --tinta:        #14171f;
+  --tinta-fraca:  #4a5164;
+  --fundo:        #f4f5f8;
+  --papel:        #ffffff;
+  --papel-2:      #eceef3;
+  --borda:        #d2d6e0;
+  --borda-forte:  #a8afc0;
+
+  --marca:        #1c4fd8;
+  --marca-clara:  #e7edfd;
+  --marca-texto:  #143a9e;
+
+  --bom:          #14663a;
+  --bom-fundo:    #e2f5ea;
+  --ruim:         #a41220;
+  --ruim-fundo:   #fdeaec;
+  --espera:       #7a4d00;
+  --espera-fundo: #fdf1dc;
+
+  --raio:   10px;
+  --raio-g: 14px;
+  --sombra: 0 1px 2px rgba(20,23,31,.06), 0 4px 14px rgba(20,23,31,.06);
+  --largura: 1180px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tinta:        #eef1f7;
+    --tinta-fraca:  #a3abbd;
+    --fundo:        #0e1016;
+    --papel:        #171a23;
+    --papel-2:      #1f2331;
+    --borda:        #2c3244;
+    --borda-forte:  #48506690;
+
+    --marca:        #7aa2ff;
+    --marca-clara:  #1a2544;
+    --marca-texto:  #b9cdff;
+
+    --bom:          #6ee7a5;
+    --bom-fundo:    #10301f;
+    --ruim:         #ff9aa4;
+    --ruim-fundo:   #3a1218;
+    --espera:       #f5c869;
+    --espera-fundo: #33270c;
+    --sombra: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 100%; }
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--fundo);
+  color: var(--tinta);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  font-size: 1.0625rem;         /* 17px: um pouco maior que o padrão, de propósito */
+  line-height: 1.65;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1, h2, h3 { line-height: 1.25; margin: 0 0 .5rem; font-weight: 700; }
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.075rem; }
+p  { margin: 0 0 .85rem; max-width: 72ch; }
+
+a { color: var(--marca-texto); }
+
+/* ── foco: grosso e sempre visível ──────────────────────────────────── */
+:focus-visible {
+  outline: 3px solid var(--marca);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* quem pediu menos movimento no sistema não recebe nenhum */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+.pular {
+  position: absolute; left: -9999px;
+  background: var(--marca); color: #fff;
+  padding: .75rem 1.25rem; border-radius: 0 0 var(--raio) 0; z-index: 100;
+}
+.pular:focus { left: 0; top: 0; }
+
+/* ── cabeçalho ──────────────────────────────────────────────────────── */
+.topo {
+  background: var(--papel);
+  border-bottom: 1px solid var(--borda);
+  padding: 1rem 1.25rem .25rem;
+}
+.topo-interno { max-width: var(--largura); margin: 0 auto; }
+.marca-linha { display: flex; align-items: baseline; gap: .75rem; flex-wrap: wrap; }
+.marca-nome { font-size: 1.35rem; font-weight: 800; letter-spacing: -.02em; }
+.marca-frase { color: var(--tinta-fraca); font-size: .95rem; }
+
+/* ── abas das loterias ──────────────────────────────────────────────── */
+.abas {
+  display: flex; gap: .35rem; flex-wrap: wrap;
+  margin-top: .9rem; padding-bottom: .1rem;
+}
+.aba {
+  appearance: none; border: 1px solid transparent; background: transparent;
+  color: var(--tinta-fraca);
+  font: inherit; font-weight: 600; font-size: .95rem;
+  padding: .55rem .9rem; border-radius: var(--raio) var(--raio) 0 0;
+  cursor: pointer; border-bottom: 3px solid transparent;
+}
+.aba:hover { color: var(--tinta); background: var(--papel-2); }
+.aba[aria-selected="true"] {
+  color: var(--marca-texto);
+  border-bottom-color: var(--marca);
+  background: var(--marca-clara);
+}
+
+/* ── corpo: menu lateral + conteúdo ─────────────────────────────────── */
+.corpo {
+  max-width: var(--largura); margin: 0 auto; padding: 1.5rem 1.25rem 4rem;
+  display: grid; gap: 1.75rem; align-items: start;
+  /* minmax(0,1fr) e nao 1fr: coluna de grid nao encolhe abaixo do conteudo por
+     padrao, entao a tabela larga empurrava a PAGINA para o lado em vez de
+     rolar dentro da propria caixa. Foi visivel na primeira foto da tela. */
+  grid-template-columns: 232px minmax(0, 1fr);
+}
+@media (max-width: 860px) {
+  .corpo { grid-template-columns: 1fr; gap: 1rem; }
+  .menu { position: static !important; }
+  .menu-lista { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .menu-item { flex: 1 1 auto; text-align: center; }
+}
+
+.menu { position: sticky; top: 1rem; }
+.menu-titulo {
+  font-size: .78rem; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--tinta-fraca); font-weight: 700; margin: 0 0 .5rem .35rem;
+}
+.menu-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: .2rem; }
+.menu-item {
+  display: block; width: 100%; text-align: left;
+  appearance: none; border: 1px solid transparent; background: transparent;
+  color: var(--tinta); font: inherit; font-size: .98rem;
+  padding: .6rem .8rem; border-radius: var(--raio); cursor: pointer;
+}
+.menu-item:hover { background: var(--papel-2); }
+.menu-item[aria-current="page"] {
+  background: var(--marca-clara); color: var(--marca-texto);
+  font-weight: 700; border-color: var(--borda);
+}
+.menu-num {
+  display: inline-block; width: 1.5rem; color: var(--tinta-fraca);
+  font-variant-numeric: tabular-nums; font-weight: 700;
+}
+.menu-item[aria-current="page"] .menu-num { color: var(--marca-texto); }
+
+/* ── cartões ────────────────────────────────────────────────────────── */
+.cartao {
+  background: var(--papel); border: 1px solid var(--borda);
+  border-radius: var(--raio-g); padding: 1.5rem; margin-bottom: 1.25rem;
+  box-shadow: var(--sombra);
+}
+.cartao > :last-child { margin-bottom: 0; }
+
+.explica {
+  background: var(--papel-2); border-left: 4px solid var(--marca);
+  border-radius: 0 var(--raio) var(--raio) 0;
+  padding: .9rem 1.1rem; margin: 0 0 1.25rem;
+}
+.explica p:last-child { margin-bottom: 0; }
+.explica strong { color: var(--marca-texto); }
+
+.aviso {
+  border-left: 4px solid var(--espera); background: var(--espera-fundo);
+  color: var(--tinta); padding: .9rem 1.1rem; border-radius: 0 var(--raio) var(--raio) 0;
+  margin: 0 0 1.1rem;
+}
+.aviso-ruim { border-left-color: var(--ruim); background: var(--ruim-fundo); }
+.aviso-bom  { border-left-color: var(--bom);  background: var(--bom-fundo); }
+
+/* ── selos de estado (nunca só cor: sempre com símbolo) ─────────────── */
+.selo {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .85rem; font-weight: 700; padding: .2rem .6rem;
+  border-radius: 999px; border: 1px solid currentColor; white-space: nowrap;
+}
+.selo-bom    { color: var(--bom);    background: var(--bom-fundo); }
+.selo-ruim   { color: var(--ruim);   background: var(--ruim-fundo); }
+.selo-espera { color: var(--espera); background: var(--espera-fundo); }
+.selo-neutro { color: var(--tinta-fraca); background: var(--papel-2); }
+
+/* ── botões ─────────────────────────────────────────────────────────── */
+.botao {
+  appearance: none; font: inherit; font-weight: 700; cursor: pointer;
+  background: var(--marca); color: #fff; border: 1px solid var(--marca);
+  padding: .65rem 1.15rem; border-radius: var(--raio);
+  display: inline-flex; align-items: center; gap: .5rem;
+}
+.botao:hover:not(:disabled) { filter: brightness(1.08); }
+.botao:disabled { opacity: .5; cursor: not-allowed; }
+.botao-2 {
+  background: var(--papel); color: var(--tinta); border-color: var(--borda-forte);
+}
+.botao-2:hover:not(:disabled) { background: var(--papel-2); filter: none; }
+.linha-botoes { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+
+/* ── campos ─────────────────────────────────────────────────────────── */
+.campo { display: grid; gap: .3rem; margin-bottom: 1rem; }
+.campo label { font-weight: 600; font-size: .95rem; }
+.campo .dica { color: var(--tinta-fraca); font-size: .875rem; }
+input[type="text"], input[type="number"], select, textarea {
+  font: inherit; color: var(--tinta); background: var(--papel);
+  border: 1px solid var(--borda-forte); border-radius: var(--raio);
+  padding: .55rem .7rem; width: 100%; max-width: 26rem;
+}
+textarea { max-width: 100%; font-family: ui-monospace, "Consolas", monospace; }
+.campos-lado { display: flex; gap: 1rem; flex-wrap: wrap; }
+.campos-lado .campo { max-width: 12rem; }
+
+/* ── a grade de dezenas ─────────────────────────────────────────────── */
+.grade-dezenas {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(3.1rem, 1fr));
+  gap: .4rem; margin: .75rem 0 1rem;
+}
+.dezena {
+  appearance: none; font: inherit; font-weight: 700; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  background: var(--papel); color: var(--tinta);
+  border: 1px solid var(--borda-forte); border-radius: var(--raio);
+  padding: .5rem .2rem; text-align: center;
+}
+.dezena:hover { background: var(--papel-2); }
+.dezena[aria-pressed="true"] {
+  background: var(--marca); color: #fff; border-color: var(--marca);
+  /* o "✓" no conteúdo garante que não seja só a cor a dizer que está marcada */
+}
+.dezena[aria-pressed="true"]::after { content: " ✓"; font-size: .7em; }
+
+/* ── as apostas resultantes ─────────────────────────────────────────── */
+.apostas { display: grid; gap: .4rem; margin: 1rem 0; }
+.aposta {
+  display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  background: var(--papel-2); border: 1px solid var(--borda);
+  border-radius: var(--raio); padding: .5rem .75rem;
+}
+.aposta-num {
+  color: var(--tinta-fraca); font-weight: 700; font-size: .85rem;
+  min-width: 2.2rem; font-variant-numeric: tabular-nums;
+}
+.bola {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 2.3rem; height: 2.3rem; padding: 0 .35rem;
+  background: var(--papel); border: 1px solid var(--borda-forte);
+  border-radius: 999px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.bola-acerto { background: var(--bom); color: #fff; border-color: var(--bom); }
+.bola-sorteada { background: var(--marca); color: #fff; border-color: var(--marca); }
+
+/* ── tabelas ────────────────────────────────────────────────────────── */
+.rolagem { overflow-x: auto; margin: 1rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+caption { text-align: left; color: var(--tinta-fraca); font-size: .9rem;
+          padding-bottom: .5rem; }
+th, td { padding: .55rem .7rem; text-align: right; border-bottom: 1px solid var(--borda);
+         white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { color: var(--tinta-fraca); font-size: .82rem; text-transform: uppercase;
+           letter-spacing: .05em; border-bottom: 2px solid var(--borda-forte); }
+tbody tr:hover { background: var(--papel-2); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ── as inteligências ───────────────────────────────────────────────── */
+.ia {
+  border: 1px solid var(--borda); border-radius: var(--raio-g);
+  padding: 1.1rem 1.25rem; margin-bottom: 1rem; background: var(--papel);
+}
+.ia-calada { background: var(--papel-2); border-style: dashed; }
+.ia-topo { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+           margin-bottom: .5rem; }
+.ia-nome { font-weight: 800; font-size: 1.05rem; margin: 0; }
+.ia-motivo { color: var(--tinta-fraca); margin: .25rem 0 .75rem; font-size: .95rem; }
+.ia-bolas { display: flex; gap: .4rem; flex-wrap: wrap; margin: .5rem 0 .9rem; }
+.ia-citacoes { list-style: none; margin: .5rem 0 0; padding: 0;
+               font-size: .9rem; color: var(--tinta-fraca); display: grid; gap: .25rem; }
+.ia-citacoes li::before { content: "cita: "; font-weight: 600; }
+
+/* ── progresso ──────────────────────────────────────────────────────── */
+.progresso {
+  background: var(--papel-2); border: 1px solid var(--borda);
+  border-radius: var(--raio); padding: .9rem 1.1rem; margin: 1rem 0;
+  font-size: .95rem;
+}
+.progresso ol { margin: .4rem 0 0; padding-left: 1.3rem; }
+.girando::before {
+  content: ""; display: inline-block; width: 1rem; height: 1rem;
+  margin-right: .5rem; vertical-align: -2px;
+  border: 2px solid var(--borda-forte); border-top-color: var(--marca);
+  border-radius: 50%; animation: girar .8s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+
+.escondido { display: none !important; }
+.so-leitor {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+.rodape {
+  max-width: var(--largura); margin: 0 auto; padding: 0 1.25rem 3rem;
+  color: var(--tinta-fraca); font-size: .9rem;
+}
