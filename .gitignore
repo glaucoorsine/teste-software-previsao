@@ -13,3 +13,11 @@ SUPER_IA/
 
 # os ZIPs de entrega são gerados a partir do que está versionado
 PACOTE_COMPLETO_v*.zip
+
+# LYRA LIVE
+# O perfil e a chave de transmissao ficam em Documentos/LyraLive/, fora do
+# repositorio — mas se alguem apontar LYRA_PASTA para ca, nao entram no git.
+LYRA_LIVE/**/perfil.json
+LYRA_LIVE/**/chave_transmissao.txt
+__pycache__/
+*.pyc

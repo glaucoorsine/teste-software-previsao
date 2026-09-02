@@ -1,0 +1,27 @@
+# LYRA LIVE — dependências
+#
+# OBRIGATÓRIO
+numpy>=1.24
+
+# QUASE OBRIGATÓRIO — sem OpenCV tudo funciona, mas em NumPy puro (mais lento),
+# e a câmera passa a ser aberta pelo ffmpeg em vez de diretamente.
+opencv-python>=4.8
+
+# PAINEL — só para a janela; a linha de comando (lyra.py) não precisa.
+customtkinter>=5.2
+Pillow>=10.0
+
+# IA SUPERVISORA — conversa com o Qwen local (Ollama ou API estilo OpenAI).
+requests>=2.31
+
+# OPCIONAIS
+# mediapipe        recorte de pessoa de verdade no desfoque de fundo
+# pyvirtualcam     publicar como câmera do sistema (webcam virtual)
+#
+# Não estão na lista de instalação automática porque falham em várias versões
+# de Python no Windows, e a falha de uma delas não pode derrubar a instalação
+# inteira. O 0_INSTALAR_LYRA.bat tenta as duas por último, separadamente.
+
+# FORA DO PIP
+# ffmpeg      obrigatório para transmitir. Windows: winget install Gyan.FFmpeg
+# ollama      opcional, para a IA supervisora: ollama pull qwen2.5:0.5b
