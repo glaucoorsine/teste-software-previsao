@@ -13,3 +13,11 @@ SUPER_IA/
 
 # os ZIPs de entrega são gerados a partir do que está versionado
 PACOTE_COMPLETO_v*.zip
+
+# ESTÚDIO — a chave da live é a senha do canal. Nunca versionada.
+ESTUDIO/chave_youtube.txt
+ESTUDIO/estudio_ajustes.json
+ESTUDIO/gravacoes/
+ESTUDIO/*.onnx
+ESTUDIO/ffmpeg.exe
+ESTUDIO/__pycache__/

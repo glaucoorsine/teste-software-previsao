@@ -1,0 +1,29 @@
+# ESTÚDIO — o que instalar. O 0_INSTALAR.bat faz isto sozinho.
+
+# ── ESSENCIAIS: sem estes o software não abre ────────────────────────────
+numpy
+opencv-python          # câmera, filtros, todo o processamento de imagem
+
+# ── ÁUDIO ────────────────────────────────────────────────────────────────
+sounddevice            # ler o microfone
+# O scipy NÃO é opcional na prática. Medi a cadeia de áudio sem ele: 1100 ms
+# de CPU para cada segundo de som -- mais de um núcleo inteiro, disputando com
+# a imagem. Com ele, 74 ms. O software funciona sem, e avisa na tela que o
+# áudio pesado foi desligado; mas "funciona" ali quer dizer "não abre a boca".
+scipy
+
+# ── INTERFACE ────────────────────────────────────────────────────────────
+customtkinter          # a aparência; sem ele cai no Tkinter comum e abre igual
+Pillow                 # desenhar o preview na janela
+
+# ── DESENVOLVIMENTO ──────────────────────────────────────────────────────
+pyflakes               # o test_lint.py usa para achar nome indefinido
+
+# ── OPCIONAIS, e o que cada um melhora ───────────────────────────────────
+# mediapipe
+#   Recorte de pessoa por pixel, para o desfoque de fundo. Sem ele o recorte
+#   é geométrico (elipse na cabeça + tronco) e funciona para uma pessoa
+#   sentada de frente, que é a live dele. Com ele, funciona sempre.
+#   pip install mediapipe
+
+# O ffmpeg NÃO é um pacote Python e não entra aqui. Ver o LEIA_PRIMEIRO.
