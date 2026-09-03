@@ -1,0 +1,5 @@
+f800c27777602e503129afaac529a1850377b074|Sun Nov 17 09:19:28 2024 -0300|updated
+fonte: https://github.com/guilhermeasn/loteria.json  (data/lotofacil.json)
+espelho publico dos resultados da Caixa, atualizado por GitHub Actions
+baixado nesta sessao; a API da Caixa esta bloqueada pela politica de rede deste ambiente
+formato: { "<concurso>": [15 dezenas como string, NA ORDEM DE SORTEIO] }

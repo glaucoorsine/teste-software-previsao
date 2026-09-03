@@ -13,3 +13,9 @@ SUPER_IA/
 
 # os ZIPs de entrega são gerados a partir do que está versionado
 PACOTE_COMPLETO_v*.zip
+
+# o HTML intermediario do relatorio: 1,5 MB de imagens em base64, e ele e
+# regenerado por `python3 lab/relatorio.py`. O PDF, sim, e a entrega.
+LOTERIA/ESTUDO/RELATORIO.html
+LOTERIA/ESTUDO/lab/__pycache__/
+LOTERIA/ESTUDO/resultados/protocolo.log
